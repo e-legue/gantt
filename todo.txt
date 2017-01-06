@@ -1,0 +1,11 @@
+TODO:
+
+display crewmember line.
+
+show/hide (day color / day yyyy-mm-yy / day relative)
+
+show/hide (hour color / hour label )
+
+show/hide (legs)
+
+save svg, and ask file name.
