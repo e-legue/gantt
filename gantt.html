@@ -38,6 +38,7 @@
         svg.getElementById("coordinateY").setAttribute("display", "none");
       }
     }
+
     function ShowHideCalendarHoursLabel(val) {
       var svg = document.getElementById("graph").getSVGDocument();
       var divs = svg.getElementsByClassName('hour_label');
@@ -52,6 +53,38 @@
           divs[i].setAttribute("display", "none");
         }
       }
+    }
+
+    function SaveSvg() {
+      var svg     = document.getElementById("graph").getSVGDocument();
+      var a           = document.createElement('a');
+      var contentType = 'data:application/octet-stream,';
+
+      //get svg source.
+      var serializer = new XMLSerializer();
+      var source = serializer.serializeToString(svg);
+
+      //add name spaces.
+      /*
+      if(!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)){
+          source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+      }
+      if(!source.match(/^<svg[^>]+"http\:\/\/www\.w3\.org\/1999\/xlink"/)){
+          source = source.replace(/^<svg/, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
+      }
+      */
+
+      //add xml declaration
+//      source = '<?xml version="1.0" standalone="no"?>\r\n' + source;
+
+      var uriContent  = contentType + encodeURIComponent(source);
+
+      a.setAttribute('href', uriContent);
+      a.setAttribute('download', 'local_file.svg');
+
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     }
   </script>
 
@@ -73,8 +106,8 @@
         <div data-dojo-type="dijit/MenuItem" data-dojo-props="iconClass:'dijitEditorIcon dijitEditorIconPaste', onClick:function(){alert('paste!')}">Paste</div>
       </div>
     </div>
-    <div data-dojo-type="dijit/MenuBarItem">
-       Save
+    <div data-dojo-type="dijit/MenuBarItem" data-dojo-props="onClick:function(){SaveSvg();}">
+       Save svg
     </div>
     <div data-dojo-type="dijit/PopupMenuBarItem">
       <span>General Show/hide</span>
