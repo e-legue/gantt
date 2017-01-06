@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+  
+  <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dijit/themes/claro/claro.css">
+  
+  <script>dojoConfig = {async: true, parseOnLoad: true}</script>
+  <script src='http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dojo/dojo.js'></script>
+
+  <script>
+    require(["dojo/parser", "dijit/MenuBar", "dijit/MenuBarItem", "dijit/PopupMenuBarItem", "dijit/DropDownMenu", "dijit/MenuItem", "dijit/CheckedMenuItem"]);
+  </script>
+
+  <script>
+    if (window.addEventListener) {              
+      window.addEventListener("resize", browserResize);
+    } else if (window.attachEvent) {                 
+      window.attachEvent("onresize", browserResize);
+    }
+    browserResize();
+
+    // set the right height of the object holding the svg graph. for unknown reason, the width works well 
+    // with 100%, but not the height. So it needs to be evaluated each time the window size changes.
+    function browserResize() {
+      // the 8 comes from the margin (2 times) value on body, and margin-bottom (one time) on id navMenu.
+      document.getElementById("graph").height = window.innerHeight - 3 * 8 - document.getElementById("navMenu").offsetHeight;
+    }
+
+    function ShowHideCoordinates(val) {
+      var svg = document.getElementById("graph").getSVGDocument();
+
+      if( val ){
+        svg.getElementById("coordinateX").setAttribute("display", "block");
+        svg.getElementById("coordinateY").setAttribute("display", "block");
+      }
+      else {
+        svg.getElementById("coordinateX").setAttribute("display", "none");
+        svg.getElementById("coordinateY").setAttribute("display", "none");
+      }
+    }
+    function ShowHideCalendarHoursLabel(val) {
+      var svg = document.getElementById("graph").getSVGDocument();
+      var divs = svg.getElementsByClassName('hour_label');
+
+      if( val ){
+        for (var i = 0; i < divs.length; i++) {
+          divs[i].setAttribute("display", "block");
+        }
+      }
+      else {
+        for (var i = 0; i < divs.length; i++) {
+          divs[i].setAttribute("display", "none");
+        }
+      }
+    }
+  </script>
+
+</head>
+<body class="claro" onload="browserResize()">
+  <div data-dojo-type="dijit/MenuBar" id="navMenu" style="margin-bottom: 8px;">
+    <div data-dojo-type="dijit/PopupMenuBarItem">
+      <span>File</span>
+      <div data-dojo-type="dijit/DropDownMenu" id="fileMenu">
+        <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){alert('file 1');}">File #1</div>
+        <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){alert('file 2');}">File #2</div>
+      </div>
+    </div>
+    <div data-dojo-type="dijit/PopupMenuBarItem">
+      <span>Edit</span>
+      <div data-dojo-type="dijit/DropDownMenu" id="editMenu">
+        <div data-dojo-type="dijit/MenuItem" data-dojo-props="iconClass:'dijitEditorIcon dijitEditorIconCut', onClick:function(){alert('cut!')}">Cut</div>
+        <div data-dojo-type="dijit/MenuItem" data-dojo-props="iconClass:'dijitEditorIcon dijitEditorIconCopy', onClick:function(){alert('copy!')}">Copy</div>
+        <div data-dojo-type="dijit/MenuItem" data-dojo-props="iconClass:'dijitEditorIcon dijitEditorIconPaste', onClick:function(){alert('paste!')}">Paste</div>
+      </div>
+    </div>
+    <div data-dojo-type="dijit/MenuBarItem">
+       Save
+    </div>
+    <div data-dojo-type="dijit/PopupMenuBarItem">
+      <span>General Show/hide</span>
+      <div data-dojo-type="dijit/DropDownMenu" id="generalShowHideMenu">
+        <div data-dojo-type="dijit/CheckedMenuItem" data-dojo-props="checked:true, onChange:function(val){ShowHideCoordinates(val);}">Coordinates</div>
+        <div data-dojo-type="dijit/CheckedMenuItem" data-dojo-props="checked:true, onChange:function(val){ShowHideCalendarHoursLabel(val);}">Calendar hours</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SVG code -->
+  <object id="graph" type="image/svg+xml" data="gantt.svg" width="100%">
+    Sorry, your browser does not support SVG.
+  </object>
+
+</body>
+</html>

@@ -1,0 +1,782 @@
+<?xml version="1.0" standalone="no"?>
+
+<?xml-stylesheet type="text/css" href="gantt.css"?>
+
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <script>
+    // <![CDATA[
+    /** 
+     *  SVGPan library 1.2.1
+     * ======================
+     *
+     * Given an unique existing element with id "viewport" (or when missing, the first g 
+     * element), including the the library into any SVG adds the following capabilities:
+     *
+     *  - Mouse panning
+     *  - Mouse zooming (using the wheel)
+     *  - Object dragging
+     *
+     * You can configure the behaviour of the pan/zoom/drag with the variables
+     * listed in the CONFIGURATION section of this file.
+     *
+     * Known issues:
+     *
+     *  - Zooming (while panning) on Safari has still some issues
+     *
+     * Releases:
+     *
+     * 1.2.1, Mon Jul  4 00:33:18 CEST 2011, Andrea Leofreddi
+     *	- Fixed a regression with mouse wheel (now working on Firefox 5)
+     *	- Working with viewBox attribute (#4)
+     *	- Added "use strict;" and fixed resulting warnings (#5)
+     *	- Added configuration variables, dragging is disabled by default (#3)
+     *
+     * 1.2, Sat Mar 20 08:42:50 GMT 2010, Zeng Xiaohui
+     *	Fixed a bug with browser mouse handler interaction
+     *
+     * 1.1, Wed Feb  3 17:39:33 GMT 2010, Zeng Xiaohui
+     *	Updated the zoom code to support the mouse wheel on Safari/Chrome
+     *
+     * 1.0, Andrea Leofreddi
+     *	First release
+     *
+     * This code is licensed under the following BSD license:
+     *
+     * Copyright 2009-2010 Andrea Leofreddi <a.leofreddi@itcharm.com>. All rights reserved.
+     * 
+     * Redistribution and use in source and binary forms, with or without modification, are
+     * permitted provided that the following conditions are met:
+     * 
+     *    1. Redistributions of source code must retain the above copyright notice, this list of
+     *       conditions and the following disclaimer.
+     * 
+     *    2. Redistributions in binary form must reproduce the above copyright notice, this list
+     *       of conditions and the following disclaimer in the documentation and/or other materials
+     *       provided with the distribution.
+     * 
+     * THIS SOFTWARE IS PROVIDED BY Andrea Leofreddi ``AS IS'' AND ANY EXPRESS OR IMPLIED
+     * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+     * FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL Andrea Leofreddi OR
+     * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+     * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+     * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+     * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+     * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+     * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+     * 
+     * The views and conclusions contained in the software and documentation are those of the
+     * authors and should not be interpreted as representing official policies, either expressed
+     * or implied, of Andrea Leofreddi.
+     */
+
+    "use strict";
+
+    /// CONFIGURATION 
+    /// ====>
+
+    var enablePan = 1; // 1 or 0: enable or disable panning (default enabled)
+    var enableZoom = 1; // 1 or 0: enable or disable zooming (default enabled)
+    var enableDrag = 0; // 1 or 0: enable or disable dragging (default disabled)
+
+    /// <====
+    /// END OF CONFIGURATION 
+
+    var root = document.documentElement;
+
+    var state = 'none', svgRoot, stateTarget, stateOrigin, stateTf;
+
+    setupHandlers(root);
+
+    /**
+     * Register handlers
+     */
+    function setupHandlers(root){
+      setAttributes(root, {
+          "onmouseup" : "handleMouseUp(evt)",
+          "onmousedown" : "handleMouseDown(evt)",
+          "onmousemove" : "handleMouseMove(evt)",
+          //"onmouseout" : "handleMouseUp(evt)", // Decomment this to stop the pan functionality when dragging out of the SVG element
+          });
+
+      if(navigator.userAgent.toLowerCase().indexOf('webkit') >= 0)
+        window.addEventListener('mousewheel', handleMouseWheel, false); // Chrome/Safari
+      else
+        window.addEventListener('DOMMouseScroll', handleMouseWheel, false); // Others
+    }
+
+    /**
+     * Retrieves the root element for SVG manipulation. The element is then cached into the svgRoot global variable.
+     */
+    function getRoot(root) {
+      if(typeof(svgRoot) == "undefined") {
+        var g = null;
+
+        g = root.getElementById("viewport");
+
+        if(g == null)
+          g = root.getElementsByTagName('g')[0];
+
+        if(g == null)
+          alert('Unable to obtain SVG root element');
+
+        setCTM(g, g.getCTM());
+
+        g.removeAttribute("viewBox");
+
+        svgRoot = g;
+      }
+
+      return svgRoot;
+    }
+
+    /**
+     * Instance an SVGPoint object with given event coordinates.
+     */
+    function getEventPoint(evt) {
+      var p = root.createSVGPoint();
+
+      p.x = evt.clientX;
+      p.y = evt.clientY;
+
+      return p;
+    }
+
+    /**
+     * Sets the current transform matrix of an element.
+     */
+    function setCTM(element, matrix) {
+      var s = "matrix(" + matrix.a + "," + matrix.b + "," + matrix.c + "," + matrix.d + "," + matrix.e + "," + matrix.f + ")";
+
+      element.setAttribute("transform", s);
+    }
+
+    /**
+     * Dumps a matrix to a string (useful for debug).
+     */
+    function dumpMatrix(matrix) {
+      var s = "[ " + matrix.a + ", " + matrix.c + ", " + matrix.e + "\n  " + matrix.b + ", " + matrix.d + ", " + matrix.f + "\n  0, 0, 1 ]";
+
+      return s;
+    }
+
+    /**
+     * Sets attributes of an element.
+     */
+    function setAttributes(element, attributes){
+      for (var i in attributes)
+        element.setAttributeNS(null, i, attributes[i]);
+    }
+
+    /**
+     * Handle mouse wheel event.
+     */
+    function handleMouseWheel(evt) {
+      if(!enableZoom)
+        return;
+
+      if(evt.preventDefault)
+        evt.preventDefault();
+
+      evt.returnValue = false;
+
+      var svgDoc = evt.target.ownerDocument;
+
+      var delta;
+
+      if(evt.wheelDelta)
+        delta = evt.wheelDelta / 3600; // Chrome/Safari
+      else
+        delta = evt.detail / -90; // Mozilla
+
+      var z = 1 + delta; // Zoom factor: 0.9/1.1
+
+      var g = getRoot(svgDoc);
+
+      var p = getEventPoint(evt);
+
+      p = p.matrixTransform(g.getCTM().inverse());
+
+      // Compute new scale matrix in current mouse position
+      var k = root.createSVGMatrix().translate(p.x, p.y).scale(z).translate(-p.x, -p.y);
+
+      setCTM(g, g.getCTM().multiply(k));
+
+      if(typeof(stateTf) == "undefined")
+        stateTf = g.getCTM().inverse();
+
+      stateTf = stateTf.multiply(k.inverse());
+    }
+
+    /**
+     * Handle mouse move event.
+     */
+    function handleMouseMove(evt) {
+      if(evt.preventDefault)
+        evt.preventDefault();
+
+      evt.returnValue = false;
+
+      var svgDoc = evt.target.ownerDocument;
+
+      var g = getRoot(svgDoc);
+
+      // This is the section added to be able to display coordinates.
+      var pt = getEventPoint(evt).matrixTransform(g.getCTM().inverse());
+      var coordinateX = document.getElementById("coordinateX");
+      var coordinateY = document.getElementById("coordinateY");
+      coordinateX.firstChild.nodeValue = "X: " + Math.floor(pt.x);
+      coordinateY.firstChild.nodeValue = "Y: " + Math.floor(pt.y);
+
+      if(state == 'pan' && enablePan) {
+        // Pan mode
+        var p = getEventPoint(evt).matrixTransform(stateTf);
+
+        setCTM(g, stateTf.inverse().translate(p.x - stateOrigin.x, p.y - stateOrigin.y));
+      } else if(state == 'drag' && enableDrag) {
+        // Drag mode
+        var p = getEventPoint(evt).matrixTransform(g.getCTM().inverse());
+
+        setCTM(stateTarget, root.createSVGMatrix().translate(p.x - stateOrigin.x, p.y - stateOrigin.y).multiply(g.getCTM().inverse()).multiply(stateTarget.getCTM()));
+
+        stateOrigin = p;
+      }
+    }
+
+    /**
+     * Handle click event.
+     */
+    function handleMouseDown(evt) {
+      if(evt.preventDefault)
+        evt.preventDefault();
+
+      evt.returnValue = false;
+
+      var svgDoc = evt.target.ownerDocument;
+
+      var g = getRoot(svgDoc);
+
+      if(
+          evt.target.tagName == "svg" 
+          || !enableDrag // Pan anyway when drag is disabled and the user clicked on an element 
+        ) {
+        // Pan mode
+        state = 'pan';
+
+        stateTf = g.getCTM().inverse();
+
+        stateOrigin = getEventPoint(evt).matrixTransform(stateTf);
+      } else {
+        // Drag mode
+        state = 'drag';
+
+        stateTarget = evt.target;
+
+        stateTf = g.getCTM().inverse();
+
+        stateOrigin = getEventPoint(evt).matrixTransform(stateTf);
+      }
+    }
+
+    /**
+     * Handle mouse button release event.
+     */
+    function handleMouseUp(evt) {
+      if(evt.preventDefault)
+        evt.preventDefault();
+
+      evt.returnValue = false;
+
+      var svgDoc = evt.target.ownerDocument;
+
+      if(state == 'pan' || state == 'drag') {
+        // Quit pan mode
+        state = '';
+      }
+    }
+
+
+    // ]]>
+  </script>
+
+
+  <title>SVG rule demo</title>
+  <desc>an awesome graph</desc>
+
+
+  <defs>
+    <g id="day">
+      <rect class="day" x="0" y="0" width="1440"  height="2000"/>
+    </g>
+    <g id="hour">
+      <rect class="hour" x="0" y="100" width="60"  height="2000"/>
+    </g>
+    <g id="hours">
+      <use xlink:href="#hour" transform="translate(60,0)"/>
+      <use xlink:href="#hour" transform="translate(180,0)"/>
+      <use xlink:href="#hour" transform="translate(300,0)"/>
+      <use xlink:href="#hour" transform="translate(420,0)"/>
+      <use xlink:href="#hour" transform="translate(540,0)"/>
+      <use xlink:href="#hour" transform="translate(660,0)"/>
+      <use xlink:href="#hour" transform="translate(780,0)"/>
+      <use xlink:href="#hour" transform="translate(900,0)"/>
+      <use xlink:href="#hour" transform="translate(1020,0)"/>
+      <use xlink:href="#hour" transform="translate(1140,0)"/>
+      <use xlink:href="#hour" transform="translate(1260,0)"/>
+      <use xlink:href="#hour" transform="translate(1380,0)"/>
+
+      <text class="hour_label" x="0" y="120">0h</text>
+      <text class="hour_label" x="180" y="120">3h</text>
+      <text class="hour_label" x="360" y="120">6h</text>
+      <text class="hour_label" x="540" y="120">9h</text>
+      <text class="hour_label" x="720" y="120">12h</text>
+      <text class="hour_label" x="900" y="120">15h</text>
+      <text class="hour_label" x="1080" y="120">18h</text>
+      <text class="hour_label" x="1260" y="120">21h</text>
+    </g>
+    <g id="activity">
+      <rect class="param(class)" x="0" y="0" rx="20" ry="20" width="param(width)" height="100" />
+      <text class="label" x="10" y="50"  font-size="50" text-anchor="start" content-value="param(label)">label</text>
+
+      <text x="0"            y="0"   font-size="10" text-anchor="start" style="fill:gray; dominant-baseline: text-after-edge;" content-value="param(begin)">begin</text>
+      <text x="param(width)" y="100" font-size="10" text-anchor="end"   style="fill:gray; dominant-baseline: text-before-edge;" content-value="param(end)">end</text>
+    </g> 
+    <g id="leg">
+      <rect class="param(class)" x="0" y="55" rx="2" ry="2" width="param(width)" height="40" />
+      <text class="label" x="10" y="75"  font-size="25" text-anchor="start" style="dominant-baseline: central;" content-value="param(label)">label</text>
+
+      <text x="0"            y="55"   font-size="10" text-anchor="start" style="fill:gray; dominant-baseline: text-before-edge;" content-value="param(begin)">begin</text>
+      <text x="param(width)" y="95"   font-size="10" text-anchor="end"   style="fill:gray; dominant-baseline: text-after-edge;" content-value="param(end)">end</text>
+    </g> 
+    <g id="do">
+      <rect class="DO" x="0" y="0" rx="20" ry="20" width="1440" height="100" />
+      <text class="label" x="10" y="50"  font-size="50" text-anchor="start" content-value="param(label)">label</text>
+    </g>
+  </defs>
+
+  <g id="viewport">
+    <!--
+    CALENDAR
+    -->
+    <g class="start_period" transform="translate(0,0)">
+      <use xlink:href="#day"/>
+      <text class="day_label" x="720" y="20" text-anchor="middle">Day 0</text>
+      <use xlink:href="#hours"/>
+    </g>
+    <g class="even" transform="translate(1440,0)">
+      <use xlink:href="#day"/>
+      <text class="day_label" x="720" y="20" text-anchor="middle">Day 1</text>
+      <use xlink:href="#hours"/>
+    </g>
+    <g class="uneven" transform="translate(2880,0)">
+      <use xlink:href="#day"/>
+      <text class="day_label" x="720" y="20" text-anchor="middle">Day 2</text>
+      <use xlink:href="#hours"/>
+    </g>
+    <g class="even" transform="translate(4320,0)">
+      <use xlink:href="#day"/>
+      <text class="day_label" x="720" y="20" text-anchor="middle">Day 3</text>
+      <use xlink:href="#hours"/>
+    </g>
+    <g class="uneven" transform="translate(5760,0)">
+      <use xlink:href="#day"/>
+      <text class="day_label" x="720" y="20" text-anchor="middle">Day 4</text>
+      <use xlink:href="#hours"/>
+    </g>
+
+    <!--
+    ACTIVITIES
+    -->
+    <use id="use_1" xlink:href="#activity" x="510" y="200" >
+      <param name="class" value="SBY" />
+      <param name="width" value="480" />
+      <param name="label" value="HSBY" />
+      <param name="begin" value="8h30" />
+      <param name="end" value="16h30" />
+    </use>
+
+    <use id="use_2" xlink:href="#do" x="4320" y="300" >
+      <param name="label" value="DO" />
+    </use>
+
+    <use id="use_3" xlink:href="#activity" x="2910" y="200" >
+      <param name="class" value="TRN" />
+      <param name="width" value="480" />
+      <param name="label" value="TRN A320-1" />
+      <param name="begin" value="0h30" />
+      <param name="end" value="8h30" />
+    </use>
+
+    <!-- trip + legs -->
+    <g transform="translate(1950,500)">
+      <use id="use_7" xlink:href="#activity" x="0" y="0" >
+        <param name="class" value="TRP" />
+        <param name="width" value="480" />
+        <param name="label" value="M9008" />
+        <param name="begin" value="8h30" />
+        <param name="end" value="16h30" />
+      </use>
+      <use id="use_7_1" xlink:href="#leg" x="20" y="0" >
+        <param name="class" value="LEG" />
+        <param name="width" value="200" />
+        <param name="label" value="E123456" />
+        <param name="begin" value="8h30" />
+        <param name="end" value="16h30" />
+      </use>
+      <use id="use_7_2" xlink:href="#leg" x="250" y="0" >
+        <param name="class" value="LEG" />
+        <param name="width" value="180" />
+        <param name="label" value="E654321" />
+        <param name="begin" value="8h30" />
+        <param name="end" value="16h30" />
+      </use>
+    </g>
+
+    <g transform="translate(1045,700)">
+      <use id="use_10" xlink:href="#activity" x="0" y="0" >
+        <param name="class" value="TRP" />
+        <param name="width" value="1530" />
+        <param name="label" value="M9026" />
+        <param name="begin" value="17h25" />
+        <param name="end" value="18h55" />
+      </use>
+      <use id="use_10_1" xlink:href="#leg" x="45" y="0" >
+        <param name="class" value="LEG" />
+        <param name="width" value="115" />
+        <param name="label" value="9E3388" />
+        <param name="begin" value="18h10" />
+        <param name="end" value="20h05" />
+      </use>
+      <use id="use_10_2" xlink:href="#leg" x="245" y="0" >
+        <param name="class" value="LEG" />
+        <param name="width" value="84" />
+        <param name="label" value="9E3463" />
+        <param name="begin" value="21h30" />
+        <param name="end" value="22h54" />
+      </use>
+      <use id="use_10_3" xlink:href="#leg" x="400" y="0" >
+        <param name="class" value="LEG" />
+        <param name="width" value="115" />
+        <param name="label" value="9E3366" />
+        <param name="begin" value="0h05" />
+        <param name="end" value="2h00" />
+      </use>
+      <use id="use_10_4" xlink:href="#leg" x="530" y="0" >
+        <param name="class" value="LAYOVER" />
+        <param name="width" value="570" />
+        <param name="label" value="layover" />
+        <param name="begin" value="2h15" />
+        <param name="end" value="" />
+      </use>
+      <use id="use_10_5" xlink:href="#leg" x="1130" y="0" >
+        <param name="class" value="LEG" />
+        <param name="width" value="171" />
+        <param name="label" value="9E3521" />
+        <param name="begin" value="12h15" />
+        <param name="end" value="15h06" />
+      </use>
+      <use id="use_10_6" xlink:href="#leg" x="1423" y="0" >
+        <param name="class" value="DEADHEAD" />
+        <param name="width" value="92" />
+        <param name="label" value="9E3375" />
+        <param name="begin" value="17h08" />
+        <param name="end" value="18h40" />
+      </use>
+    </g>
+  </g>
+
+  <!--
+  COORDINATES
+  -->
+  <g id="coordinate">
+    <text x="10" y="20" id="coordinateX" style="position:fixed;"> </text>
+    <text x="10" y="40" id="coordinateY" style="position:fixed;"> </text>
+  </g>
+ 
+  <!-- this script has to be inserted at the end of the document. --> 
+  <script>
+    // <![CDATA[
+    var svgns = "http://www.w3.org/2000/svg";
+    var xlinkns = "http://www.w3.org/1999/xlink";
+
+    GetParams();
+
+    function GetParams()
+    {
+      var uids = [];
+
+      var paramArray = [];
+      if ( document.defaultView.frameElement )
+      {
+         var params = document.defaultView.frameElement.getElementsByTagName("param");
+
+         for ( var i = 0, iLen = params.length; iLen > i; i++ )
+         {
+            var eachParam = params[ i ];
+            var name = eachParam.getAttribute( "name" );
+            var value = eachParam.getAttribute( "value" );
+            
+            paramArray[ name ] = value;
+         }
+      }
+
+      var href = document.defaultView.location.href;
+      if ( -1 != href.indexOf("?") )
+      {
+        var paramList = href.split("?")[1].split(/&|;/);
+        for ( var p = 0, pLen = paramList.length; pLen > p; p++ )
+        {
+           var eachParam = paramList[ p ];
+           var valList = eachParam.split("=");
+           var name = unescape(valList[0]);
+           var value = unescape(valList[1]);
+
+           paramArray[ name ] = value;
+         }
+      }
+
+      SetElementValues( paramArray, uids );
+    }
+
+
+    function GetValue( attrStr, params )
+    {
+      // parse attribute value for parameter reference and fallback value 
+      var paramSplit = attrStr.split(")");
+      var paramName = paramSplit[0].replace("param(","");
+      var defaultVal = null;
+      if (paramSplit[1])
+      {
+        defaultVal = paramSplit[1].replace(/^\s\s*/, "").replace(/\s\s*$/, "");
+      }
+      
+      var newVal = params[ paramName ];
+      if ( !newVal )
+      {
+        newVal = defaultVal;  
+      }
+
+      return newVal;
+    }
+
+
+    function SetElementValues( params, uids  )
+    {
+      var useEls =[];
+      var elList = document.documentElement.getElementsByTagName( "*" );
+      for ( var i = 0, iLen = elList.length; iLen > i; i++ )
+      {
+        var eachEl = elList[ i ];
+        if ( "use" != eachEl.localName )
+        {
+          SetParamValues( eachEl, params );
+        }
+        else
+        {
+          var shadow = EmulateShadowTree( eachEl, params, uids, i );
+          if ( shadow )
+          {
+            useEls.push( [ eachEl, shadow ] );
+          }
+        }
+      }
+        
+      for ( var u = 0, uLen = useEls.length; uLen > u; u++ )
+      {
+        var useEl = useEls[ u ][0];
+        var shadow = useEls[ u ][1];
+        useEl.setAttribute("display", "none");
+        if (useEl.nextSibling)
+        {
+          useEl.parentNode.insertBefore(shadow, useEl.nextSibling);
+        }
+        else
+        {
+          useEl.parentNode.appendChild(shadow);
+        }
+      }
+    }
+
+
+    function SetParamValues( el, params, isShadow )
+    {
+      for ( var a = 0, aLen = el.attributes.length; aLen > a; a++ )
+      {
+        var attr = el.attributes[ a ];
+        var attrVal = attr.value;
+        
+        if ( -1 != attrVal.indexOf( "param(" ) )
+        {
+          //alert("attr: " + attr.localName + "\nvalue: " + attrVal)
+          if ( "params" == attr.localName )
+          {
+            // alert("attr.name: " + attr.name + "\nattrVal: " + attrVal + "\nisShadow: " + isShadow)
+            if (isShadow)
+            {
+              //alert(attrVal)
+              var paramSplit = attrVal.split(";");
+              for ( var p = 0, pLen = paramSplit.length; pLen > p; p++ )
+              {
+                var eachPair = paramSplit[ p ];
+                // alert("eachPair: " + eachPair)
+                var pairSplit = eachPair.split(":");
+                var newAttr = pairSplit[0];
+
+                var newVal = GetValue( pairSplit[1], params );
+
+                var attrns = null;
+                if ( "href" == newAttr || "xlink:href" == newAttr )
+                {
+                  attrns = xlinkns;
+                }
+                el.setAttributeNS( attrns, newAttr, newVal);
+              }
+            }
+          }
+          else
+          {
+            var newVal = GetValue( attrVal, params );
+            
+            if ( null != newVal && "" != newVal )
+            {
+              if ( "content-value" == attr.localName )
+              {
+                el.replaceChild( document.createTextNode( newVal ), el.firstChild );
+              }
+              else
+              {
+                el.setAttributeNS( attr.namespaceURI, attr.name, newVal);
+                //alert("attr.name: " + attr.name + "\nattrVal: " + newVal)
+
+                // note replacement values in params metadata attribute 
+                var paramAttrVal = el.getAttribute( "params" );
+                if ( paramAttrVal )
+                {
+                  el.setAttribute( "params", paramAttrVal + ";" + attr.name + ":" + attrVal);
+                  //alert(paramAttrVal)
+                }
+                else
+                {
+                  el.setAttribute( "params", attr.name + ":" + attrVal);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+
+    // au37k
+    //emulate modifying shadow tree by duplicating element are replacing over use element
+    function EmulateShadowTree( el, params, uids, idnum )
+    {
+      //alert("EmulateShadowTree")
+      shadowParams = params;
+      var hasParam = false;
+      var cn = el.childNodes;
+      for ( var c = 0, cLen = cn.length; cLen > c; c++ )
+      {
+        var eachChild = cn[ c ];
+        //alert(eachChild + ": " + eachChild.nodeType)
+        if ( 1 == eachChild.nodeType && "param" == eachChild.localName)
+        {
+          var name = eachChild.getAttribute( "name" );
+          var val = eachChild.getAttribute( "value" );
+          shadowParams[ name ] = val;
+          hasParam = true; 
+          // alert("name: " + name + "\nvalue: " + val)
+        }
+      }
+
+      var parametersAttrVal = el.getAttribute( "parameters" );
+      if( parametersAttrVal )
+      {
+        // alert(parametersAttrVal)
+        var paramSplit = parametersAttrVal.split(";");
+        for ( var p = 0, pLen = paramSplit.length; pLen > p; p++ )
+        {
+          var eachPair = paramSplit[ p ];
+          //alert("eachPair: " + eachPair)
+          var pairSplit = eachPair.split(":");
+          shadowParams[ pairSplit[0] ] = pairSplit[1];
+          hasParam = true;
+        }     
+      }
+
+      if ( hasParam )
+      {
+        //alert("hasParam")
+        var idref = el.getAttributeNS( xlinkns, "href").replace("#", "");
+        var refEl = document.getElementById( idref );
+
+        //emulate modifying shadow tree by duplicating element are replacing over use element
+        var newEl = refEl.cloneNode(true);
+
+        // alert("EmulateShadowTree:\n\nnewEl:" + newEl + "\nshadowParams: " + shadowParams )
+        SetParamValues( newEl, shadowParams, true );
+
+        var wrapper = document.createElementNS( svgns, "g");
+        var shadow = document.createElementNS( svgns, "g");
+        for ( var ua = 0, uaLen = el.attributes.length; uaLen > ua; ua++ )
+        {
+          var attr = el.attributes[ ua ];
+          if ( "content-value" != attr.localName && "params" != attr.localName && "parameters" != attr.localName 
+                && "href" != attr.localName && "x" != attr.localName && "y" != attr.localName )
+          {
+            //copy use element attributes to replacement image
+            shadow.setAttribute( attr.name, attr.value);
+          }
+        }
+
+        var x = el.getAttribute("x");
+        var y = el.getAttribute("y");
+        wrapper.setAttribute( "transform", "translate(" + x + "," + y + ")");
+
+        shadow.appendChild(newEl);
+        wrapper.appendChild(shadow);
+
+
+        var shadowEls = newEl.getElementsByTagName( "*" );
+        for ( var e = 0, eLen = shadowEls.length; eLen > e; e++ )
+        {
+          var eachEl = shadowEls[ e ];
+          SetParamValues( eachEl, shadowParams, true );
+
+          for ( var a = 0, aLen = eachEl.attributes.length; aLen > a; a++ )
+          {
+            var attr = eachEl.attributes[ a ];
+            var attrVal = attr.value;
+            //alert("attr: " + attr.localName + "\nvalue: " + attrVal)
+            if ( "id" == attr.localName )
+            {
+              //change id to unique id
+              eachEl.setAttribute( attr.name, attrVal + "__" + idnum);
+              uids[attrVal] = attrVal + "__" + idnum;
+            }
+
+            //alert( attrVal )
+            if ( -1 != attrVal.indexOf("url(#") )
+            {
+              //alert( attrVal )
+              for ( uid in uids )
+              {
+                //alert( uid + ": " + uids[uid] )
+                if ( -1 != attrVal.indexOf( "url(#" + uid + ")" ) )
+                {
+                  eachEl.setAttributeNS( attr.namespaceURI, attr.name, "url(#" + uids[uid] + ")" );
+                }
+              }
+            }
+          }
+        }
+        
+        return wrapper;
+      }
+      return null;
+    }
+    // ]]>
+  </script> <!-- <script type="text/ecmascript" xlink:href="param.js" />-->
+</svg>
+

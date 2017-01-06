@@ -1,0 +1,51 @@
+.day {
+  fill-opacity: 0.2;
+}
+.start_period {
+  fill: green;
+}
+.start_period_day:hover {
+  fill: orange;
+}
+
+.hour {
+  fill-opacity: 0.1;
+}
+
+.even {
+  fill: yellow;
+}
+.uneven {
+  fill: blue;
+}
+
+/* text inside a box */
+.label {
+  fill: black;
+}
+
+.DO {
+  fill: orange;
+}
+
+.TRN {
+  fill: green;
+}
+
+.SBY {
+  fill: cyan;
+}
+
+.TRP {
+  fill: blue;
+}
+
+.LEG {
+  fill: magenta;
+}
+.LAYOVER {
+  fill: yellow;
+}
+.DEADHEAD {
+  fill: white;
+}
