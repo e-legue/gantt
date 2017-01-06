@@ -1,10 +1,61 @@
 <?xml version="1.0" standalone="no"?>
 
-<?xml-stylesheet type="text/css" href="gantt.css"?>
-
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <style>
+.day {
+  fill-opacity: 0.2;
+}
+.start_period {
+  fill: green;
+}
+.start_period_day:hover {
+  fill: orange;
+}
+
+.hour {
+  fill-opacity: 0.1;
+}
+
+.even {
+  fill: yellow;
+}
+.uneven {
+  fill: blue;
+}
+
+/* text inside a box */
+.label {
+  fill: black;
+}
+
+.DO {
+  fill: orange;
+}
+
+.TRN {
+  fill: green;
+}
+
+.SBY {
+  fill: cyan;
+}
+
+.TRP {
+  fill: blue;
+}
+
+.LEG {
+  fill: magenta;
+}
+.LAYOVER {
+  fill: yellow;
+}
+.DEADHEAD {
+  fill: white;
+}
+  </style>
   <script>
     // <![CDATA[
     /** 
@@ -393,7 +444,7 @@
       <param name="width" value="480" />
       <param name="label" value="HSBY" />
       <param name="begin" value="8h30" />
-      <param name="end" value="16h30" />
+      <param name="end"   value="16h30" />
     </use>
 
     <use id="use_2" xlink:href="#do" x="4320" y="300" >
@@ -405,7 +456,7 @@
       <param name="width" value="480" />
       <param name="label" value="TRN A320-1" />
       <param name="begin" value="0h30" />
-      <param name="end" value="8h30" />
+      <param name="end"   value="8h30" />
     </use>
 
     <!-- trip + legs -->
@@ -415,21 +466,21 @@
         <param name="width" value="480" />
         <param name="label" value="M9008" />
         <param name="begin" value="8h30" />
-        <param name="end" value="16h30" />
+        <param name="end"   value="16h30" />
       </use>
       <use id="use_7_1" xlink:href="#leg" x="20" y="0" >
         <param name="class" value="LEG" />
         <param name="width" value="200" />
         <param name="label" value="E123456" />
         <param name="begin" value="8h30" />
-        <param name="end" value="16h30" />
+        <param name="end"   value="16h30" />
       </use>
       <use id="use_7_2" xlink:href="#leg" x="250" y="0" >
         <param name="class" value="LEG" />
         <param name="width" value="180" />
         <param name="label" value="E654321" />
         <param name="begin" value="8h30" />
-        <param name="end" value="16h30" />
+        <param name="end"   value="16h30" />
       </use>
     </g>
 
@@ -439,49 +490,49 @@
         <param name="width" value="1530" />
         <param name="label" value="M9026" />
         <param name="begin" value="17h25" />
-        <param name="end" value="18h55" />
+        <param name="end"   value="18h55" />
       </use>
       <use id="use_10_1" xlink:href="#leg" x="45" y="0" >
         <param name="class" value="LEG" />
         <param name="width" value="115" />
         <param name="label" value="9E3388" />
         <param name="begin" value="18h10" />
-        <param name="end" value="20h05" />
+        <param name="end"   value="20h05" />
       </use>
       <use id="use_10_2" xlink:href="#leg" x="245" y="0" >
         <param name="class" value="LEG" />
         <param name="width" value="84" />
         <param name="label" value="9E3463" />
         <param name="begin" value="21h30" />
-        <param name="end" value="22h54" />
+        <param name="end"   value="22h54" />
       </use>
       <use id="use_10_3" xlink:href="#leg" x="400" y="0" >
         <param name="class" value="LEG" />
         <param name="width" value="115" />
         <param name="label" value="9E3366" />
         <param name="begin" value="0h05" />
-        <param name="end" value="2h00" />
+        <param name="end"   value="2h00" />
       </use>
       <use id="use_10_4" xlink:href="#leg" x="530" y="0" >
         <param name="class" value="LAYOVER" />
         <param name="width" value="570" />
         <param name="label" value="layover" />
         <param name="begin" value="2h15" />
-        <param name="end" value="" />
+        <param name="end"   value=" " />
       </use>
       <use id="use_10_5" xlink:href="#leg" x="1130" y="0" >
         <param name="class" value="LEG" />
         <param name="width" value="171" />
         <param name="label" value="9E3521" />
         <param name="begin" value="12h15" />
-        <param name="end" value="15h06" />
+        <param name="end"   value="15h06" />
       </use>
       <use id="use_10_6" xlink:href="#leg" x="1423" y="0" >
         <param name="class" value="DEADHEAD" />
         <param name="width" value="92" />
         <param name="label" value="9E3375" />
         <param name="begin" value="17h08" />
-        <param name="end" value="18h40" />
+        <param name="end"   value="18h40" />
       </use>
     </g>
   </g>
