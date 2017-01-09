@@ -1,8 +1,15 @@
 TODO:
 
-display crewmember line.
+Create calendar menu with "initialize" and "set day start period" submenu.
+and draw the svg accordingly.
+
+
 
 show/hide (day color / day yyyy-mm-yy / day relative)
+
+
+display crewmember line.
+
 
 show/hide (hour color / hour label )
 
