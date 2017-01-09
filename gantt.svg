@@ -423,31 +423,31 @@
       <g class="start_period" transform="translate(0,0)">
         <use xlink:href="#day"/>
         <text class="day_label relative" x="720" y="-70" text-anchor="middle">Day 0</text>
-        <text class="day_label calendar" x="720" y="-20" text-anchor="middle">2003/08/05</text>
+        <text class="day_label yyyymmdd" x="720" y="-20" text-anchor="middle">2003/08/05</text>
         <use xlink:href="#hours"/>
       </g>
       <g class="even" transform="translate(1440,0)">
         <use xlink:href="#day"/>
         <text class="day_label relative" x="720" y="-70" text-anchor="middle">Day 1</text>
-        <text class="day_label calendar" x="720" y="-20" text-anchor="middle">2003/08/06</text>
+        <text class="day_label yyyymmdd" x="720" y="-20" text-anchor="middle">2003/08/06</text>
         <use xlink:href="#hours"/>
       </g>
       <g class="uneven" transform="translate(2880,0)">
         <use xlink:href="#day"/>
         <text class="day_label relative" x="720" y="-70" text-anchor="middle">Day 2</text>
-        <text class="day_label calendar" x="720" y="-20" text-anchor="middle">2003/08/07</text>
+        <text class="day_label yyyymmdd" x="720" y="-20" text-anchor="middle">2003/08/07</text>
         <use xlink:href="#hours"/>
       </g>
       <g class="even" transform="translate(4320,0)">
         <use xlink:href="#day"/>
         <text class="day_label relative" x="720" y="-70" text-anchor="middle">Day 3</text>
-        <text class="day_label calendar" x="720" y="-20" text-anchor="middle">2003/08/08</text>
+        <text class="day_label yyyymmdd" x="720" y="-20" text-anchor="middle">2003/08/08</text>
         <use xlink:href="#hours"/>
       </g>
       <g class="uneven" transform="translate(5760,0)">
         <use xlink:href="#day"/>
         <text class="day_label relative" x="720" y="-70" text-anchor="middle">Day 4</text>
-        <text class="day_label calendar" x="720" y="-20" text-anchor="middle">2003/08/09</text>
+        <text class="day_label yyyymmdd" x="720" y="-20" text-anchor="middle">2003/08/09</text>
         <use xlink:href="#hours"/>
       </g>
     </g>

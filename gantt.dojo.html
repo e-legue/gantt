@@ -39,7 +39,7 @@
       var tableContainerShowHide = new TableContainer({
         cols: 1,
         customClass:"labelsAndValues",
-        "labelWidth": "250"
+        "labelWidth": "300"
       });
 
       var item1 = new CheckBox({
@@ -80,10 +80,54 @@
         },
         label: "Show Calendar day hours",
       }, "chkShowHideCoordinates");
+      var item3 = new CheckBox({
+        id : "idShowHideCalendarDayRelative",
+        name: "IdShowHideCalendaDayRelative",
+        checked: true,
+        onChange: function(isChecked){  
+          var svg = dom.byId("graph").getSVGDocument();
+          var divs = svg.getElementsByClassName('relative');
+
+          if( isChecked ) {
+            for (var i = 0; i < divs.length; i++) {
+              divs[i].setAttribute("display", "block");
+            }
+          }
+          else {
+            for (var i = 0; i < divs.length; i++) {
+              divs[i].setAttribute("display", "none");
+            }
+          }
+        },
+        label: "Show Calendar relative day",
+      }, "chkShowHideCalendarDayRelative");
+      var item4 = new CheckBox({
+        id : "idShowHideCalendarDayYYYYMMDD",
+        name: "IdShowHideCalendaDayYYYYMMDD",
+        checked: true,
+        onChange: function(isChecked){  
+          var svg = dom.byId("graph").getSVGDocument();
+          var divs = svg.getElementsByClassName('yyyymmdd');
+
+          if( isChecked ) {
+            for (var i = 0; i < divs.length; i++) {
+              divs[i].setAttribute("display", "block");
+            }
+          }
+          else {
+            for (var i = 0; i < divs.length; i++) {
+              divs[i].setAttribute("display", "none");
+            }
+          }
+        },
+        label: "Show Calendar day YYYY-MM-DD",
+      }, "chkShowHideCalendarDayYYYYMMDD");
 
       // Add the four text boxes to the TableContainer
       tableContainerShowHide.addChild(item1);
       tableContainerShowHide.addChild(item2);
+      tableContainerShowHide.addChild(item3);
+      tableContainerShowHide.addChild(item4);
 
       // Start the table container. This initializes it and places
       // the child widgets in the correct place.
@@ -249,7 +293,7 @@
           myG.appendChild(myText1);
 
           var myText2 = document.createElementNS(svgNS,"text");
-          myText2.setAttributeNS(null,"class","day_label relative");
+          myText2.setAttributeNS(null,"class","day_label yyyymmdd");
           myText2.setAttributeNS(null,"x","720");
           myText2.setAttributeNS(null,"y","-20");
           var t2 = document.createTextNode(date.toISOString().substring(0, 10));
