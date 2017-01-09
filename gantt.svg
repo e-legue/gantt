@@ -408,137 +408,160 @@
 
   <g id="viewport">
     <!--
+    ====================================================================================
     CALENDAR
+    ====================================================================================
     -->
-    <g class="start_period" transform="translate(0,0)">
-      <use xlink:href="#day"/>
-      <text class="day_label" x="720" y="20" text-anchor="middle">Day 0</text>
-      <use xlink:href="#hours"/>
-    </g>
-    <g class="even" transform="translate(1440,0)">
-      <use xlink:href="#day"/>
-      <text class="day_label" x="720" y="20" text-anchor="middle">Day 1</text>
-      <use xlink:href="#hours"/>
-    </g>
-    <g class="uneven" transform="translate(2880,0)">
-      <use xlink:href="#day"/>
-      <text class="day_label" x="720" y="20" text-anchor="middle">Day 2</text>
-      <use xlink:href="#hours"/>
-    </g>
-    <g class="even" transform="translate(4320,0)">
-      <use xlink:href="#day"/>
-      <text class="day_label" x="720" y="20" text-anchor="middle">Day 3</text>
-      <use xlink:href="#hours"/>
-    </g>
-    <g class="uneven" transform="translate(5760,0)">
-      <use xlink:href="#day"/>
-      <text class="day_label" x="720" y="20" text-anchor="middle">Day 4</text>
-      <use xlink:href="#hours"/>
+    <g id="calendar">
+      <g class="start_period" transform="translate(0,0)">
+        <use xlink:href="#day"/>
+        <text class="day_label relative" x="720" y="20" text-anchor="middle">Day 0</text>
+        <text class="day_label calendar" x="720" y="40" text-anchor="middle">2003/08/05</text>
+        <use xlink:href="#hours"/>
+      </g>
+      <g class="even" transform="translate(1440,0)">
+        <use xlink:href="#day"/>
+        <text class="day_label relative" x="720" y="20" text-anchor="middle">Day 1</text>
+        <text class="day_label calendar" x="720" y="40" text-anchor="middle">2003/08/06</text>
+        <use xlink:href="#hours"/>
+      </g>
+      <g class="uneven" transform="translate(2880,0)">
+        <use xlink:href="#day"/>
+        <text class="day_label relative" x="720" y="20" text-anchor="middle">Day 2</text>
+        <text class="day_label calendar" x="720" y="40" text-anchor="middle">2003/08/07</text>
+        <use xlink:href="#hours"/>
+      </g>
+      <g class="even" transform="translate(4320,0)">
+        <use xlink:href="#day"/>
+        <text class="day_label relative" x="720" y="20" text-anchor="middle">Day 3</text>
+        <text class="day_label calendar" x="720" y="40" text-anchor="middle">2003/08/08</text>
+        <use xlink:href="#hours"/>
+      </g>
+      <g class="uneven" transform="translate(5760,0)">
+        <use xlink:href="#day"/>
+        <text class="day_label relative" x="720" y="20" text-anchor="middle">Day 4</text>
+        <text class="day_label calendar" x="720" y="40" text-anchor="middle">2003/08/09</text>
+        <use xlink:href="#hours"/>
+      </g>
     </g>
 
     <!--
-    ACTIVITIES
+    ====================================================================================
+    CREWMEMBERS
+    ====================================================================================
     -->
-    <use id="use_1" xlink:href="#activity" x="510" y="200" >
-      <param name="class" value="SBY" />
-      <param name="width" value="480" />
-      <param name="label" value="HSBY" />
-      <param name="begin" value="8h30" />
-      <param name="end"   value="16h30" />
-    </use>
-
-    <use id="use_2" xlink:href="#do" x="4320" y="300" >
-      <param name="label" value="DO" />
-    </use>
-
-    <use id="use_3" xlink:href="#activity" x="2910" y="200" >
-      <param name="class" value="TRN" />
-      <param name="width" value="480" />
-      <param name="label" value="TRN A320-1" />
-      <param name="begin" value="0h30" />
-      <param name="end"   value="8h30" />
-    </use>
-
-    <!-- trip + legs -->
-    <g transform="translate(1950,500)">
-      <use id="use_7" xlink:href="#activity" x="0" y="0" >
-        <param name="class" value="TRP" />
-        <param name="width" value="480" />
-        <param name="label" value="M9008" />
-        <param name="begin" value="8h30" />
-        <param name="end"   value="16h30" />
-      </use>
-      <use id="use_7_1" xlink:href="#leg" x="20" y="0" >
-        <param name="class" value="LEG" />
-        <param name="width" value="200" />
-        <param name="label" value="E123456" />
-        <param name="begin" value="8h30" />
-        <param name="end"   value="16h30" />
-      </use>
-      <use id="use_7_2" xlink:href="#leg" x="250" y="0" >
-        <param name="class" value="LEG" />
-        <param name="width" value="180" />
-        <param name="label" value="E654321" />
-        <param name="begin" value="8h30" />
-        <param name="end"   value="16h30" />
-      </use>
+    <g id="crewmembers">
     </g>
 
-    <g transform="translate(1045,700)">
-      <use id="use_10" xlink:href="#activity" x="0" y="0" >
-        <param name="class" value="TRP" />
-        <param name="width" value="1530" />
-        <param name="label" value="M9026" />
-        <param name="begin" value="17h25" />
-        <param name="end"   value="18h55" />
+    <!--
+    ====================================================================================
+    ACTIVITIES
+    ====================================================================================
+    -->
+    <g id="activities">
+      <use id="use_1" xlink:href="#activity" x="510" y="200" >
+        <param name="class" value="SBY" />
+        <param name="width" value="480" />
+        <param name="label" value="HSBY" />
+        <param name="begin" value="8h30" />
+        <param name="end"   value="16h30" />
       </use>
-      <use id="use_10_1" xlink:href="#leg" x="45" y="0" >
-        <param name="class" value="LEG" />
-        <param name="width" value="115" />
-        <param name="label" value="9E3388" />
-        <param name="begin" value="18h10" />
-        <param name="end"   value="20h05" />
+
+      <use id="use_2" xlink:href="#do" x="4320" y="300" >
+        <param name="label" value="DO" />
       </use>
-      <use id="use_10_2" xlink:href="#leg" x="245" y="0" >
-        <param name="class" value="LEG" />
-        <param name="width" value="84" />
-        <param name="label" value="9E3463" />
-        <param name="begin" value="21h30" />
-        <param name="end"   value="22h54" />
+
+      <use id="use_3" xlink:href="#activity" x="2910" y="200" >
+        <param name="class" value="TRN" />
+        <param name="width" value="480" />
+        <param name="label" value="TRN A320-1" />
+        <param name="begin" value="0h30" />
+        <param name="end"   value="8h30" />
       </use>
-      <use id="use_10_3" xlink:href="#leg" x="400" y="0" >
-        <param name="class" value="LEG" />
-        <param name="width" value="115" />
-        <param name="label" value="9E3366" />
-        <param name="begin" value="0h05" />
-        <param name="end"   value="2h00" />
-      </use>
-      <use id="use_10_4" xlink:href="#leg" x="530" y="0" >
-        <param name="class" value="LAYOVER" />
-        <param name="width" value="570" />
-        <param name="label" value="layover" />
-        <param name="begin" value="2h15" />
-        <param name="end"   value=" " />
-      </use>
-      <use id="use_10_5" xlink:href="#leg" x="1130" y="0" >
-        <param name="class" value="LEG" />
-        <param name="width" value="171" />
-        <param name="label" value="9E3521" />
-        <param name="begin" value="12h15" />
-        <param name="end"   value="15h06" />
-      </use>
-      <use id="use_10_6" xlink:href="#leg" x="1423" y="0" >
-        <param name="class" value="DEADHEAD" />
-        <param name="width" value="92" />
-        <param name="label" value="9E3375" />
-        <param name="begin" value="17h08" />
-        <param name="end"   value="18h40" />
-      </use>
+
+      <!-- trip + legs -->
+      <g transform="translate(1950,500)">
+        <use id="use_7" xlink:href="#activity" x="0" y="0" >
+          <param name="class" value="TRP" />
+          <param name="width" value="480" />
+          <param name="label" value="M9008" />
+          <param name="begin" value="8h30" />
+          <param name="end"   value="16h30" />
+        </use>
+        <use id="use_7_1" xlink:href="#leg" x="20" y="0" >
+          <param name="class" value="LEG" />
+          <param name="width" value="200" />
+          <param name="label" value="E123456" />
+          <param name="begin" value="8h30" />
+          <param name="end"   value="16h30" />
+        </use>
+        <use id="use_7_2" xlink:href="#leg" x="250" y="0" >
+          <param name="class" value="LEG" />
+          <param name="width" value="180" />
+          <param name="label" value="E654321" />
+          <param name="begin" value="8h30" />
+          <param name="end"   value="16h30" />
+        </use>
+      </g>
+
+      <g transform="translate(1045,700)">
+        <use id="use_10" xlink:href="#activity" x="0" y="0" >
+          <param name="class" value="TRP" />
+          <param name="width" value="1530" />
+          <param name="label" value="M9026" />
+          <param name="begin" value="17h25" />
+          <param name="end"   value="18h55" />
+        </use>
+        <use id="use_10_1" xlink:href="#leg" x="45" y="0" >
+          <param name="class" value="LEG" />
+          <param name="width" value="115" />
+          <param name="label" value="9E3388" />
+          <param name="begin" value="18h10" />
+          <param name="end"   value="20h05" />
+        </use>
+        <use id="use_10_2" xlink:href="#leg" x="245" y="0" >
+          <param name="class" value="LEG" />
+          <param name="width" value="84" />
+          <param name="label" value="9E3463" />
+          <param name="begin" value="21h30" />
+          <param name="end"   value="22h54" />
+        </use>
+        <use id="use_10_3" xlink:href="#leg" x="400" y="0" >
+          <param name="class" value="LEG" />
+          <param name="width" value="115" />
+          <param name="label" value="9E3366" />
+          <param name="begin" value="0h05" />
+          <param name="end"   value="2h00" />
+        </use>
+        <use id="use_10_4" xlink:href="#leg" x="530" y="0" >
+          <param name="class" value="LAYOVER" />
+          <param name="width" value="570" />
+          <param name="label" value="layover" />
+          <param name="begin" value="2h15" />
+          <param name="end"   value=" " />
+        </use>
+        <use id="use_10_5" xlink:href="#leg" x="1130" y="0" >
+          <param name="class" value="LEG" />
+          <param name="width" value="171" />
+          <param name="label" value="9E3521" />
+          <param name="begin" value="12h15" />
+          <param name="end"   value="15h06" />
+        </use>
+        <use id="use_10_6" xlink:href="#leg" x="1423" y="0" >
+          <param name="class" value="DEADHEAD" />
+          <param name="width" value="92" />
+          <param name="label" value="9E3375" />
+          <param name="begin" value="17h08" />
+          <param name="end"   value="18h40" />
+        </use>
+      </g>
     </g>
   </g>
 
   <!--
+  ====================================================================================
   COORDINATES
+  ====================================================================================
   -->
   <g id="coordinate">
     <text x="10" y="20" id="coordinateX" style="position:fixed;"> </text>
