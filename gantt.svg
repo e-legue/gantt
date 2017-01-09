@@ -25,6 +25,13 @@
   fill: blue;
 }
 
+.day_label {
+  text-anchor: middle; 
+  font-size: 40px;
+  fill: gray;
+}
+
+
 /* text inside a box */
 .label {
   fill: black;
@@ -361,7 +368,7 @@
       <rect class="day" x="0" y="0" width="1440"  height="2000"/>
     </g>
     <g id="hour">
-      <rect class="hour" x="0" y="100" width="60"  height="2000"/>
+      <rect class="hour" x="0" y="0" width="60"  height="2000"/>
     </g>
     <g id="hours">
       <use xlink:href="#hour" transform="translate(60,0)"/>
@@ -377,14 +384,14 @@
       <use xlink:href="#hour" transform="translate(1260,0)"/>
       <use xlink:href="#hour" transform="translate(1380,0)"/>
 
-      <text class="hour_label" x="0" y="120">0h</text>
-      <text class="hour_label" x="180" y="120">3h</text>
-      <text class="hour_label" x="360" y="120">6h</text>
-      <text class="hour_label" x="540" y="120">9h</text>
-      <text class="hour_label" x="720" y="120">12h</text>
-      <text class="hour_label" x="900" y="120">15h</text>
-      <text class="hour_label" x="1080" y="120">18h</text>
-      <text class="hour_label" x="1260" y="120">21h</text>
+      <text class="hour_label" x="0" y="20">0h</text>
+      <text class="hour_label" x="180" y="20">3h</text>
+      <text class="hour_label" x="360" y="20">6h</text>
+      <text class="hour_label" x="540" y="20">9h</text>
+      <text class="hour_label" x="720" y="20">12h</text>
+      <text class="hour_label" x="900" y="20">15h</text>
+      <text class="hour_label" x="1080" y="20">18h</text>
+      <text class="hour_label" x="1260" y="20">21h</text>
     </g>
     <g id="activity">
       <rect class="param(class)" x="0" y="0" rx="20" ry="20" width="param(width)" height="100" />
@@ -415,32 +422,32 @@
     <g id="calendar">
       <g class="start_period" transform="translate(0,0)">
         <use xlink:href="#day"/>
-        <text class="day_label relative" x="720" y="20" text-anchor="middle">Day 0</text>
-        <text class="day_label calendar" x="720" y="40" text-anchor="middle">2003/08/05</text>
+        <text class="day_label relative" x="720" y="-70" text-anchor="middle">Day 0</text>
+        <text class="day_label calendar" x="720" y="-20" text-anchor="middle">2003/08/05</text>
         <use xlink:href="#hours"/>
       </g>
       <g class="even" transform="translate(1440,0)">
         <use xlink:href="#day"/>
-        <text class="day_label relative" x="720" y="20" text-anchor="middle">Day 1</text>
-        <text class="day_label calendar" x="720" y="40" text-anchor="middle">2003/08/06</text>
+        <text class="day_label relative" x="720" y="-70" text-anchor="middle">Day 1</text>
+        <text class="day_label calendar" x="720" y="-20" text-anchor="middle">2003/08/06</text>
         <use xlink:href="#hours"/>
       </g>
       <g class="uneven" transform="translate(2880,0)">
         <use xlink:href="#day"/>
-        <text class="day_label relative" x="720" y="20" text-anchor="middle">Day 2</text>
-        <text class="day_label calendar" x="720" y="40" text-anchor="middle">2003/08/07</text>
+        <text class="day_label relative" x="720" y="-70" text-anchor="middle">Day 2</text>
+        <text class="day_label calendar" x="720" y="-20" text-anchor="middle">2003/08/07</text>
         <use xlink:href="#hours"/>
       </g>
       <g class="even" transform="translate(4320,0)">
         <use xlink:href="#day"/>
-        <text class="day_label relative" x="720" y="20" text-anchor="middle">Day 3</text>
-        <text class="day_label calendar" x="720" y="40" text-anchor="middle">2003/08/08</text>
+        <text class="day_label relative" x="720" y="-70" text-anchor="middle">Day 3</text>
+        <text class="day_label calendar" x="720" y="-20" text-anchor="middle">2003/08/08</text>
         <use xlink:href="#hours"/>
       </g>
       <g class="uneven" transform="translate(5760,0)">
         <use xlink:href="#day"/>
-        <text class="day_label relative" x="720" y="20" text-anchor="middle">Day 4</text>
-        <text class="day_label calendar" x="720" y="40" text-anchor="middle">2003/08/09</text>
+        <text class="day_label relative" x="720" y="-70" text-anchor="middle">Day 4</text>
+        <text class="day_label calendar" x="720" y="-20" text-anchor="middle">2003/08/09</text>
         <use xlink:href="#hours"/>
       </g>
     </g>

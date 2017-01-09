@@ -203,8 +203,66 @@
       var button2 = new Button({
         label: "OK",
         onClick: function(){
+          var start = dijit.byId("idCalendarStart");
+          var end   = dijit.byId("idCalendarEnd");
+          
 
-          dijit.byId("CalendarRangeDialog").hide();
+          if( start.get("value") != null && end.get("value") != null ) {
+            dijit.byId("CalendarRangeDialog").hide();
+
+            var range = Date.difference(start.get("value"), end.get("value"), "day");
+            var date = start.get("value");
+
+            var svg    = dom.byId("graph").getSVGDocument();
+            var insert = svg.getElementById("calendar");
+
+            // remove old calendar.
+            while (insert.firstChild) {
+              insert.removeChild(insert.firstChild);
+            }
+
+            var svgNS = "http://www.w3.org/2000/svg";
+            var xlinkNS = "http://www.w3.org/1999/xlink";
+
+            for(i = 0; i < range; i++) {
+//      <g class="start_period" transform="translate(0,0)">
+//        <use xlink:href="#day"/>
+//        <text class="day_label relative" x="720" y="20" text-anchor="middle">Day 0</text>
+//        <text class="day_label calendar" x="720" y="40" text-anchor="middle">2003/08/05</text>
+//        <use xlink:href="#hours"/>
+//      </g>
+          var myG = document.createElementNS(svgNS,"g");
+          myG.setAttributeNS(null,"transform","translate(" + 1440 * i + ",0)");
+          myG.setAttributeNS(null,"class", i % 2 ? "even" : "uneven" );
+          insert.appendChild(myG);
+          
+          var myUseDay = document.createElementNS(svgNS, "use");
+          myUseDay.setAttributeNS(xlinkNS, 'href', "#day");
+          myG.appendChild(myUseDay);
+
+          var myText1 = document.createElementNS(svgNS,"text");
+          myText1.setAttributeNS(null,"class","day_label relative");
+          myText1.setAttributeNS(null,"x","720");
+          myText1.setAttributeNS(null,"y","-70");
+          var t1 = document.createTextNode("Day " + i );
+          myText1.appendChild(t1);
+          myG.appendChild(myText1);
+
+          var myText2 = document.createElementNS(svgNS,"text");
+          myText2.setAttributeNS(null,"class","day_label relative");
+          myText2.setAttributeNS(null,"x","720");
+          myText2.setAttributeNS(null,"y","-20");
+          var t2 = document.createTextNode(date.toISOString().substring(0, 10));
+          myText2.appendChild(t2);
+          myG.appendChild(myText2);
+
+          var myUseHours = document.createElementNS(svgNS,"use");
+          myUseHours.setAttributeNS(xlinkNS, 'href', "#hours");
+          myG.appendChild(myUseHours);
+              
+              date = Date.add(date, "day", 1); 
+            }
+          }
         }
       });
 
@@ -268,7 +326,7 @@
       pSubMenu3.addChild(new MenuItem({
         label: "Create activity",
         onClick: function(){
-          var svg     = document.getElementById("graph").getSVGDocument();
+          var svg    = dom.byId("graph").getSVGDocument();
           var insert = svg.getElementById("activities");
 
           var svgNS = "http://www.w3.org/2000/svg";
