@@ -23,9 +23,11 @@
     "dijit/form/CheckBox",
     "dijit/form/TextBox",
     "dijit/form/Button",
+    "dijit/form/DateTextBox",
     "dojox/layout/TableContainer",
+    "dojo/date",
     "dojo/domReady!"
-    ], function(on, dom, domConstruct, MenuBar, PopupMenuBarItem, Menu, MenuItem, MenuBarItem, DropDownMenu,CheckedMenuItem, Dialog, CheckBox, TextBox, Button, TableContainer){
+    ], function(on, dom, domConstruct, MenuBar, PopupMenuBarItem, Menu, MenuItem, MenuBarItem, DropDownMenu,CheckedMenuItem, Dialog, CheckBox, TextBox, Button, DateTextBox, TableContainer, Date){
 
       // ===============================================
       // DIALOG
@@ -166,6 +168,65 @@
         style: "width: 500px"
       });
 
+      // -----------------------------------------------
+      // Calendar range set up dialog
+      // -----------------------------------------------
+      var tableContainerCalendarRange = new TableContainer({
+        cols: 1,
+        customClass:"labelsAndValues",
+        "labelWidth": "250"
+      });
+
+
+
+      var date1 = new DateTextBox({
+        id: "idCalendarStart",
+        name: "IdCalendarStart",
+        required: true,
+        label: "Start date",
+      });
+
+      var date2 = new DateTextBox({
+        id: "idCalendarEnd",
+        name: "IdCalendarEnd",
+        required: true,
+        label: "End date (excluded)",
+      });
+
+      on(dijit.byId("idCalendarStart"), "change", function(){
+        dijit.byId("idCalendarEnd").constraints.min = Date.add(this.get("value"), "day", 1);
+      });
+      on(dijit.byId("idCalendarEnd"), "change", function(){
+        dijit.byId("idCalendarStart").constraints.max = Date.add(this.get("value"), "day", -1);
+      });
+
+      var button2 = new Button({
+        label: "OK",
+        onClick: function(){
+
+          dijit.byId("CalendarRangeDialog").hide();
+        }
+      });
+
+
+      // Add the four text boxes to the TableContainer
+      tableContainerCalendarRange.addChild(date1);
+      tableContainerCalendarRange.addChild(date2);
+      tableContainerCalendarRange.addChild(button2);
+
+      // Start the table container. This initializes it and places
+      // the child widgets in the correct place.
+      tableContainerCalendarRange.startup();
+
+
+
+      var myCalendarRangeSetUpDialog = new Dialog({
+        id: "CalendarRangeDialog",
+        title: "Set up calender range dialog",
+        content: tableContainerCalendarRange,
+        style: "width: 500px"
+      });
+
 
       // ===============================================
       // Menu.
@@ -186,6 +247,22 @@
         label: "File",
         popup: pSubMenu
       }));
+
+      var pSubMenu4 = new DropDownMenu({});
+      pSubMenu4.addChild(new MenuItem({
+        label: "Range set up",
+        onClick: function(){
+          myCalendarRangeSetUpDialog.show();
+        }
+      }));
+      pSubMenu4.addChild(new MenuItem({
+        label: "Period start set up",
+      }));
+      pMenuBar.addChild(new PopupMenuBarItem({
+        label: "Calendar",
+        popup: pSubMenu4
+      }));
+
 
       var pSubMenu3 = new DropDownMenu({});
       pSubMenu3.addChild(new MenuItem({
