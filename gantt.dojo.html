@@ -269,18 +269,15 @@
         label: "Create activity",
         onClick: function(){
           var svg     = document.getElementById("graph").getSVGDocument();
-          var insert = svg.getElementById("viewport");
+          var insert = svg.getElementById("activities");
 
           var svgNS = "http://www.w3.org/2000/svg";
-
- //   <use id="use_2" xlink:href="#do" x="4320" y="300" >
- //     <param name="label" value="DO" />
- //   </use>
 
 //    <g transform="translate(4320,300)"><g id="use_2"><g id="do">
 //      <rect class="DO" x="0" y="0" rx="20" ry="20" width="1440" height="100"/>
 //      <text class="label" x="10" y="50" font-size="50" text-anchor="start" content-value="param(label)">DO</text>
 //    </g></g></g>
+
 
           var myG = document.createElementNS(svgNS,"g");
           myG.setAttributeNS(null,"transform","translate(0,500)");
