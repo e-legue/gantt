@@ -8,4 +8,10 @@ show/hide (hour color / hour label )
 
 show/hide (legs)
 
-save svg, and ask file name.
+done - save svg, and ask file name.
+       but the dialog should be reviewed.
+
+ref 
+http://stackoverflow.com/questions/11219973/how-to-upload-file-using-dojo
+
+
