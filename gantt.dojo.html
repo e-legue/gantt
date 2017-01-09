@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+  
+  <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dijit/themes/claro/claro.css">
+  
+  <script>dojoConfig = {async: true, parseOnLoad: true}</script>
+  <script src='http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dojo/dojo.js'></script>
+
+  <script>
+    require([
+    "dojo/on",
+    "dojo/dom",
+    "dojo/dom-construct",
+    "dijit/MenuBar",
+    "dijit/PopupMenuBarItem",
+    "dijit/Menu",
+    "dijit/MenuItem",
+    "dijit/MenuBarItem",
+    "dijit/DropDownMenu",
+    "dijit/CheckedMenuItem",
+    "dijit/Dialog",
+    "dijit/form/CheckBox",
+    "dijit/form/TextBox",
+    "dijit/form/Button",
+    "dojox/layout/TableContainer",
+    "dojo/domReady!"
+    ], function(on, dom, domConstruct, MenuBar, PopupMenuBarItem, Menu, MenuItem, MenuBarItem, DropDownMenu,CheckedMenuItem, Dialog, CheckBox, TextBox, Button, TableContainer){
+
+      // ===============================================
+      // DIALOG
+      // ===============================================
+
+      // -----------------------------------------------
+      // Show/Hide dialog
+      // -----------------------------------------------
+      var tableContainerShowHide = new TableContainer({
+        cols: 1,
+        customClass:"labelsAndValues",
+        "labelWidth": "250"
+      });
+
+      var item1 = new CheckBox({
+        id : "idShowHideCoordinates",
+        name: "IdShowHideCoordinates",
+        checked: true,
+        onChange: function(isChecked){
+          var svg = dom.byId("graph").getSVGDocument();
+          if( isChecked ) {
+            svg.getElementById("coordinateX").setAttribute("display", "block");
+            svg.getElementById("coordinateY").setAttribute("display", "block");
+          }
+          else {
+            svg.getElementById("coordinateX").setAttribute("display", "none");
+            svg.getElementById("coordinateY").setAttribute("display", "none");
+          }
+        },
+        label: "Show coordinates X and Y",
+      }, "chkShowHideCoordinates");
+      var item2 = new CheckBox({
+        id : "idShowHideCalendarHours",
+        name: "IdShowHideCalendarHours",
+        checked: true,
+        onChange: function(isChecked){  
+          var svg = dom.byId("graph").getSVGDocument();
+          var divs = svg.getElementsByClassName('hour_label');
+
+          if( isChecked ) {
+            for (var i = 0; i < divs.length; i++) {
+              divs[i].setAttribute("display", "block");
+            }
+          }
+          else {
+            for (var i = 0; i < divs.length; i++) {
+              divs[i].setAttribute("display", "none");
+            }
+          }
+        },
+        label: "Show Calendar day hours",
+      }, "chkShowHideCoordinates");
+
+      // Add the four text boxes to the TableContainer
+      tableContainerShowHide.addChild(item1);
+      tableContainerShowHide.addChild(item2);
+
+      // Start the table container. This initializes it and places
+      // the child widgets in the correct place.
+      tableContainerShowHide.startup();
+
+      var myShowHideDialog = new Dialog({
+        id: "ShowHideDialog",
+        title: "Show/Hide SVG items dialog",
+        content: tableContainerShowHide,
+        style: "width: 500px"
+      });
+
+
+      // -----------------------------------------------
+      // Save file dialog
+      // -----------------------------------------------
+      var tableContainerSaveFile = new TableContainer({
+        cols: 1,
+        customClass:"labelsAndValues",
+        "labelWidth": "250"
+      });
+
+      var text1 = new TextBox({
+        id: "idSaveFileName",
+        name: "IdSaveFileName",
+        label: "File name"
+      });
+
+      var button1 = new Button({
+        label: "Save",
+        onClick: function(){
+          // Do something:
+          console.log(text1.value);
+          var svg         = dom.byId("graph").getSVGDocument();
+          var a           = document.createElement('a');
+          var contentType = 'data:application/octet-stream,';
+
+          //get svg source.
+          var serializer = new XMLSerializer();
+          var source = serializer.serializeToString(svg);
+
+          //add name spaces.
+          /*
+          if(!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)){
+            source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+          }
+          if(!source.match(/^<svg[^>]+"http\:\/\/www\.w3\.org\/1999\/xlink"/)){
+            source = source.replace(/^<svg/, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
+          }
+          */
+
+          //add xml declaration
+          //      source = '<?xml version="1.0" standalone="no"?>\r\n' + source;
+
+          // TODO add a check to add .svg if necessary to text1.value.
+
+          var uriContent  = contentType + encodeURIComponent(source);
+
+          a.setAttribute('href', uriContent);
+          a.setAttribute('download', text1.value);
+
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+
+          dijit.byId("SaveFileDialog").hide();
+        }
+      });
+
+      // Add the four text boxes to the TableContainer
+      tableContainerSaveFile.addChild(text1);
+      tableContainerSaveFile.addChild(button1);
+
+      // Start the table container. This initializes it and places
+      // the child widgets in the correct place.
+      tableContainerSaveFile.startup();
+
+      var mySaveFileDialog = new Dialog({
+        id: "SaveFileDialog",
+        title: "Save SVG graph dialog",
+        content: tableContainerSaveFile,
+        style: "width: 500px"
+      });
+
+
+      // ===============================================
+      // Menu.
+      // ===============================================
+      var pMenuBar = new MenuBar({});
+
+      var pSubMenu = new DropDownMenu({});
+      pSubMenu.addChild(new MenuItem({
+        label: "Load file"
+      }));
+      pSubMenu.addChild(new MenuItem({
+        label: "Save file",
+        onClick: function(){
+          mySaveFileDialog.show();
+        }
+      }));
+      pMenuBar.addChild(new PopupMenuBarItem({
+        label: "File",
+        popup: pSubMenu
+      }));
+
+      var pSubMenu3 = new DropDownMenu({});
+      pSubMenu3.addChild(new MenuItem({
+        label: "Create activity",
+        onClick: function(){
+          var svg     = document.getElementById("graph").getSVGDocument();
+          var insert = svg.getElementById("viewport");
+
+          var svgNS = "http://www.w3.org/2000/svg";
+
+ //   <use id="use_2" xlink:href="#do" x="4320" y="300" >
+ //     <param name="label" value="DO" />
+ //   </use>
+
+//    <g transform="translate(4320,300)"><g id="use_2"><g id="do">
+//      <rect class="DO" x="0" y="0" rx="20" ry="20" width="1440" height="100"/>
+//      <text class="label" x="10" y="50" font-size="50" text-anchor="start" content-value="param(label)">DO</text>
+//    </g></g></g>
+
+          var myG = document.createElementNS(svgNS,"g");
+          myG.setAttributeNS(null,"transform","translate(0,500)");
+          myG.setAttributeNS(null,"id","do_1");
+          myG.setAttributeNS(null,"onclick","alert('click! do_1');");
+          insert.appendChild(myG);
+          var myRect = document.createElementNS(svgNS,"rect");
+          myRect.setAttributeNS(null,"class","DO");
+          myRect.setAttributeNS(null,"x","0");
+          myRect.setAttributeNS(null,"y","0");
+          myRect.setAttributeNS(null,"rx","20");
+          myRect.setAttributeNS(null,"ry","20");
+          myRect.setAttributeNS(null,"width","1440");
+          myRect.setAttributeNS(null,"height","100");
+          myG.appendChild(myRect);
+          var myText = document.createElementNS(svgNS,"text");
+          myText.setAttributeNS(null,"class","label");
+          myText.setAttributeNS(null,"x","10");
+          myText.setAttributeNS(null,"y","50");
+          myText.setAttributeNS(null,"font-size","50");
+          myText.setAttributeNS(null,"text-anchor","start");
+          var t = document.createTextNode("This is a paragraph.");
+          myText.appendChild(t);
+          myG.appendChild(myText);
+
+        }
+      }));
+      pSubMenu3.addChild(new MenuItem({
+        label: "Create crew",
+      }));
+      pMenuBar.addChild(new PopupMenuBarItem({
+        label: "Objects",
+        popup: pSubMenu3
+      }));
+
+
+      var pSubMenu2 = new DropDownMenu({});
+      pSubMenu2.addChild(new MenuItem({
+        label: "Cut",
+        iconClass: "dijitEditorIcon dijitEditorIconCut"
+      }));
+      pSubMenu2.addChild(new MenuItem({
+        label: "Copy",
+        iconClass: "dijitEditorIcon dijitEditorIconCopy"
+      }));
+      pSubMenu2.addChild(new MenuItem({
+        label: "Paste",
+        iconClass: "dijitEditorIcon dijitEditorIconPaste"
+      }));
+      pMenuBar.addChild(new PopupMenuBarItem({
+        label: "Edit",
+        popup: pSubMenu2
+      }));
+
+      pMenuBar.addChild(new MenuBarItem({
+        label: "Show/Hide",
+        onClick: function(){
+          myShowHideDialog.show();
+        }
+      }));
+
+      pMenuBar.placeAt("navMenu");
+      pMenuBar.startup();
+
+      // events
+      /*
+      var checkbox = dijit.byId("ShowHideCoordinates");
+      on(checkbox, "change", function(evt){
+        alert(evt);
+      });
+      /*
+      on(dijit.byId("ShowHideCoordinates"), "change", function(evt){
+        alert(evt);
+      });
+      */
+
+    });
+  </script>
+
+  <script>
+    if (window.addEventListener) {              
+      window.addEventListener("resize", browserResize);
+    } else if (window.attachEvent) {                 
+      window.attachEvent("onresize", browserResize);
+    }
+    browserResize();
+
+    // set the right height of the object holding the svg graph. for unknown reason, the width works well 
+    // with 100%, but not the height. So it needs to be evaluated each time the window size changes.
+    function browserResize() {
+      // the 8 comes from the margin (2 times) value on body, and margin-bottom (one time) on id navMenu.
+      document.getElementById("graph").height = window.innerHeight - 3 * 8 - document.getElementById("navMenu").offsetHeight;
+    }
+
+  </script>
+
+</head>
+<body class="claro" onload="browserResize()">
+  <div id="navMenu" style="margin-bottom: 8px;"></div>
+  
+  <!-- SVG code -->
+  <object id="graph" type="image/svg+xml" data="gantt.svg" width="100%">
+    Sorry, your browser does not support SVG.
+  </object>
+
+</body>
+</html>
