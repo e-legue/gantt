@@ -12,6 +12,8 @@
     "dojo/on",
     "dojo/dom",
     "dojo/dom-construct",
+    "dojo/parser",
+    "dijit/registry",
     "dijit/MenuBar",
     "dijit/PopupMenuBarItem",
     "dijit/Menu",
@@ -27,8 +29,8 @@
     "dojox/layout/TableContainer",
     "dojo/date",
     "dojo/domReady!"
-    ], function(on, dom, domConstruct, MenuBar, PopupMenuBarItem, Menu, MenuItem, MenuBarItem, DropDownMenu,CheckedMenuItem, Dialog, CheckBox, TextBox, Button, DateTextBox, TableContainer, Date){
-
+    ], function(on, dom, domConstruct, parser, registry, MenuBar, PopupMenuBarItem, Menu, MenuItem, MenuBarItem, DropDownMenu,CheckedMenuItem, Dialog, CheckBox, TextBox, Button, DateTextBox, TableContainer, Date){
+      parser.parse();
       // ===============================================
       // DIALOG
       // ===============================================
@@ -36,299 +38,166 @@
       // -----------------------------------------------
       // Show/Hide dialog
       // -----------------------------------------------
-      var tableContainerShowHide = new TableContainer({
-        cols: 1,
-        customClass:"labelsAndValues",
-        "labelWidth": "300"
-      });
+      registry.byId("SHCoordinates").on("change", function(isChecked){
+        var svg = dom.byId("graph").getSVGDocument();
+        if( isChecked ) {
+          svg.getElementById("coordinateX").setAttribute("display", "block");
+          svg.getElementById("coordinateY").setAttribute("display", "block");
+        }
+        else {
+          svg.getElementById("coordinateX").setAttribute("display", "none");
+          svg.getElementById("coordinateY").setAttribute("display", "none");
+        }
+      }, true);
+      
+      registry.byId("SHCalendarHours").on("change", function(isChecked){
+        var svg = dom.byId("graph").getSVGDocument();
+        var divs = svg.getElementsByClassName('hour_label');
 
-      var item1 = new CheckBox({
-        id : "idShowHideCoordinates",
-        name: "IdShowHideCoordinates",
-        checked: true,
-        onChange: function(isChecked){
-          var svg = dom.byId("graph").getSVGDocument();
-          if( isChecked ) {
-            svg.getElementById("coordinateX").setAttribute("display", "block");
-            svg.getElementById("coordinateY").setAttribute("display", "block");
+        if( isChecked ) {
+          for (var i = 0; i < divs.length; i++) {
+            divs[i].setAttribute("display", "block");
           }
-          else {
-            svg.getElementById("coordinateX").setAttribute("display", "none");
-            svg.getElementById("coordinateY").setAttribute("display", "none");
+        }
+        else {
+          for (var i = 0; i < divs.length; i++) {
+            divs[i].setAttribute("display", "none");
           }
-        },
-        label: "Show coordinates X and Y",
-      }, "chkShowHideCoordinates");
-      var item2 = new CheckBox({
-        id : "idShowHideCalendarHours",
-        name: "IdShowHideCalendarHours",
-        checked: true,
-        onChange: function(isChecked){  
-          var svg = dom.byId("graph").getSVGDocument();
-          var divs = svg.getElementsByClassName('hour_label');
+        }
+      }, true);
+      
+      registry.byId("SHCalendarDayX").on("change", function(isChecked){
+        var svg = dom.byId("graph").getSVGDocument();
+        var divs = svg.getElementsByClassName('relative');
 
-          if( isChecked ) {
-            for (var i = 0; i < divs.length; i++) {
-              divs[i].setAttribute("display", "block");
-            }
+        if( isChecked ) {
+          for (var i = 0; i < divs.length; i++) {
+            divs[i].setAttribute("display", "block");
           }
-          else {
-            for (var i = 0; i < divs.length; i++) {
-              divs[i].setAttribute("display", "none");
-            }
+        }
+        else {
+          for (var i = 0; i < divs.length; i++) {
+            divs[i].setAttribute("display", "none");
           }
-        },
-        label: "Show Calendar day hours",
-      }, "chkShowHideCoordinates");
-      var item3 = new CheckBox({
-        id : "idShowHideCalendarDayRelative",
-        name: "IdShowHideCalendaDayRelative",
-        checked: true,
-        onChange: function(isChecked){  
-          var svg = dom.byId("graph").getSVGDocument();
-          var divs = svg.getElementsByClassName('relative');
+        }
+      }, true);
+      
+      registry.byId("SHCalendarDayYYYYMMDD").on("change", function(isChecked){
+        var svg = dom.byId("graph").getSVGDocument();
+        var divs = svg.getElementsByClassName('yyyymmdd');
 
-          if( isChecked ) {
-            for (var i = 0; i < divs.length; i++) {
-              divs[i].setAttribute("display", "block");
-            }
+        if( isChecked ) {
+          for (var i = 0; i < divs.length; i++) {
+            divs[i].setAttribute("display", "block");
           }
-          else {
-            for (var i = 0; i < divs.length; i++) {
-              divs[i].setAttribute("display", "none");
-            }
+        }
+        else {
+          for (var i = 0; i < divs.length; i++) {
+            divs[i].setAttribute("display", "none");
           }
-        },
-        label: "Show Calendar relative day",
-      }, "chkShowHideCalendarDayRelative");
-      var item4 = new CheckBox({
-        id : "idShowHideCalendarDayYYYYMMDD",
-        name: "IdShowHideCalendaDayYYYYMMDD",
-        checked: true,
-        onChange: function(isChecked){  
-          var svg = dom.byId("graph").getSVGDocument();
-          var divs = svg.getElementsByClassName('yyyymmdd');
-
-          if( isChecked ) {
-            for (var i = 0; i < divs.length; i++) {
-              divs[i].setAttribute("display", "block");
-            }
-          }
-          else {
-            for (var i = 0; i < divs.length; i++) {
-              divs[i].setAttribute("display", "none");
-            }
-          }
-        },
-        label: "Show Calendar day YYYY-MM-DD",
-      }, "chkShowHideCalendarDayYYYYMMDD");
-
-      // Add the four text boxes to the TableContainer
-      tableContainerShowHide.addChild(item1);
-      tableContainerShowHide.addChild(item2);
-      tableContainerShowHide.addChild(item3);
-      tableContainerShowHide.addChild(item4);
-
-      // Start the table container. This initializes it and places
-      // the child widgets in the correct place.
-      tableContainerShowHide.startup();
-
-      var myShowHideDialog = new Dialog({
-        id: "ShowHideDialog",
-        title: "Show/Hide SVG items dialog",
-        content: tableContainerShowHide,
-        style: "width: 500px"
-      });
-
+        }
+      }, true);
 
       // -----------------------------------------------
       // Save file dialog
       // -----------------------------------------------
-      var tableContainerSaveFile = new TableContainer({
-        cols: 1,
-        customClass:"labelsAndValues",
-        "labelWidth": "250"
-      });
+      registry.byId("SaveFile").on("click", function(){
+        var svg         = dom.byId("graph").getSVGDocument();
+        var a           = document.createElement('a');
+        var contentType = 'data:application/octet-stream,';
 
-      var text1 = new TextBox({
-        id: "idSaveFileName",
-        name: "IdSaveFileName",
-        label: "File name"
-      });
+        //get svg source.
+        var serializer = new XMLSerializer();
+        var source = serializer.serializeToString(svg);
 
-      var button1 = new Button({
-        label: "Save",
-        onClick: function(){
-          // Do something:
-          console.log(text1.value);
-          var svg         = dom.byId("graph").getSVGDocument();
-          var a           = document.createElement('a');
-          var contentType = 'data:application/octet-stream,';
+        var uriContent  = contentType + encodeURIComponent(source);
 
-          //get svg source.
-          var serializer = new XMLSerializer();
-          var source = serializer.serializeToString(svg);
+        a.setAttribute('href', uriContent);
+        a.setAttribute('download', registry.byId("filename").value);
 
-          //add name spaces.
-          /*
-          if(!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)){
-            source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
-          }
-          if(!source.match(/^<svg[^>]+"http\:\/\/www\.w3\.org\/1999\/xlink"/)){
-            source = source.replace(/^<svg/, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
-          }
-          */
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
 
-          //add xml declaration
-          //      source = '<?xml version="1.0" standalone="no"?>\r\n' + source;
-
-          // TODO add a check to add .svg if necessary to text1.value.
-
-          var uriContent  = contentType + encodeURIComponent(source);
-
-          a.setAttribute('href', uriContent);
-          a.setAttribute('download', text1.value);
-
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-
-          dijit.byId("SaveFileDialog").hide();
-        }
-      });
-
-      // Add the four text boxes to the TableContainer
-      tableContainerSaveFile.addChild(text1);
-      tableContainerSaveFile.addChild(button1);
-
-      // Start the table container. This initializes it and places
-      // the child widgets in the correct place.
-      tableContainerSaveFile.startup();
-
-      var mySaveFileDialog = new Dialog({
-        id: "SaveFileDialog",
-        title: "Save SVG graph dialog",
-        content: tableContainerSaveFile,
-        style: "width: 500px"
-      });
+        SaveFileDialog.hide();
+      }, true);
 
       // -----------------------------------------------
       // Calendar range set up dialog
       // -----------------------------------------------
-      var tableContainerCalendarRange = new TableContainer({
-        cols: 1,
-        customClass:"labelsAndValues",
-        "labelWidth": "250"
-      });
+/*
+      registry.byId("CalendarStart").on("click", function(){
+        var end   = registry.byId("CalendarEnd");
+        end.constraints.min = Date.add(this.get("value"), "day", 1);
+      }, true);
+      
+      registry.byId("CalendarEnd").on("click", function(){
+        var start = registry.byId("CalendarStart");
+        start.constraints.max = Date.add(this.get("value"), "day", -1);
+      }, true);
+*/
+      registry.byId("SetCalendar").on("click", function(){
+        var start = registry.byId("CalendarStart");
+        var end   = registry.byId("CalendarEnd");
+        
 
+        if( start.get("value") != null && end.get("value") != null ) {
+          SetCalendarDialog.hide();
 
+          var range = Date.difference(start.get("value"), end.get("value"), "day");
+          var date = start.get("value");
 
-      var date1 = new DateTextBox({
-        id: "idCalendarStart",
-        name: "IdCalendarStart",
-        required: true,
-        label: "Start date",
-      });
+          var svg    = dom.byId("graph").getSVGDocument();
+          var insert = svg.getElementById("calendar");
 
-      var date2 = new DateTextBox({
-        id: "idCalendarEnd",
-        name: "IdCalendarEnd",
-        required: true,
-        label: "End date (excluded)",
-      });
+          // remove old calendar.
+          while (insert.firstChild) {
+            insert.removeChild(insert.firstChild);
+          }
 
-      on(dijit.byId("idCalendarStart"), "change", function(){
-        dijit.byId("idCalendarEnd").constraints.min = Date.add(this.get("value"), "day", 1);
-      });
-      on(dijit.byId("idCalendarEnd"), "change", function(){
-        dijit.byId("idCalendarStart").constraints.max = Date.add(this.get("value"), "day", -1);
-      });
+          var svgNS = "http://www.w3.org/2000/svg";
+          var xlinkNS = "http://www.w3.org/1999/xlink";
 
-      var button2 = new Button({
-        label: "OK",
-        onClick: function(){
-          var start = dijit.byId("idCalendarStart");
-          var end   = dijit.byId("idCalendarEnd");
-          
-
-          if( start.get("value") != null && end.get("value") != null ) {
-            dijit.byId("CalendarRangeDialog").hide();
-
-            var range = Date.difference(start.get("value"), end.get("value"), "day");
-            var date = start.get("value");
-
-            var svg    = dom.byId("graph").getSVGDocument();
-            var insert = svg.getElementById("calendar");
-
-            // remove old calendar.
-            while (insert.firstChild) {
-              insert.removeChild(insert.firstChild);
-            }
-
-            var svgNS = "http://www.w3.org/2000/svg";
-            var xlinkNS = "http://www.w3.org/1999/xlink";
-
-            for(i = 0; i < range; i++) {
+          for(i = 0; i < range; i++) {
 //      <g class="start_period" transform="translate(0,0)">
 //        <use xlink:href="#day"/>
 //        <text class="day_label relative" x="720" y="20" text-anchor="middle">Day 0</text>
 //        <text class="day_label calendar" x="720" y="40" text-anchor="middle">2003/08/05</text>
 //        <use xlink:href="#hours"/>
 //      </g>
-          var myG = document.createElementNS(svgNS,"g");
-          myG.setAttributeNS(null,"transform","translate(" + 1440 * i + ",0)");
-          myG.setAttributeNS(null,"class", i % 2 ? "even" : "uneven" );
-          insert.appendChild(myG);
-          
-          var myUseDay = document.createElementNS(svgNS, "use");
-          myUseDay.setAttributeNS(xlinkNS, 'href', "#day");
-          myG.appendChild(myUseDay);
+            var myG = document.createElementNS(svgNS,"g");
+            myG.setAttributeNS(null,"transform","translate(" + 1440 * i + ",0)");
+            myG.setAttributeNS(null,"class", i % 2 ? "even" : "uneven" );
+            insert.appendChild(myG);
 
-          var myText1 = document.createElementNS(svgNS,"text");
-          myText1.setAttributeNS(null,"class","day_label relative");
-          myText1.setAttributeNS(null,"x","720");
-          myText1.setAttributeNS(null,"y","-70");
-          var t1 = document.createTextNode("Day " + i );
-          myText1.appendChild(t1);
-          myG.appendChild(myText1);
+            var myUseDay = document.createElementNS(svgNS, "use");
+            myUseDay.setAttributeNS(xlinkNS, 'href', "#day");
+            myG.appendChild(myUseDay);
 
-          var myText2 = document.createElementNS(svgNS,"text");
-          myText2.setAttributeNS(null,"class","day_label yyyymmdd");
-          myText2.setAttributeNS(null,"x","720");
-          myText2.setAttributeNS(null,"y","-20");
-          var t2 = document.createTextNode(date.toISOString().substring(0, 10));
-          myText2.appendChild(t2);
-          myG.appendChild(myText2);
+            var myText1 = document.createElementNS(svgNS,"text");
+            myText1.setAttributeNS(null,"class","day_label relative");
+            myText1.setAttributeNS(null,"x","720");
+            myText1.setAttributeNS(null,"y","-70");
+            var t1 = document.createTextNode("Day " + i );
+            myText1.appendChild(t1);
+            myG.appendChild(myText1);
 
-          var myUseHours = document.createElementNS(svgNS,"use");
-          myUseHours.setAttributeNS(xlinkNS, 'href', "#hours");
-          myG.appendChild(myUseHours);
-              
-              date = Date.add(date, "day", 1); 
-            }
+            var myText2 = document.createElementNS(svgNS,"text");
+            myText2.setAttributeNS(null,"class","day_label yyyymmdd");
+            myText2.setAttributeNS(null,"x","720");
+            myText2.setAttributeNS(null,"y","-20");
+            var t2 = document.createTextNode(date.toISOString().substring(0, 10));
+            myText2.appendChild(t2);
+            myG.appendChild(myText2);
+
+            var myUseHours = document.createElementNS(svgNS,"use");
+            myUseHours.setAttributeNS(xlinkNS, 'href', "#hours");
+            myG.appendChild(myUseHours);
+
+            date = Date.add(date, "day", 1); 
           }
         }
       });
-
-
-      // Add the four text boxes to the TableContainer
-      tableContainerCalendarRange.addChild(date1);
-      tableContainerCalendarRange.addChild(date2);
-      tableContainerCalendarRange.addChild(button2);
-
-      // Start the table container. This initializes it and places
-      // the child widgets in the correct place.
-      tableContainerCalendarRange.startup();
-
-
-
-      var myCalendarRangeSetUpDialog = new Dialog({
-        id: "CalendarRangeDialog",
-        title: "Set up calender range dialog",
-        content: tableContainerCalendarRange,
-        style: "width: 500px"
-      });
-
 
       // ===============================================
       // Menu.
@@ -342,7 +211,7 @@
       pSubMenu.addChild(new MenuItem({
         label: "Save file",
         onClick: function(){
-          mySaveFileDialog.show();
+          SaveFileDialog.show();
         }
       }));
       pMenuBar.addChild(new PopupMenuBarItem({
@@ -354,7 +223,7 @@
       pSubMenu4.addChild(new MenuItem({
         label: "Range set up",
         onClick: function(){
-          myCalendarRangeSetUpDialog.show();
+          SetCalendarDialog.show();
         }
       }));
       pSubMenu4.addChild(new MenuItem({
@@ -437,7 +306,7 @@
       pMenuBar.addChild(new MenuBarItem({
         label: "Show/Hide",
         onClick: function(){
-          myShowHideDialog.show();
+          ShowHideDialog.show();
         }
       }));
 
@@ -484,6 +353,80 @@
   <object id="graph" type="image/svg+xml" data="gantt.svg" width="100%">
     Sorry, your browser does not support SVG.
   </object>
+  
+  <div data-dojo-type="dijit/Dialog" data-dojo-id="ShowHideDialog" title="Show/hide SVG items">
+    <table class="dijitDialogPaneContentArea">
+      <tr>
+        <td><label for="SHCoordinates">Show coordinates X and Y</label></td>
+        <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCoordinates" id="SHCoordinates" checked></td>
+      </tr>
+      <tr>
+        <td><label for="SHCalendarHours">Show calendar hours</label></td>
+        <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarHours" id="SHCalendarHours" checked></td>
+      </tr>
+      <tr>
+        <td><label for="SHCalendarDayX">Show calendar Day X</label></td>
+        <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarDayX" id="SHCalendarDayX" checked></td>
+      </tr>
+      <tr>
+        <td><label for="SHCalendarDayYYYYMMDD">Show calendar day YYYY-MM-DD</label></td>
+        <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarDayYYYYMMDD" id="SHCalendarDayYYYYMMDD" checked></td>
+      </tr>
+    </table>
 
-</body>
+    <div class="dijitDialogPaneActionBar">
+      <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){ShowHideDialog.hide();}" id="close">Close</button>
+    </div>
+  </div>
+
+
+  <div data-dojo-type="dijit/Dialog" data-dojo-id="SaveFileDialog" title="Save SVG graph as a file">
+    <table class="dijitDialogPaneContentArea">
+      <tr>
+        <td><label for="filename">Filename:</label></td>
+        <td><input data-dojo-type="dijit/form/TextBox" name="filename" id="filename" value=".svg" required="true"></td>
+      </tr>
+    </table>
+
+    <div class="dijitDialogPaneActionBar">
+      <button data-dojo-type="dijit/form/Button" type="submit" id="SaveFile">Save file</button>
+      <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){SaveFileDialog.hide();}" id="cancel">Cancel</button>
+    </div>
+  </div>
+
+
+  <div data-dojo-type="dijit/Dialog" data-dojo-id="SetCalendarDialog" title="Set calendar">
+    <table class="dijitDialogPaneContentArea">
+      <tr>
+        <td><label for="start">Start date</label></td>
+        <td><input data-dojo-id="from" data-dojo-type="dijit/form/DateTextBox" name="start" id="CalendarStart" required="true" onChange="to.constraints.min = arguments[0];"></td>
+      </tr>
+      <tr>
+        <td><label for="end">End date (excluded)</label></td>
+        <td><input data-dojo-id="to" data-dojo-type="dijit/form/DateTextBox" name="end" id="CalendarEnd" required="true" onChange="from.constraints.max = arguments[0];"></td>
+      </tr>
+    </table>
+
+    <div class="dijitDialogPaneActionBar">
+      <button data-dojo-type="dijit/form/Button" type="submit" id="SetCalendar">Set calendar</button>
+      <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){SetCalendarDialog.hide();}" id="cancel2">Cancel</button>
+    </div>
+  </div>
+
+
+  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateActivityDialog" title="Create an activity">
+    <table class="dijitDialogPaneContentArea">
+      <tr>
+        <td><label for="filename2">Filename:</label></td>
+        <td><input data-dojo-type="dijit/form/TextBox" name="filename2" id="filename2"></td>
+      </tr>
+    </table>
+
+    <div class="dijitDialogPaneActionBar">
+      <button data-dojo-type="dijit/form/Button" type="submit" id="save2">Save</button>
+      <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){CreateActivityDialog.hide();}" id="cancel3">Cancel</button>
+    </div>
+  </div>
+
+
 </html>
