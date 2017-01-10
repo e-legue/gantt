@@ -26,10 +26,32 @@
     "dijit/form/TextBox",
     "dijit/form/Button",
     "dijit/form/DateTextBox",
+    "dijit/layout/TabContainer", 
+    "dijit/layout/ContentPane", 
     "dojox/layout/TableContainer",
     "dojo/date",
     "dojo/domReady!"
-    ], function(on, dom, domConstruct, parser, registry, MenuBar, PopupMenuBarItem, Menu, MenuItem, MenuBarItem, DropDownMenu,CheckedMenuItem, Dialog, CheckBox, TextBox, Button, DateTextBox, TableContainer, Date){
+    ], function(on, 
+                dom, 
+                domConstruct, 
+                parser, 
+                registry, 
+                MenuBar, 
+                PopupMenuBarItem, 
+                Menu, 
+                MenuItem, 
+                MenuBarItem, 
+                DropDownMenu,
+                CheckedMenuItem, 
+                Dialog, 
+                CheckBox, 
+                TextBox, 
+                Button, 
+                DateTextBox, 
+                TabContainer,
+                ContentPane,
+                TableContainer, 
+                Date){
       parser.parse();
       // ===============================================
       // DIALOG
@@ -125,17 +147,17 @@
       // -----------------------------------------------
       // Calendar range set up dialog
       // -----------------------------------------------
-/*
-      registry.byId("CalendarStart").on("click", function(){
+
+      registry.byId("CalendarStart").on("change", function(){
         var end   = registry.byId("CalendarEnd");
         end.constraints.min = Date.add(this.get("value"), "day", 1);
       }, true);
       
-      registry.byId("CalendarEnd").on("click", function(){
+      registry.byId("CalendarEnd").on("change", function(){
         var start = registry.byId("CalendarStart");
         start.constraints.max = Date.add(this.get("value"), "day", -1);
       }, true);
-*/
+
       registry.byId("SetCalendar").on("click", function(){
         var start = registry.byId("CalendarStart");
         var end   = registry.byId("CalendarEnd");
@@ -239,6 +261,12 @@
       pSubMenu3.addChild(new MenuItem({
         label: "Create activity",
         onClick: function(){
+          CreateActivityDialog.show();
+        }
+      }));
+      pSubMenu3.addChild(new MenuItem({
+        label: "Create fix DO",
+        onClick: function(){
           var svg    = dom.byId("graph").getSVGDocument();
           var insert = svg.getElementById("activities");
 
@@ -276,6 +304,9 @@
 
         }
       }));
+
+
+
       pSubMenu3.addChild(new MenuItem({
         label: "Create crew",
       }));
@@ -354,7 +385,7 @@
     Sorry, your browser does not support SVG.
   </object>
   
-  <div data-dojo-type="dijit/Dialog" data-dojo-id="ShowHideDialog" title="Show/hide SVG items">
+  <div data-dojo-type="dijit/Dialog" data-dojo-id="ShowHideDialog" title="Show/hide SVG items" style="display: none;">
     <table class="dijitDialogPaneContentArea">
       <tr>
         <td><label for="SHCoordinates">Show coordinates X and Y</label></td>
@@ -380,7 +411,7 @@
   </div>
 
 
-  <div data-dojo-type="dijit/Dialog" data-dojo-id="SaveFileDialog" title="Save SVG graph as a file">
+  <div data-dojo-type="dijit/Dialog" data-dojo-id="SaveFileDialog" title="Save SVG graph as a file" style="display: none;">
     <table class="dijitDialogPaneContentArea">
       <tr>
         <td><label for="filename">Filename:</label></td>
@@ -395,15 +426,15 @@
   </div>
 
 
-  <div data-dojo-type="dijit/Dialog" data-dojo-id="SetCalendarDialog" title="Set calendar">
+  <div data-dojo-type="dijit/Dialog" data-dojo-id="SetCalendarDialog" title="Set calendar" style="display: none;">
     <table class="dijitDialogPaneContentArea">
       <tr>
         <td><label for="start">Start date</label></td>
-        <td><input data-dojo-id="from" data-dojo-type="dijit/form/DateTextBox" name="start" id="CalendarStart" required="true" onChange="to.constraints.min = arguments[0];"></td>
+        <td><input data-dojo-type="dijit/form/DateTextBox" name="start" id="CalendarStart" required="true"></td>
       </tr>
       <tr>
         <td><label for="end">End date (excluded)</label></td>
-        <td><input data-dojo-id="to" data-dojo-type="dijit/form/DateTextBox" name="end" id="CalendarEnd" required="true" onChange="from.constraints.max = arguments[0];"></td>
+        <td><input data-dojo-type="dijit/form/DateTextBox" name="end" id="CalendarEnd" required="true"></td>
       </tr>
     </table>
 
@@ -413,20 +444,62 @@
     </div>
   </div>
 
-
-  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateActivityDialog" title="Create an activity">
-    <table class="dijitDialogPaneContentArea">
-      <tr>
-        <td><label for="filename2">Filename:</label></td>
-        <td><input data-dojo-type="dijit/form/TextBox" name="filename2" id="filename2"></td>
-      </tr>
-    </table>
-
-    <div class="dijitDialogPaneActionBar">
-      <button data-dojo-type="dijit/form/Button" type="submit" id="save2">Save</button>
-      <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){CreateActivityDialog.hide();}" id="cancel3">Cancel</button>
+  <!-- http://archive.dojotoolkit.org/nightly/checkout/dijit/tests/layout/test_TabContainer.html -->
+<!--
+  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateActivityDialog" title="Create an activity" style="display: none;" >
+    <div data-dojo-type="dijit/layout/TabContainer" style="width: 400px;height: 20em;">
+        <div data-dojo-type="dijit/layout/ContentPane" title="My first tab" data-dojo-props="selected:true" style="height: 100%;">
+            Lorem ipsum and all around...
+        </div>
+        <div data-dojo-type="dijit/layout/ContentPane" title="My second tab" data-dojo-props="closable:true">
+            Lorem ipsum and all around - second...<br />
+            Hmmm expanding tabs......
+        </div>
+        <div data-dojo-type="dijit/layout/ContentPane" title="My last tab">
+            Lorem ipsum and all around - last...<br />
+            <br />
+            <br />
+            Hmmm even more expanding tabs......
+        </div>
+    </div>
+</div>
+-->
+  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateActivityDialog" title="Create an activity" style="display: none;">
+    <div data-dojo-type="dijit/layout/TabContainer" style="width: 900px; height: 20em;">
+      <div data-dojo-type="dijit/layout/ContentPane" title="Trip">
+        Lorem ipsum and all around - second...
+        <div class="dijitDialogPaneActionBar">
+          <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){CreateActivityDialog.hide();}">Cancel</button>
+        </div>
+      </div>
+      <div data-dojo-type="dijit/layout/ContentPane" title="Training">
+        Lorem ipsum and all around - last...
+        <div class="dijitDialogPaneActionBar">
+          <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){CreateActivityDialog.hide();}">Cancel</button>
+        </div>
+      </div>
+      <div data-dojo-type="dijit/layout/ContentPane" title="Other activity type">
+        Lorem ipsum and all around - last...
+        <div class="dijitDialogPaneActionBar">
+          <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){CreateActivityDialog.hide();}">Cancel</button>
+        </div>
+      </div>
+      <div data-dojo-type="dijit/layout/ContentPane" title="Day Off" data-dojo-props="selected:true">
+        <table class="dijitDialogPaneContentArea">
+          <tr>
+            <td><label for="start">Start date</label></td>
+            <td><input data-dojo-type="dijit/form/DateTextBox" name="start" id="CalendarStart2" required="true"></td>
+          </tr>
+          <tr>
+            <td><label for="end">End date (excluded)</label></td>
+            <td><input data-dojo-type="dijit/form/DateTextBox" name="end" id="CalendarEnd2" required="true"></td>
+          </tr>
+        </table>
+        <div class="dijitDialogPaneActionBar">
+          <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){CreateActivityDialog.hide();}">Cancel</button>
+        </div>
+      </div>
     </div>
   </div>
-
 
 </html>

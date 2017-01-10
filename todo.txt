@@ -21,4 +21,5 @@ done - save svg, and ask file name.
 ref 
 http://stackoverflow.com/questions/11219973/how-to-upload-file-using-dojo
 
-
+ref to extend svg tags...
+https://www.w3.org/TR/SVG/extend.html#AnExample
