@@ -5,65 +5,30 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="googlebot" content="noindex, nofollow">
 
-  
-  
-
-  
-  
-  
-
-  
-
-  <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/dojo/1.10.0/dojo/dojo.js" data-dojo-config="async: 1, isDebug: 1"></script>
-
-  
-
-  
-
-  
-
-  
-    <link rel="stylesheet" type="text/css" href="/css/result-light.css">
-  
-
-  
-
-  <style type="text/css">
-    body {
-    font-family: sans-serif;
-}
-  </style>
-
-  <title>remove all items in dstore</title>
-
-  
-</head>
-
-<body class="claro">
-  <div id="usersGrid"></div>
-<button id="reset">Remove All</button>
-  
-
-
-
-
-<script type='text/javascript'>//<![CDATA[
-
-require({
-    packages: [{
+  <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dijit/themes/claro/claro.css">
+ 
+  <script>
+var dojoConfig = {
+  async: true,
+  packages: [{
         name: 'dgrid',
-        location: '//cdn.rawgit.com/SitePen/dgrid/v0.4.0'
+        location: 'http://cdn.rawgit.com/SitePen/dgrid/v0.4.0'
     }, {
         name: 'dstore',
-        location: '//cdn.rawgit.com/SitePen/dstore/v1.0.0'
+        location: 'http://cdn.rawgit.com/SitePen/dstore/v1.0.0'
     }, {
         name: 'xstyle',
-        location: '//cdn.rawgit.com/kriszyp/xstyle/v0.2.1'
+        location: 'http://cdn.rawgit.com/kriszyp/xstyle/v0.2.1'
     }, {
         name: 'put-selector',
-        location: '//cdn.rawgit.com/kriszyp/put-selector/v0.3.6'
-    }]
-}, [
+        location: 'http://cdn.rawgit.com/kriszyp/put-selector/v0.3.6'
+  }]
+};
+  </script>
+  <script src='http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dojo/dojo.js'></script>
+
+  <script>
+    require([
     'dojo/dom',
     'dojo/on',
     'dojo/_base/declare',
@@ -110,19 +75,26 @@ require({
 		});
     });
 });
-//]]> 
 
-</script>
+  </script>
 
-  <script>
-  // tell the embed parent frame the height of the content
-  if (window.parent && window.parent.parent){
-    window.parent.parent.postMessage(["resultsFrame", {
-      height: document.body.getBoundingClientRect().height,
-      slug: "zz4mLw73"
-    }], "*")
-  }
-</script>
+  <style type="text/css">
+    body {
+    font-family: sans-serif;
+}
+  </style>
+
+  <title>remove all items in dstore</title>
+
+  
+</head>
+
+<body class="claro">
+  <div id="usersGrid"></div>
+  <button id="reset">Remove All</button>
+  
+
+
 
 </body>
 
