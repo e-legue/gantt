@@ -23,3 +23,9 @@ http://stackoverflow.com/questions/11219973/how-to-upload-file-using-dojo
 
 ref to extend svg tags...
 https://www.w3.org/TR/SVG/extend.html#AnExample
+
+http://archive.dojotoolkit.org/nightly/checkout/dijit/tests/layout/test_TabContainer.html
+
+
+dstore sur fiddle...
+http://jsfiddle.net/zz4mLw73/3/
