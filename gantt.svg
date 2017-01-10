@@ -1,7 +1,12 @@
 <?xml version="1.0" standalone="no"?>
 
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"
+[
+<!ENTITY % SVG.metadata.extra.content "|meta" >
+<!ELEMENT meta (#PCDATA) >
+<!ATTLIST meta name CDATA #REQUIRED>
+]
+>
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink">
   <style>
 .day {
@@ -574,6 +579,31 @@
     <text x="10" y="20" id="coordinateX" style="position:fixed;"> </text>
     <text x="10" y="40" id="coordinateY" style="position:fixed;"> </text>
   </g>
+
+  <!--
+  ====================================================================================
+  DSTORE
+  ====================================================================================
+  -->
+   <metadata>
+      <meta name="Name">Resistor</meta>
+      <meta name="Library">spice2vhd</meta>
+      <meta name="Architecture">SPICE</meta>
+   </metadata>
+   
+   <g class="Port">
+      <metadata>
+         <meta name="PortClass">terminal</meta>
+         <meta name="PortType">Electrical</meta>
+         <meta name="Name">P</meta>
+         <meta name="X">0</meta>
+         <meta name="Y">0</meta>
+      </metadata>
+      <!-- it works. -->
+      <!-- <text x="100" y="100" font-size="56" font-family="Arial" font-style="normal" fill="black">TIGIDOU</text> -->
+   </g>
+
+
  
   <!-- this script has to be inserted at the end of the document. --> 
   <script>
