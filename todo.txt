@@ -29,3 +29,7 @@ http://archive.dojotoolkit.org/nightly/checkout/dijit/tests/layout/test_TabConta
 
 dstore sur fiddle...
 http://jsfiddle.net/zz4mLw73/3/
+
+datetime picker dojo...
+http://jsfiddle.net/dacrazycoder/8sraoao9/
+

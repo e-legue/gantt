@@ -8,6 +8,17 @@
   <script src='http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dojo/dojo.js'></script>
 
   <script>
+
+    // set the right height of the object holding the svg graph. for unknown reason, the width works well 
+    // with 100%, but not the height. So it needs to be evaluated each time the window size changes.
+    function browserResize() {
+      // the 8 comes from the margin (2 times) value on body, and margin-bottom (one time) on id navMenu.
+      document.getElementById("graph").height = window.innerHeight - 3 * 8 - document.getElementById("navMenu").offsetHeight;
+    }
+
+
+
+
     require([
     "dojo/on",
     "dojo/dom",
@@ -32,27 +43,45 @@
     "dojo/date",
     "dojo/domReady!"
     ], function(on, 
-                dom, 
-                domConstruct, 
-                parser, 
-                registry, 
-                MenuBar, 
-                PopupMenuBarItem, 
-                Menu, 
-                MenuItem, 
-                MenuBarItem, 
-                DropDownMenu,
-                CheckedMenuItem, 
-                Dialog, 
-                CheckBox, 
-                TextBox, 
-                Button, 
-                DateTextBox, 
-                TabContainer,
-                ContentPane,
-                TableContainer, 
-                Date){
+    dom, 
+    domConstruct, 
+    parser, 
+    registry, 
+    MenuBar, 
+    PopupMenuBarItem, 
+    Menu, 
+    MenuItem, 
+    MenuBarItem, 
+    DropDownMenu,
+    CheckedMenuItem, 
+    Dialog, 
+    CheckBox, 
+    TextBox, 
+    Button, 
+    DateTextBox, 
+    TabContainer,
+    ContentPane,
+    TableContainer, 
+    Date){
+
+
+
       parser.parse();
+
+
+
+    if (window.addEventListener) {              
+      window.addEventListener("resize", browserResize);
+    } else if (window.attachEvent) {                 
+      window.attachEvent("onresize", browserResize);
+    }
+    browserResize();
+
+
+
+
+
+
       // ===============================================
       // DIALOG
       // ===============================================
@@ -149,13 +178,13 @@
       // -----------------------------------------------
 
       registry.byId("CalendarStart").on("change", function(){
-        var end   = registry.byId("CalendarEnd");
-        end.constraints.min = Date.add(this.get("value"), "day", 1);
+        registry.byId("CalendarEnd").constraints.min = Date.add(this.get("value"), "day", 1);
+        registry.byId("DayOffDate").constraints.min = this.get("value");
       }, true);
       
       registry.byId("CalendarEnd").on("change", function(){
-        var start = registry.byId("CalendarStart");
-        start.constraints.max = Date.add(this.get("value"), "day", -1);
+        registry.byId("CalendarStart").constraints.max = Date.add(this.get("value"), "day", -1);
+        registry.byId("DayOffDate").constraints.max = Date.add(this.get("value"), "day", -1);
       }, true);
 
       registry.byId("SetCalendar").on("click", function(){
@@ -221,52 +250,10 @@
         }
       });
 
-      // ===============================================
-      // Menu.
-      // ===============================================
-      var pMenuBar = new MenuBar({});
-
-      var pSubMenu = new DropDownMenu({});
-      pSubMenu.addChild(new MenuItem({
-        label: "Load file"
-      }));
-      pSubMenu.addChild(new MenuItem({
-        label: "Save file",
-        onClick: function(){
-          SaveFileDialog.show();
-        }
-      }));
-      pMenuBar.addChild(new PopupMenuBarItem({
-        label: "File",
-        popup: pSubMenu
-      }));
-
-      var pSubMenu4 = new DropDownMenu({});
-      pSubMenu4.addChild(new MenuItem({
-        label: "Range set up",
-        onClick: function(){
-          SetCalendarDialog.show();
-        }
-      }));
-      pSubMenu4.addChild(new MenuItem({
-        label: "Period start set up",
-      }));
-      pMenuBar.addChild(new PopupMenuBarItem({
-        label: "Calendar",
-        popup: pSubMenu4
-      }));
-
-
-      var pSubMenu3 = new DropDownMenu({});
-      pSubMenu3.addChild(new MenuItem({
-        label: "Create activity",
-        onClick: function(){
-          CreateActivityDialog.show();
-        }
-      }));
-      pSubMenu3.addChild(new MenuItem({
-        label: "Create fix DO",
-        onClick: function(){
+      // -----------------------------------------------
+      // Create Day Off dialog
+      // -----------------------------------------------
+      registry.byId("CreateDayOff").on("click", function(){
           var svg    = dom.byId("graph").getSVGDocument();
           var insert = svg.getElementById("activities");
 
@@ -277,9 +264,14 @@
 //      <text class="label" x="10" y="50" font-size="50" text-anchor="start" content-value="param(label)">DO</text>
 //    </g></g></g>
 
+        var start = registry.byId("CalendarStart");
+        var end   = registry.byId("DayOffDate");
+         
+          var range = Date.difference(start.get("value"), end.get("value"), "day");
+
 
           var myG = document.createElementNS(svgNS,"g");
-          myG.setAttributeNS(null,"transform","translate(0,500)");
+          myG.setAttributeNS(null,"transform","translate(" + range * 1440 + ",500)");
           myG.setAttributeNS(null,"id","do_1");
           myG.setAttributeNS(null,"onclick","alert('click! do_1');");
           insert.appendChild(myG);
@@ -298,88 +290,56 @@
           myText.setAttributeNS(null,"y","50");
           myText.setAttributeNS(null,"font-size","50");
           myText.setAttributeNS(null,"text-anchor","start");
-          var t = document.createTextNode("This is a paragraph.");
+          var t = document.createTextNode("DO");
           myText.appendChild(t);
           myG.appendChild(myText);
-
-        }
-      }));
-
-
-
-      pSubMenu3.addChild(new MenuItem({
-        label: "Create crew",
-      }));
-      pMenuBar.addChild(new PopupMenuBarItem({
-        label: "Objects",
-        popup: pSubMenu3
-      }));
-
-
-      var pSubMenu2 = new DropDownMenu({});
-      pSubMenu2.addChild(new MenuItem({
-        label: "Cut",
-        iconClass: "dijitEditorIcon dijitEditorIconCut"
-      }));
-      pSubMenu2.addChild(new MenuItem({
-        label: "Copy",
-        iconClass: "dijitEditorIcon dijitEditorIconCopy"
-      }));
-      pSubMenu2.addChild(new MenuItem({
-        label: "Paste",
-        iconClass: "dijitEditorIcon dijitEditorIconPaste"
-      }));
-      pMenuBar.addChild(new PopupMenuBarItem({
-        label: "Edit",
-        popup: pSubMenu2
-      }));
-
-      pMenuBar.addChild(new MenuBarItem({
-        label: "Show/Hide",
-        onClick: function(){
-          ShowHideDialog.show();
-        }
-      }));
-
-      pMenuBar.placeAt("navMenu");
-      pMenuBar.startup();
-
-      // events
-      /*
-      var checkbox = dijit.byId("ShowHideCoordinates");
-      on(checkbox, "change", function(evt){
-        alert(evt);
-      });
-      /*
-      on(dijit.byId("ShowHideCoordinates"), "change", function(evt){
-        alert(evt);
-      });
-      */
-
+      }, true);
     });
   </script>
 
-  <script>
-    if (window.addEventListener) {              
-      window.addEventListener("resize", browserResize);
-    } else if (window.attachEvent) {                 
-      window.attachEvent("onresize", browserResize);
-    }
-    browserResize();
-
-    // set the right height of the object holding the svg graph. for unknown reason, the width works well 
-    // with 100%, but not the height. So it needs to be evaluated each time the window size changes.
-    function browserResize() {
-      // the 8 comes from the margin (2 times) value on body, and margin-bottom (one time) on id navMenu.
-      document.getElementById("graph").height = window.innerHeight - 3 * 8 - document.getElementById("navMenu").offsetHeight;
-    }
-
-  </script>
-
 </head>
-<body class="claro" onload="browserResize()">
-  <div id="navMenu" style="margin-bottom: 8px;"></div>
+<body class="claro">
   
+  <div data-dojo-type="dijit/MenuBar" id="navMenu" style="margin-bottom: 8px;">
+    <div data-dojo-type="dijit/PopupMenuBarItem">
+      <span>File</span>
+      <div data-dojo-type="dijit/DropDownMenu" id="fileMenu">
+        <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true">Load SVG file</div>
+        <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){SaveFileDialog.show();}">Save SVG file</div>
+      </div>
+    </div>
+    <div data-dojo-type="dijit/PopupMenuBarItem">
+      <span>Calendar</span>
+      <div data-dojo-type="dijit/DropDownMenu" id="calendarMenu">
+        <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){SetCalendarDialog.show();}">Set [Start, End[</div>
+        <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true">Set start period(s)</div>
+      </div>
+    </div>
+    <div data-dojo-type="dijit/PopupMenuBarItem">
+      <span>Business objects</span>
+      <div data-dojo-type="dijit/DropDownMenu" id="businessObjectMenu">
+        <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true">Create crewmember</div>
+        <div data-dojo-type="dijit/PopupMenuItem">
+          <span>Create activity</span>
+          <div data-dojo-type="dijit/DropDownMenu" id="submenu2">
+            <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateDayOffDialog.show();}">Day off</div>
+            <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true">Trip</div>
+            <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateTrainingDialog.show();}">Training</div>
+            <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true">Other activity</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div data-dojo-type="dijit/PopupMenuBarItem">
+      <span>Graph options</span>
+      <div data-dojo-type="dijit/DropDownMenu" id="graphOptionMenu">
+        <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){ShowHideDialog.show();}">Calendar Date/Hours</div>
+        <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true">Activities</div>
+      </div>
+    </div>
+  </div>
+
+
   <!-- SVG code -->
   <object id="graph" type="image/svg+xml" data="gantt.svg" width="100%">
     Sorry, your browser does not support SVG.
@@ -406,7 +366,7 @@
     </table>
 
     <div class="dijitDialogPaneActionBar">
-      <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){ShowHideDialog.hide();}" id="close">Close</button>
+      <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){ShowHideDialog.hide();}">Close</button>
     </div>
   </div>
 
@@ -421,7 +381,7 @@
 
     <div class="dijitDialogPaneActionBar">
       <button data-dojo-type="dijit/form/Button" type="submit" id="SaveFile">Save file</button>
-      <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){SaveFileDialog.hide();}" id="cancel">Cancel</button>
+      <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){SaveFileDialog.hide();}">Cancel</button>
     </div>
   </div>
 
@@ -440,66 +400,47 @@
 
     <div class="dijitDialogPaneActionBar">
       <button data-dojo-type="dijit/form/Button" type="submit" id="SetCalendar">Set calendar</button>
-      <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){SetCalendarDialog.hide();}" id="cancel2">Cancel</button>
+      <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){SetCalendarDialog.hide();}">Cancel</button>
     </div>
   </div>
 
-  <!-- http://archive.dojotoolkit.org/nightly/checkout/dijit/tests/layout/test_TabContainer.html -->
-<!--
-  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateActivityDialog" title="Create an activity" style="display: none;" >
-    <div data-dojo-type="dijit/layout/TabContainer" style="width: 400px;height: 20em;">
-        <div data-dojo-type="dijit/layout/ContentPane" title="My first tab" data-dojo-props="selected:true" style="height: 100%;">
-            Lorem ipsum and all around...
-        </div>
-        <div data-dojo-type="dijit/layout/ContentPane" title="My second tab" data-dojo-props="closable:true">
-            Lorem ipsum and all around - second...<br />
-            Hmmm expanding tabs......
-        </div>
-        <div data-dojo-type="dijit/layout/ContentPane" title="My last tab">
-            Lorem ipsum and all around - last...<br />
-            <br />
-            <br />
-            Hmmm even more expanding tabs......
-        </div>
-    </div>
-</div>
--->
-  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateActivityDialog" title="Create an activity" style="display: none;">
-    <div data-dojo-type="dijit/layout/TabContainer" style="width: 900px; height: 20em;">
-      <div data-dojo-type="dijit/layout/ContentPane" title="Trip">
-        Lorem ipsum and all around - second...
-        <div class="dijitDialogPaneActionBar">
-          <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){CreateActivityDialog.hide();}">Cancel</button>
-        </div>
-      </div>
-      <div data-dojo-type="dijit/layout/ContentPane" title="Training">
-        Lorem ipsum and all around - last...
-        <div class="dijitDialogPaneActionBar">
-          <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){CreateActivityDialog.hide();}">Cancel</button>
-        </div>
-      </div>
-      <div data-dojo-type="dijit/layout/ContentPane" title="Other activity type">
-        Lorem ipsum and all around - last...
-        <div class="dijitDialogPaneActionBar">
-          <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){CreateActivityDialog.hide();}">Cancel</button>
-        </div>
-      </div>
-      <div data-dojo-type="dijit/layout/ContentPane" title="Day Off" data-dojo-props="selected:true">
-        <table class="dijitDialogPaneContentArea">
-          <tr>
-            <td><label for="start">Start date</label></td>
-            <td><input data-dojo-type="dijit/form/DateTextBox" name="start" id="CalendarStart2" required="true"></td>
-          </tr>
-          <tr>
-            <td><label for="end">End date (excluded)</label></td>
-            <td><input data-dojo-type="dijit/form/DateTextBox" name="end" id="CalendarEnd2" required="true"></td>
-          </tr>
-        </table>
-        <div class="dijitDialogPaneActionBar">
-          <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){CreateActivityDialog.hide();}">Cancel</button>
-        </div>
-      </div>
+
+  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateDayOffDialog" title="Create day off" style="display: none;">
+    <table class="dijitDialogPaneContentArea">
+      <tr>
+        <td><label for="day">Date</label></td>
+        <td><input data-dojo-type="dijit/form/DateTextBox" name="day" id="DayOffDate" required="true"></td>
+      </tr>
+    </table>
+
+    <div class="dijitDialogPaneActionBar">
+      <button data-dojo-type="dijit/form/Button" type="submit" id="CreateDayOff">Create</button>
+      <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){CreateDayOff.hide();}">Cancel</button>
     </div>
   </div>
+
+
+  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateTrainingDialog" title="Create training" style="display: none;">
+    <table class="dijitDialogPaneContentArea">
+      <tr>
+        <td><label for="name">Name</label></td>
+        <td><input data-dojo-type="dijit/form/TextBox" name="name" id="TrainingName" required="true"></td>
+      </tr>
+      <tr>
+        <td><label for="start">Date</label></td>
+        <td><input data-dojo-type="dijit/form/DateTextBox" name="day" id="DayOffDate" required="true"></td>
+      </tr>
+      <tr>
+        <td><label for="start">Time</label></td>
+        <td><input data-dojo-type="dijit/form/DateTextBox" name="day" id="DayOffDate" required="true"></td>
+      </tr>
+    </table>
+
+    <div class="dijitDialogPaneActionBar">
+      <button data-dojo-type="dijit/form/Button" type="submit" id="CreateDayOff">Create</button>
+      <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){CreateDayOff.hide();}">Cancel</button>
+    </div>
+  </div>
+
 
 </html>
