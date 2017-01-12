@@ -1,11 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"> 
+  <meta charset="UTF-8" /> 
   
-  <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dijit/themes/claro/claro.css">
-  
-  <script>dojoConfig = {async: true, parseOnLoad: true}</script>
+  <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dijit/themes/claro/claro.css" />
+  <script>
+var dojoConfig = {
+  async: true,
+  parseOnLoad: true,
+  packages: [{
+//        name: 'dgrid',
+//        location: 'http://cdn.rawgit.com/SitePen/dgrid/v0.4.0'
+//    }, {
+        name: 'dstore',
+        location: 'http://cdn.rawgit.com/SitePen/dstore/v1.0.0'
+    }, {
+        name: 'dmodel',
+        location: 'http://cdn.rawgit.com/SitePen/dmodel/master'
+//    }, {
+//        name: 'xstyle',
+//        location: 'http://cdn.rawgit.com/kriszyp/xstyle/v0.2.1'
+//    }, {
+//        name: 'put-selector',
+//        location: 'http://cdn.rawgit.com/kriszyp/put-selector/v0.3.6'
+  }]
+};
+  </script>
+
   <script src='http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dojo/dojo.js'></script>
 
   <script>
@@ -23,6 +44,7 @@ function SVG_drawCalendarDate(calendarId, iDate, date){
   var G       = document.createElementNS(svgNS,"g");
   G.setAttributeNS(null,"transform","translate(" + 1440 * iDate + ",0)");
   G.setAttributeNS(null,"class", iDate % 2 ? "even" : "uneven" );
+  G.setAttributeNS(null,"id", date);
   calendarId.appendChild(G);
 
   var UseDay = document.createElementNS(svgNS, "use");
@@ -44,7 +66,7 @@ function SVG_drawCalendarDate(calendarId, iDate, date){
   TextYYYYMMDDDate.setAttributeNS(null,"y","-20");
   G.appendChild(TextYYYYMMDDDate);
   
-  var TextNodeYYYYMMDDDate = document.createTextNode(date.toISOString().substring(0, 10));
+  var TextNodeYYYYMMDDDate = document.createTextNode(date);
   TextYYYYMMDDDate.appendChild(TextNodeYYYYMMDDDate);
 
   var UseHours = document.createElementNS(svgNS,"use");
@@ -105,7 +127,10 @@ require([
   "dijit/layout/TabContainer", 
   "dijit/layout/ContentPane", 
   "dojox/layout/TableContainer",
+  "dojox/widget/MultiSelectCalendar",
   "dojo/date",
+  "dstore/Memory",
+  "dmodel/Model",
   "dojo/domReady!"
 ], function(
   on, 
@@ -128,7 +153,10 @@ require([
   TabContainer,
   ContentPane,
   TableContainer, 
-  Date){
+  MultiSelectCalendar,
+  Date,
+  Memory,
+  Model){
 
   parser.parse();
 
@@ -138,6 +166,9 @@ require([
     window.attachEvent("onresize", browserResize);
   }
   browserResize();
+
+  // for every object created, this value should be incremeted.
+  var indexDStoreObject = 0;
 
 
 
@@ -268,11 +299,61 @@ require([
       }
 
       for(i = 0; i < range; i++) {
-        SVG_drawCalendarDate(calendarId, i, date);
+        SVG_drawCalendarDate(calendarId, i, date.toISOString().substring(0, 10));
         date = Date.add(date, "day", 1); 
       }
+
+      // constraints are not supported...
+      // registry.byId("CalendarStartPeriods").constraints.min = start; 
+      // registry.byId("CalendarStartPeriods").constraints.max = Date.add(end, "day", -1);
+
+      // enabled some menu items.
+      registry.byId("FileSaveMenu").set('disabled', false);
+      registry.byId("CalendarSetStartPeriodsMenu").set('disabled', false);
+      registry.byId("BusinessObjectMenu").set('disabled', false);
+      registry.byId("GraphOptionMenu").set('disabled', false);
+      registry.byId("HighlightsMenu").set('disabled', false);
     }
   });
+
+  registry.byId("SetStartPeriods").on("click", function(){
+    var svg      = dom.byId("graph").getSVGDocument();
+
+    // remove old start period                         
+    var oldStarts = svg.getElementsByClassName('start_period_uneven');
+    for (var i = 0; i < oldStarts.length; i++) {
+      oldStarts[i].setAttribute("class", "uneven");
+    }
+    var oldStarts2 = svg.getElementsByClassName('start_period_even');
+    for (var i = 0; i < oldStarts2.length; i++) {
+      oldStarts2[i].setAttribute("class", "even");
+    }
+
+    // install new start period.                         
+    var starts    = registry.byId("CalendarStartPeriods").get("value");
+    var start     = registry.byId("CalendarStart").get("value");
+    var start_str = start.toISOString().substring(0, 10);
+    var end_str   = registry.byId("CalendarEnd").get("value").toISOString().substring(0, 10);
+ 
+    var calendarId = svg.getElementById("calendar");
+
+    for(i = 0; i < starts.length; i++) {
+      var current = starts[i];
+
+      if( current >= start_str && current < end_str ){
+        var id = svg.getElementById(current);                        
+        var currentClassName = id.getAttribute("class"); // className; // getAttribute("class");
+        var newClassName = "start_period_" + currentClassName;
+        
+        id.setAttribute("class", newClassName);
+      }
+    }
+
+                         
+    SetStartPeriodsDialog.hide();
+
+  });
+
 
   // -----------------------------------------------
   // Create Day Off dialog
@@ -294,39 +375,48 @@ require([
     <div data-dojo-type="dijit/PopupMenuBarItem">
       <span>File</span>
       <div data-dojo-type="dijit/DropDownMenu" id="fileMenu">
-        <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true">Load SVG file</div>
-        <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){SaveFileDialog.show();}">Save SVG file</div>
+        <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true, onClick:function(){alert('not yet available');}">Load SVG file</div>
+        <div id="FileSaveMenu" data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true, onClick:function(){SaveFileDialog.show();}">Save SVG file</div>
       </div>
     </div>
     <div data-dojo-type="dijit/PopupMenuBarItem">
       <span>Calendar</span>
       <div data-dojo-type="dijit/DropDownMenu" id="calendarMenu">
         <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){SetCalendarDialog.show();}">Set [Start, End[</div>
-        <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true">Set start period(s)</div>
+        <div id="CalendarSetStartPeriodsMenu" data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true, onClick:function(){SetStartPeriodsDialog.show();}">Set start period(s)</div>
       </div>
     </div>
-    <div data-dojo-type="dijit/PopupMenuBarItem">
+    <div id="BusinessObjectMenu" data-dojo-type="dijit/PopupMenuBarItem" data-dojo-props="disabled:true">
       <span>Business objects</span>
       <div data-dojo-type="dijit/DropDownMenu" id="businessObjectMenu">
-        <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true">Create crewmember</div>
+        <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateCrewMemberDialog.show();}">Create crewmember</div>
         <div data-dojo-type="dijit/PopupMenuItem">
           <span>Create activity</span>
           <div data-dojo-type="dijit/DropDownMenu" id="submenu2">
             <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateDayOffDialog.show();}">Day off</div>
-            <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true">Trip</div>
-            <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateTrainingDialog.show();}">Training</div>
-            <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true">Other activity</div>
+            <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true, onClick:function(){alert('not yet available');}">Trip</div>
+            <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true, onClick:function(){CreateTrainingDialog.show();}">Training</div>
+            <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true, onClick:function(){alert('not yet available');}">Other activity</div>
           </div>
         </div>
       </div>
     </div>
-    <div data-dojo-type="dijit/PopupMenuBarItem">
+    <div id="GraphOptionMenu" data-dojo-type="dijit/PopupMenuBarItem" data-dojo-props="disabled:true">
       <span>Graph options</span>
       <div data-dojo-type="dijit/DropDownMenu" id="graphOptionMenu">
         <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){ShowHideDialog.show();}">Calendar Date/Hours</div>
-        <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true">Activities</div>
+        <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true, onClick:function(){alert('not yet available');}">Activities</div>
       </div>
     </div>
+    <div id="HighlightsMenu" data-dojo-type="dijit/PopupMenuBarItem" data-dojo-props="disabled:true">
+      <span>Highlights</span>
+      <div data-dojo-type="dijit/DropDownMenu" id="highlightsMenu">
+        <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true, onClick:function(){alert('not yet available');}">Specific date(s)</div>
+        <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true, onClick:function(){alert('not yet available');}">Distance</div>
+        <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true, onClick:function(){alert('not yet available');}">Window</div>
+      </div>
+    </div>
+
   </div>
 
 
@@ -395,6 +485,19 @@ require([
   </div>
 
 
+  <div data-dojo-type="dijit/Dialog" data-dojo-id="SetStartPeriodsDialog" title="Set start period(s)" style="display: none;">
+    <table class="dijitDialogPaneContentArea">
+      <tr>
+        <td><div dojoType="dojox.widget.MultiSelectCalendar" id="CalendarStartPeriods" style="display:inline-block"></div></td>
+      </tr>
+    </table>
+
+    <div class="dijitDialogPaneActionBar">
+      <button data-dojo-type="dijit/form/Button" type="submit" id="SetStartPeriods">Set</button>
+    </div>
+  </div>
+
+
   <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateDayOffDialog" title="Create day off" style="display: none;">
     <table class="dijitDialogPaneContentArea">
       <tr>
@@ -405,7 +508,6 @@ require([
 
     <div class="dijitDialogPaneActionBar">
       <button data-dojo-type="dijit/form/Button" type="submit" id="CreateDayOff">Create</button>
-      <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){CreateDayOffDialog.hide();}">Cancel</button>
     </div>
   </div>
 
@@ -428,9 +530,27 @@ require([
 
     <div class="dijitDialogPaneActionBar">
       <button data-dojo-type="dijit/form/Button" type="submit" id="CreateDayOff">Create</button>
-      <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){CreateDayOff.hide();}">Cancel</button>
     </div>
   </div>
+
+
+  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateCrewMemberDialog" title="Create crew member" style="display: none;">
+    <table class="dijitDialogPaneContentArea">
+      <tr>
+        <td><label for="name">Name</label></td>
+        <td><input data-dojo-type="dijit/form/TextBox" name="name" id="CrewMemberName" required="true"></td>
+      </tr>
+      <tr>
+        <td><label for="start">Birth date</label></td>
+        <td><input data-dojo-type="dijit/form/DateTextBox" name="day" id="CrewMemberBirthDate" required="true"></td>
+      </tr>
+    </table>
+
+    <div class="dijitDialogPaneActionBar">
+      <button data-dojo-type="dijit/form/Button" type="submit" id="CreateCrewMember">Create</button>
+    </div>
+  </div>
+
 
 
 </html>
