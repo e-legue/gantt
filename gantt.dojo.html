@@ -48,6 +48,8 @@ require([
   "dojo/date",
   "dstore/Memory",
   "dmodel/Model",
+  "dojox/gfx",
+  "dojox/gfx/svg_attach",
   "dojo/domReady!"
 ], function(
   on, 
@@ -74,7 +76,9 @@ require([
   TableContainer, 
   Date,
   Memory,
-  Model){
+  Model,
+  gfx,
+  svg_attach){
 
   parser.parse();
 
@@ -102,10 +106,34 @@ require([
   // ===============================================
   // SVG drawing
   // ===============================================
+  var graph   = svg_attach.attachSurface(dom.byId("graph").getSVGDocument().activeElement); 
   var svgNS   = "http://www.w3.org/2000/svg";
   var xlinkNS = "http://www.w3.org/1999/xlink";
 
+  graph.createRect({ x: 100, y: 50, width: 200, height: 100 })
+.setFill("yellow")
+.setStroke("blue");
+
   function SVG_drawCalendarDate(calendarId, iDate, date){
+    if(1) {
+    // Create a group
+    var group = graph.createGroup().setTransform({dx: 1440 * iDate, dy: 0});
+//      .setClass(iDate % 2 ? "uneven" : "even");
+
+    // Add a shape directly to the group instead of the surface
+//    var rectShape = group.createRect({ x: 0, y: 0, width: 200, height: 100 }) .setFill("#0000ae");
+    
+    group.createText({ x: 720, y: -70, text: "Day " + iDate})
+          .setFont({ family: "Arial", size: "20pt", weight: "bold" }) //set font
+    .setFill("blue");
+    group.createText({ x: 720, y: -20, text: date})
+          .setFont({ family: "Arial", size: "20pt", weight: "bold" }) //set font
+    .setFill("blue");
+    }
+    else
+    {
+
+
     var G       = document.createElementNS(svgNS,"g");
     G.setAttributeNS(null,"transform","translate(" + 1440 * iDate + ",0)");
     G.setAttributeNS(null,"class", iDate % 2 ? "even" : "uneven" );
@@ -137,6 +165,7 @@ require([
     var UseHours = document.createElementNS(svgNS,"use");
     UseHours.setAttributeNS(xlinkNS, 'href', "#hours");
     G.appendChild(UseHours);
+    }
   }
 
 
@@ -589,7 +618,5 @@ require([
       <button data-dojo-type="dijit/form/Button" type="submit" id="CreateCrewMember">Create</button>
     </div>
   </div>
-
-
 
 </html>
