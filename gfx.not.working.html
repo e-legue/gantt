@@ -50,7 +50,9 @@ require([
   "dstore/Memory",
   "dstore/Trackable",
   "dmodel/Model",
-  "dmodel/ComputedProperty",
+  "dojox/gfx",
+  "dojox/gfx/svg",
+  "dojox/gfx/svg_attach",
   "dojo/domReady!"
 ], function(
   declare,
@@ -80,7 +82,9 @@ require([
   Memory,
   Trackable,
   Model,
-  ComputedProperty){
+  gfx,
+  SVG,
+  svg_attach){
 
   parser.parse();
 
@@ -109,18 +113,52 @@ require([
   // SVG drawing
   // ===============================================
   var svg     = dom.byId("graph").getSVGDocument();
+  var graph   = svg_attach.attachSurface(dom.byId("graph").getSVGDocument().activeElement); 
+  // var graph   = SVG.attachSurface(dom.byId("graph").getSVGDocument().activeElement); 
   var svgNS   = "http://www.w3.org/2000/svg";
   var xlinkNS = "http://www.w3.org/1999/xlink";
 
+  graph.createRect({id: "rect1",  x: 100, y: 50, width: 200, height: 100 })
+.setFill("yellow")
+.setStroke("blue");
+  
+var cal = graph.createCircle({id: "circ1", cx: 500, cy: 100, r: 30}).setStroke("green").setFill("blue");
+/*
+Rect({ x: 500, y: 200, width: 200, height: 100 })
+.setFill("green")
+.setStroke("pink");
+*/
+
+var i = 10;
+
   function SVG_drawCalendarDate(item){
+    if(1) {
+      // Create a group
+      var calendar = graph.byId("calendar");
+
+//    var calendarGroup = graph.createGroup(); //.setTransform({dx: 1440 * item.position, dy: 0});
+//      .setClass(iDate % 2 ? "uneven" : "even");
+
+    // Add a shape directly to the group instead of the surface
+    var rectShape = graph.createRect({ x: item.postion * 1440, y: 0, width: 200, height: 100 }) .setFill("#0000ae");
+
+/*    
+  graph.createText({ x: 1440 * item.position + 720, y: -70, text: "Day " + item.relative})
+          .setFont({ family: "Arial", size: "20pt", weight: "bold" }) //set font
+    .setFill("blue");
+    graph.createText({ x: 1440 * item.position + 720, y: -20, text: item.label})
+          .setFont({ family: "Arial", size: "20pt", weight: "bold" }) //set font
+    .setFill("blue");*/
+    }
+    else
+    {
+
     var calendarId = svg.getElementById("calendar");
 
     var G       = document.createElementNS(svgNS,"g");
     G.setAttributeNS(null,"transform","translate(" + 1440 * item.position + ",0)");
-    G.setAttributeNS(null,"class", item.position % 2 ? "uneven" : "even");
-    G.setAttributeNS(null,"id", "cd" + item.position);
-    /*G.setAttributeNS(null,"class", item.property('class'));
-    G.setAttributeNS(null,"id", item.property('id'));*/
+    G.setAttributeNS(null,"class", item.position % 2 ? "uneven" : "even" );
+    G.setAttributeNS(null,"id", item.position);
     calendarId.appendChild(G);
 
     var UseDay = document.createElementNS(svgNS, "use");
@@ -148,6 +186,7 @@ require([
     var UseHours = document.createElementNS(svgNS,"use");
     UseHours.setAttributeNS(xlinkNS, 'href', "#hours");
     G.appendChild(UseHours);
+    }
   }
 
 
@@ -189,25 +228,13 @@ require([
 
   var TrackableMemory = declare([Memory, Trackable]);
 
-  var CalendarModel = declare([Model({
+  CalendarModel = new Model({
     schema: {
       label: 'string',
       relative: 'numeric',
       position: 'numeric',
-      class: new ComputedProperty({
-        dependsOn: ['position'],
-        getValue: function(position){
-          return position % 2 ? "uneven" : "even";
-        }
-      }),
-      id: new ComputedProperty({ 
-        dependsOn: ['position'],
-        getValue: function(position){
-          return "cd" + position;
-        }
-      })
     }
-  })]);
+  });
 
   CalendarStore = new TrackableMemory({
     model: CalendarModel,
@@ -219,13 +246,8 @@ require([
   });
 
   CalendarStore.on('delete', function(event){
-    console.log("ondelete");
-    console.log(event.target);
-
-    var item = svg.getElementById("cd" + event.target.position);
+    var item=dom.byId(event.target.position);
     
-    console.log(item);
-
     item.parentNode.removeChild(item);
   });
 
@@ -343,29 +365,32 @@ require([
       var range = Date.difference(start.get("value"), end.get("value"), "day");
       var date = start.get("value");
 
-      var intro = svg.getElementById('intro');
-      if(intro){
-        intro.parentNode.removeChild(intro);
-      } 
-
+/*
+      // remove old calendar.
+      while (calendarId.firstChild) {
+        calendarId.removeChild(calendarId.firstChild);
+      }
+      */
+      // CalendarStore = new TrackableMemory();
+      //CalendarStore.removeAll()
+      /*forEach(function(item){
+        console.log(item);
+      //  CalendarStore.remove(item.position);
+    });
+                  });
+    */
       CalendarStore.fetch().then(function (users){
         for (var i = users.length - 1; i >= 0; i--) {
           CalendarStore.remove(users[i].position);
         }
       });        
       for(i = 0; i < range; i++) {
-        CalendarStore.add(new CalendarModel({
-          label: date.toISOString().substring(0, 10),
-          relative: i,
-          position: i
-          }));
-/*
         CalendarStore.add({
           label: date.toISOString().substring(0, 10),
           relative: i,
           position: i
         });
-*/
+
         date = Date.add(date, "day", 1); 
       }
 
@@ -395,18 +420,25 @@ require([
       registry.byId("HighlightsMenu").set('disabled', false);
     }
   });
-  
-  // Redraw start periods
+
   registry.byId("SetStartPeriods").on("click", function(){
 
     // remove old start period                         
-    var oldStarts = svg.getElementsByClassName('start_period');
+    var oldStarts = svg.getElementsByClassName('start_period_uneven');
     for (var i = 0; i < oldStarts.length; i++) {
-//      oldStarts[i].setAttribute("class", item.position % 2 ? "uneven" : "even" );
+      oldStarts[i].setAttribute("class", "uneven");
+    }
+    var oldStarts2 = svg.getElementsByClassName('start_period_even');
+    for (var i = 0; i < oldStarts2.length; i++) {
+      oldStarts2[i].setAttribute("class", "even");
     }
 
-
-/* 
+    // install new start period.                         
+    var starts    = registry.byId("CalendarStartPeriods").get("value");
+    var start     = registry.byId("CalendarStart").get("value");
+    var start_str = start.toISOString().substring(0, 10);
+    var end_str   = registry.byId("CalendarEnd").get("value").toISOString().substring(0, 10);
+ 
     for(i = 0; i < starts.length; i++) {
       var current = starts[i];
 
@@ -418,7 +450,7 @@ require([
         id.setAttribute("class", newClassName);
       }
     }
-*/
+
                          
     SetStartPeriodsDialog.hide();
 

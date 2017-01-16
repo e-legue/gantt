@@ -12,7 +12,7 @@
 .day {
   fill-opacity: 0.2;
 }
-.start_period_even, .start_period_uneven {
+.start_period {
   fill: green;
 }
 .start_period_day:hover {
@@ -407,7 +407,7 @@
     ====================================================================================
     -->
     <g id="calendar">
-      <text class="uneven" x="100" y="50" style="fill:black;font-size:40p">To start, please load a file or set up a calendar through the menu.</text>
+      <text id="intro" x="100" y="50" style="fill:black;font-size:40p">To start, please load a file or set up a calendar through the menu.</text>
     </g>
 
     <!--
