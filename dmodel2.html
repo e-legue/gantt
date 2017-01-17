@@ -50,7 +50,8 @@ var dojoConfig = {
 
 
   console.log('tigidou');
-var model = new (declare(Model, {
+// var model = new (declare(Model, {
+  var CalendarModel = declare(Model, {
 				schema: {
                                         
       label: 'string',
@@ -69,50 +70,73 @@ var model = new (declare(Model, {
         }
       }),
 
-
-					firstName: 'string',
-					lastName: 'string',
-					name: new ComputedProperty({
-						dependsOn: ['firstName', 'lastName'],
-						getValue: function (firstName, lastName) {
-							return firstName + ' ' + lastName;
-						},
-						setValue: function (value, parent) {
-							var parts = value.split(' ');
-							parent.set('firstName', parts[0]);
-							parent.set('lastName', parts[1]);
-						}
-					}),
-					birthDate: new ComputedProperty({
-						dependsOn: ['birthDate'],
-						getValue: function (birthDate) {
-							return new Date(birthDate);
-						},
-						setValue: function (value, parent) {
-							return parent[this.name] = value.getTime();
-						}
-					})
 				},
 				validateOnSet: false
-			}))({ label: 'toto',
+			});
+
+   var obj1 = new CalendarModel({ label: 'toto',
                               relative: 10,
                               position: 100,
-				firstName: 'John',
-				lastName: 'Doe'
 			});
-			var updatedName;
-			var nameProperty = model.property('name');
-			var nameUpdateCount = 0;
-			nameProperty.observe(function (name) {
-				updatedName = name;
-				nameUpdateCount++;
+
+                        console.log(obj1);
+                        console.log(obj1.get('label'));
+                        console.log(obj1.get('position'));
+                        console.log(obj1.get('class'));
+
+   var obj2 = new CalendarModel({ label: 'titi',
+                              relative: 11,
+                              position: 101,
 			});
-			console.log(nameProperty.valueOf());
-                        console.log('John Doe');
-                        console.log(model);
-                        console.log(model.get('label'));
-                        console.log(model.get('position'));
-                        console.log(model.get('class'));
+
+                        console.log(obj2);
+                        console.log(obj2.get('label'));
+                        console.log(obj2.get('position'));
+                        console.log(obj2.get('class'));
+
+   var obj3 = new CalendarModel({ label: 'tutu',
+                              relative: 12,
+                              position: 102,
+			});
+
+                        console.log(obj3);
+                        console.log(obj3.get('label'));
+                        console.log(obj3.get('position'));
+                        console.log(obj3.get('class'));
+
+
+    var TrackableMemory = declare([ Memory, Trackable ]);
+
+
+  var calendarStore = new TrackableMemory({
+    Model: CalendarModel,
+    idProperty: "position",
+  });
+
+  calendarStore.addSync(obj1);
+  calendarStore.addSync(obj2);
+  calendarStore.addSync(obj3);
+  calendarStore.addSync({label:'tata', relative:13, position:103 });
+  console.log(calendarStore);
+  console.log(calendarStore.getSync(103));
+  var obj103 =  calendarStore.getSync(103);
+  console.log(obj103.get('label'));
+  console.log(obj103.get('class'));
+
+
+  
+
+
+
+
+
+
+
+
+
+/*
+ 
+
 /*
                         assert.strictEqual(nameUpdateCount, 1);
 			model.set('firstName', 'Jane');
