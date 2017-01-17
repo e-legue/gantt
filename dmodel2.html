@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="googlebot" content="noindex, nofollow">
+
+  <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dijit/themes/claro/claro.css">
+ 
+  <script>
+var dojoConfig = {
+  async: true,
+  packages: [{
+        name: 'dgrid',
+        location: 'http://cdn.rawgit.com/SitePen/dgrid/v0.4.0'
+    }, {
+        name: 'dstore',
+        location: 'http://cdn.rawgit.com/SitePen/dstore/v1.0.0'
+  }, {
+    name: 'dmodel',
+    location: 'http://cdn.rawgit.com/SitePen/dmodel/master'
+    }, {
+        name: 'xstyle',
+        location: 'http://cdn.rawgit.com/kriszyp/xstyle/v0.2.1'
+    }, {
+        name: 'put-selector',
+        location: 'http://cdn.rawgit.com/kriszyp/put-selector/v0.3.6'
+  }]
+};
+  </script>
+  <script src='http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dojo/dojo.js'></script>
+
+  <script>
+
+    require([
+    'dojo/dom',
+    'dojo/on',
+    'dojo/_base/declare',
+    'dgrid/OnDemandGrid',
+    'dstore/Memory',
+    'dstore/Trackable',
+    'dmodel/Model',
+    "dmodel/ComputedProperty",
+    'dojo/domReady!'
+], function (dom, on, declare, OnDemandGrid, Memory, Trackable, Model, ComputedProperty) {
+   
+ console.log('tigidou');
+
+
+
+
+  console.log('tigidou');
+var model = new (declare(Model, {
+				schema: {
+                                        
+      label: 'string',
+      relative: 'numeric',
+      position: 'numeric',
+      class: new ComputedProperty({
+        dependsOn: ['position'],
+        getValue: function(position){
+          return position % 2 ? "uneven" : "even";
+        }
+      }),
+      ident: new ComputedProperty({ 
+        dependsOn: ['position'],
+        getValue: function(position){
+          return "cd" + position;
+        }
+      }),
+
+
+					firstName: 'string',
+					lastName: 'string',
+					name: new ComputedProperty({
+						dependsOn: ['firstName', 'lastName'],
+						getValue: function (firstName, lastName) {
+							return firstName + ' ' + lastName;
+						},
+						setValue: function (value, parent) {
+							var parts = value.split(' ');
+							parent.set('firstName', parts[0]);
+							parent.set('lastName', parts[1]);
+						}
+					}),
+					birthDate: new ComputedProperty({
+						dependsOn: ['birthDate'],
+						getValue: function (birthDate) {
+							return new Date(birthDate);
+						},
+						setValue: function (value, parent) {
+							return parent[this.name] = value.getTime();
+						}
+					})
+				},
+				validateOnSet: false
+			}))({ label: 'toto',
+                              relative: 10,
+                              position: 100,
+				firstName: 'John',
+				lastName: 'Doe'
+			});
+			var updatedName;
+			var nameProperty = model.property('name');
+			var nameUpdateCount = 0;
+			nameProperty.observe(function (name) {
+				updatedName = name;
+				nameUpdateCount++;
+			});
+			console.log(nameProperty.valueOf());
+                        console.log('John Doe');
+                        console.log(model);
+                        console.log(model.get('label'));
+                        console.log(model.get('position'));
+                        console.log(model.get('class'));
+/*
+                        assert.strictEqual(nameUpdateCount, 1);
+			model.set('firstName', 'Jane');
+			assert.strictEqual(updatedName, 'Jane Doe');
+			assert.strictEqual(nameUpdateCount, 2);
+			var updatedName2;
+			var handle = model.observe('name', function (name) {
+				updatedName2 = name;
+			});
+			assert.strictEqual(updatedName2, 'Jane Doe');
+
+			model.set('lastName', 'Smith');
+			assert.strictEqual(updatedName, 'Jane Smith');
+			assert.strictEqual(updatedName2, 'Jane Smith');
+			assert.strictEqual(nameUpdateCount, 3);
+			handle.remove();
+
+			model.set({
+				firstName: 'John',
+				lastName: 'Doe'
+			});
+			assert.strictEqual(updatedName, 'John Doe');
+			assert.strictEqual(updatedName2, 'Jane Smith');
+			assert.strictEqual(nameUpdateCount, 4);
+			model.set('name', 'Adam Smith');
+			assert.strictEqual(updatedName, 'Adam Smith');
+			assert.strictEqual(model.get('firstName'), 'Adam');
+			assert.strictEqual(model.get('lastName'), 'Smith');
+			assert.strictEqual(nameUpdateCount, 5);
+			assert.strictEqual(updatedName2, 'Jane Smith');
+			var then = new Date(1000000);
+			model.set('birthDate', then);
+			assert.strictEqual(model.get('birthDate').getTime(), 1000000);
+			var updatedDate, now = new Date();
+			model.observe('birthDate', function (newDate) {
+				updatedDate = newDate;
+			});
+			model.set('birthDate', now);
+			assert.strictEqual(updatedDate.getTime(), now.getTime());*/
+    });
+
+  </script>
+
+
+  <title>remove all items in dstore</title>
+
+  
+</head>
+
+<body class="claro">
+
+</body>
+
+</html>
+
+
