@@ -116,11 +116,9 @@ require([
     var calendarId = svg.getElementById("calendar");
 
     var G       = document.createElementNS(svgNS,"g");
-    G.setAttributeNS(null,"transform","translate(" + 1440 * item.position + ",0)");
-    G.setAttributeNS(null,"class", item.position % 2 ? "uneven" : "even");
-    G.setAttributeNS(null,"id", "cd" + item.position);
-    /*G.setAttributeNS(null,"class", item.property('class'));
-    G.setAttributeNS(null,"id", item.property('id'));*/
+    G.setAttributeNS(null,"transform","translate(" + 1440 * item.get('position') + ",0)");
+    G.setAttributeNS(null,"class", item.get('class'));
+    G.setAttributeNS(null,"id", item.get('ident'));
     calendarId.appendChild(G);
 
     var UseDay = document.createElementNS(svgNS, "use");
@@ -133,7 +131,7 @@ require([
     TextRelativeDate.setAttributeNS(null,"y","-70");
     G.appendChild(TextRelativeDate);
 
-    var TextNodeRelativeDate = document.createTextNode("Day " + item.relative );
+    var TextNodeRelativeDate = document.createTextNode("Day " + item.get('relative') );
     TextRelativeDate.appendChild(TextNodeRelativeDate);
 
     var TextYYYYMMDDDate = document.createElementNS(svgNS,"text");
@@ -142,7 +140,7 @@ require([
     TextYYYYMMDDDate.setAttributeNS(null,"y","-20");
     G.appendChild(TextYYYYMMDDDate);
     
-    var TextNodeYYYYMMDDDate = document.createTextNode(item.label);
+    var TextNodeYYYYMMDDDate = document.createTextNode(item.get('label'));
     TextYYYYMMDDDate.appendChild(TextNodeYYYYMMDDDate);
 
     var UseHours = document.createElementNS(svgNS,"use");
@@ -189,7 +187,7 @@ require([
 
   var TrackableMemory = declare([Memory, Trackable]);
 
-  var CalendarModel = declare([Model({
+  var CalendarModel = declare(Model, {
     schema: {
       label: 'string',
       relative: 'numeric',
@@ -200,32 +198,37 @@ require([
           return position % 2 ? "uneven" : "even";
         }
       }),
-      id: new ComputedProperty({ 
+      ident: new ComputedProperty({ 
         dependsOn: ['position'],
         getValue: function(position){
           return "cd" + position;
         }
-      })
-    }
-  })]);
+      }),
+    },
+    validateOnSet: false
+  });
 
-  CalendarStore = new TrackableMemory({
-    model: CalendarModel,
+
+  var calendarStore = new TrackableMemory({
+    Model: CalendarModel,
     idProperty: "position",
   });
 
-  CalendarStore.on('add', function(event){
+  calendarStore.on('add', function(event){
     SVG_drawCalendarDate(event.target);
   });
 
-  CalendarStore.on('delete', function(event){
-    console.log("ondelete");
-    console.log(event.target);
-
-    var item = svg.getElementById("cd" + event.target.position);
+  calendarStore.on('update', function(event){
+    var item = svg.getElementById(event.target.get('ident'));
     
-    console.log(item);
+    item.parentNode.removeChild(item);
 
+    SVG_drawCalendarDate(event.target);
+  });
+
+  calendarStore.on('delete', function(event){
+    var item = svg.getElementById(event.target.get('ident'));
+    
     item.parentNode.removeChild(item);
   });
 
@@ -348,24 +351,18 @@ require([
         intro.parentNode.removeChild(intro);
       } 
 
-      CalendarStore.fetch().then(function (users){
+      calendarStore.fetch().then(function (users){
         for (var i = users.length - 1; i >= 0; i--) {
-          CalendarStore.remove(users[i].position);
+          calendarStore.remove(users[i].position);
         }
       });        
       for(i = 0; i < range; i++) {
-        CalendarStore.add(new CalendarModel({
+        calendarStore.addSync({
           label: date.toISOString().substring(0, 10),
           relative: i,
           position: i
-          }));
-/*
-        CalendarStore.add({
-          label: date.toISOString().substring(0, 10),
-          relative: i,
-          position: i
-        });
-*/
+          });
+
         date = Date.add(date, "day", 1); 
       }
 
@@ -382,8 +379,8 @@ require([
         selectbox.remove(i);
       }
 
-      dojo.forEach(CalendarStore.data, function(item) {
-        addOption(selectbox, item.label, item.position);
+      dojo.forEach(calendarStore.data, function(item) {
+        addOption(selectbox, item.get('label'), item.get('position'));
       });
 
 
@@ -398,14 +395,14 @@ require([
   
   // Redraw start periods
   registry.byId("SetStartPeriods").on("click", function(){
+    var newStarts = registry.byId("CalendarStartPeriods").value;
 
-    // remove old start period                         
-    var oldStarts = svg.getElementsByClassName('start_period');
-    for (var i = 0; i < oldStarts.length; i++) {
-//      oldStarts[i].setAttribute("class", item.position % 2 ? "uneven" : "even" );
+    if(newStarts.length > 0 ){
+      calendarStore.forEach(function(item){
+        item.set('relative', item.get('position') - newStarts[0]);
+        calendarStore.put(item);
+        });
     }
-
-
 /* 
     for(i = 0; i < starts.length; i++) {
       var current = starts[i];
