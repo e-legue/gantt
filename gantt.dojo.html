@@ -148,6 +148,23 @@ require([
     G.appendChild(UseHours);
   }
 
+  function SVG_drawCrewMember(item){
+    var crewMemberId = svg.getElementById("crewmembers");
+
+    var G = document.createElementNS(svgNS,"g");
+    G.setAttributeNS(null,"transform","translate(0," + item.get('y') + ")");
+    G.setAttributeNS(null,"id", item.get('ident'));
+    crewMemberId.appendChild(G);
+
+    var TextName = document.createElementNS(svgNS,"text");
+    TextName.setAttributeNS(null,"class","crewmember");
+    TextName.setAttributeNS(null,"x","-50");
+    TextName.setAttributeNS(null,"y", "100");
+    G.appendChild(TextName);
+
+    var TextNodeName = document.createTextNode(item.get('name') );
+    TextName.appendChild(TextNodeName);
+  }
 
   function SVG_drawDO(activitiesId, iDate){
     var G = document.createElementNS(svgNS,"g");
@@ -182,9 +199,6 @@ require([
   // MODELs AND STOREs
   // ===============================================
 
-  // for every object created, this value should be incremeted.
-  var indexDStoreObject = 0;
-
   var TrackableMemory = declare([Memory, Trackable]);
 
   var CalendarModel = declare(Model, {
@@ -207,6 +221,24 @@ require([
     },
     validateOnSet: false
   });
+
+  var CrewMemberModel = declare(Model, {
+    schema: {
+      name: 'string',
+      birthdate: 'string',
+      position: 'numeric',
+      ident: new ComputedProperty({ 
+        dependsOn: ['position'],
+        getValue: function(position){
+          return "cm" + position;
+        }
+      }),
+      y: 'numeric',
+      height: 'numeric',
+    },
+    validateOnSet: false
+  });
+
 
 
   var calendarStore = new TrackableMemory({
@@ -233,6 +265,28 @@ require([
   });
 
 
+  var crewMemberStore= new TrackableMemory({
+    Model: CrewMemberModel,
+    idProperty: "position",
+  });
+
+  crewMemberStore.on('add', function(event){
+    SVG_drawCrewMember(event.target);
+  });
+  
+  crewMemberStore.on('update', function(event){
+    var item = svg.getElementById(event.target.get('ident'));
+    
+    item.parentNode.removeChild(item);
+
+    SVG_drawCrewMember(event.target);
+  });
+
+  crewMemberStore.on('delete', function(event){
+    var item = svg.getElementById(event.target.get('ident'));
+    
+    item.parentNode.removeChild(item);
+  });
 
 
 
@@ -361,26 +415,21 @@ require([
           label: date.toISOString().substring(0, 10),
           relative: i,
           position: i
-          });
+        });
 
         date = Date.add(date, "day", 1); 
       }
-
-      function addOption(selectbox,text,value )
-      {
-        var optn = document.createElement("OPTION");
-        optn.text = text;
-        optn.value = value;
-        selectbox.options.add(optn);
-      };
 
       var selectbox = registry.byId("CalendarStartPeriods").domNode;
       for(i=selectbox.options.length-1;i>=0;i--){
         selectbox.remove(i);
       }
 
-      dojo.forEach(calendarStore.data, function(item) {
-        addOption(selectbox, item.get('label'), item.get('position'));
+      calendarStore.forEach(function(item){
+        var optn = document.createElement("OPTION");
+        optn.text = item.get('label');
+        optn.value = item.get('position');
+        selectbox.options.add(optn);
       });
 
 
@@ -401,24 +450,56 @@ require([
       calendarStore.forEach(function(item){
         item.set('relative', item.get('position') - newStarts[0]);
         calendarStore.put(item);
-        });
+      });
     }
-/* 
-    for(i = 0; i < starts.length; i++) {
-      var current = starts[i];
 
-      if( current >= start_str && current < end_str ){
-        var id = svg.getElementById(current);                        
-        var currentClassName = id.getAttribute("class"); // className; // getAttribute("class");
-        var newClassName = "start_period_" + currentClassName;
-        
-        id.setAttribute("class", newClassName);
-      }
-    }
-*/
-                         
+    newStarts.forEach(function(position){
+      var item = calendarStore.getSync(position);
+
+      var day = svg.getElementById(item.get('ident'));
+      day.setAttribute('class', 'start_period');
+    }); 
+
     SetStartPeriodsDialog.hide();
+  });
 
+  // -----------------------------------------------
+  // Create Crewmember dialog
+  // -----------------------------------------------
+  registry.byId("CreateCrewMember").on("click", function(){
+    var coordY = 100;
+    var pos = 0;
+
+    crewMemberStore.sort('position').forEach(function(item){
+      pos += 1;
+      coordY += item.get('height');
+    }); 
+
+    crewMemberStore.addSync({
+      name: registry.byId("CrewMemberName").get('value'),
+      birthdate: registry.byId("CrewMemberBirthDate").get('value').toISOString().substring(0, 10),
+      position: pos,
+      y:coordY,
+      height:200,
+    });
+
+
+      var selectbox = registry.byId("CalendarStartPeriods").domNode;
+      for(i=selectbox.options.length-1;i>=0;i--){
+        selectbox.remove(i);
+      }
+
+      calendarStore.forEach(function(item){
+        var optn = document.createElement("OPTION");
+        optn.text = item.get('label');
+        optn.value = item.get('position');
+        selectbox.options.add(optn);
+      });
+
+
+
+//    name, birthdate, position, y, height
+    CreateCrewMemberDialog.hide();
   });
 
 

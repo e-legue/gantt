@@ -15,9 +15,6 @@
 .start_period {
   fill: green;
 }
-.start_period_day:hover {
-  fill: orange;
-}
 
 .hour {
   fill-opacity: 0.1;
@@ -35,6 +32,19 @@
   font-size: 40px;
   fill: gray;
 }
+
+.hour_label {
+  fill: gray;
+}
+
+.crewmember {
+  text-anchor: end; 
+  font-size: 40px;
+  fill: black;
+}
+
+
+
 
 
 /* text inside a box */
