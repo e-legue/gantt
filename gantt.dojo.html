@@ -43,12 +43,14 @@ require([
   "dijit/form/DateTextBox",
   "dijit/form/Select",
   "dijit/form/MultiSelect",
+  "dijit/form/ComboBox",
   "dijit/layout/TabContainer", 
   "dijit/layout/ContentPane", 
   "dojox/layout/TableContainer",
   "dojo/date",
   "dstore/Memory",
   "dstore/Trackable",
+  "dstore/legacy/StoreAdapter-Memory",
   "dmodel/Model",
   "dmodel/ComputedProperty",
   "dojo/domReady!"
@@ -73,12 +75,14 @@ require([
   DateTextBox, 
   Select,
   MultiSelect,
+  ComboBox,
   TabContainer,
   ContentPane,
   TableContainer, 
   Date,
   Memory,
   Trackable,
+  StoreAdapter,
   Model,
   ComputedProperty){
 
@@ -96,6 +100,7 @@ require([
   }
 
 
+  // on window change, update the size of the svg graph.
   if (window.addEventListener) {              
     window.addEventListener("resize", browserResize);
   } else if (window.attachEvent) {                 
@@ -112,6 +117,10 @@ require([
   var svgNS   = "http://www.w3.org/2000/svg";
   var xlinkNS = "http://www.w3.org/1999/xlink";
 
+  // Draw a calendar date. The drawing belongs to id calendar in the SVG.
+  // Each "date" is embedded in a g node, with a translation on X, according
+  // to the position. This way, each drawing into the g node is strictly the 
+  // same for each day, except labels.
   function SVG_drawCalendarDate(item){
     var calendarId = svg.getElementById("calendar");
 
@@ -148,6 +157,10 @@ require([
     G.appendChild(UseHours);
   }
 
+  // Draw a crewmember. The drawing is embedded into a g node 
+  // with a translation on y, and belongs to crewmembers id.
+  // There is no x translation, so every activity attached to the 
+  // crewmember will be add into the g node.
   function SVG_drawCrewMember(item){
     var crewMemberId = svg.getElementById("crewmembers");
 
@@ -215,7 +228,7 @@ require([
       ident: new ComputedProperty({ 
         dependsOn: ['position'],
         getValue: function(position){
-          return "cd" + position;
+          return "cd" + position;  // cd stands for Calendar Day.
         }
       }),
     },
@@ -230,7 +243,7 @@ require([
       ident: new ComputedProperty({ 
         dependsOn: ['position'],
         getValue: function(position){
-          return "cm" + position;
+          return "cm" + position; // cm stands for CrewMember.
         }
       }),
       y: 'numeric',
@@ -265,10 +278,12 @@ require([
   });
 
 
-  var crewMemberStore= new TrackableMemory({
-    Model: CrewMemberModel,
-    idProperty: "position",
-  });
+  var crewMemberStore=  new StoreAdapter(
+    new TrackableMemory({
+      Model: CrewMemberModel,
+      idProperty: "position",
+    })
+    );
 
   crewMemberStore.on('add', function(event){
     SVG_drawCrewMember(event.target);
@@ -470,11 +485,14 @@ require([
     var coordY = 100;
     var pos = 0;
 
+    // Compute the position and Y coordinate of the new crewmmember based on 
+    // existing data.
     crewMemberStore.sort('position').forEach(function(item){
       pos += 1;
       coordY += item.get('height');
     }); 
 
+    // Add the new crew in the store. Event will trigger the drawing.
     crewMemberStore.addSync({
       name: registry.byId("CrewMemberName").get('value'),
       birthdate: registry.byId("CrewMemberBirthDate").get('value').toISOString().substring(0, 10),
@@ -483,19 +501,29 @@ require([
       height:200,
     });
 
+    // Reset dialog input.
+    registry.byId("CrewMemberName").set('value', '');
+    registry.byId("CrewMemberBirthDate").set('value', null);
 
-      var selectbox = registry.byId("CalendarStartPeriods").domNode;
-      for(i=selectbox.options.length-1;i>=0;i--){
-        selectbox.remove(i);
-      }
+/*
+    var selectbox = registry.byId("CalendarStartPeriods").domNode;
+    for(i=selectbox.options.length-1;i>=0;i--){
+      selectbox.remove(i);
+    }
 
-      calendarStore.forEach(function(item){
-        var optn = document.createElement("OPTION");
-        optn.text = item.get('label');
-        optn.value = item.get('position');
-        selectbox.options.add(optn);
-      });
+    calendarStore.forEach(function(item){
+      var optn = document.createElement("OPTION");
+      optn.text = item.get('label');
+      optn.value = item.get('position');
+      selectbox.options.add(optn);
+    });
+*/
 
+  var select = new ComboBox({
+                name: 'crewMember',
+                store: crewMemberStore,
+            }, 'crewMemberSelect');
+            select.startup();
 
 
 //    name, birthdate, position, y, height
@@ -648,8 +676,12 @@ require([
   <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateDayOffDialog" title="Create day off" style="display: none;">
     <table class="dijitDialogPaneContentArea">
       <tr>
-        <td><label for="day">Date</label></td>
-        <td><input data-dojo-type="dijit/form/DateTextBox" name="day" id="DayOffDate" required="true"></td>
+        <td><label for="day">Crew member</label></td>
+        <td><div id="crewMemberSelect"></div></td>
+      </tr>
+      <tr>
+        <td><label for="start">date(s)</label></td>
+        <td><select data-dojo-type="dijit/form/MultiSelect" name="start" id="DayOffDatesSelect" size="15"></td>
       </tr>
     </table>
 
