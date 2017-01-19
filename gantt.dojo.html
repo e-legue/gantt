@@ -180,20 +180,23 @@ require([
     TextName.appendChild(TextNodeName);
   }
 
-  function SVG_drawDO(activitiesId, iDate){
+  function SVG_drawActivity(activity, line){
+
+    var parentId = svg.getElementById(line.get('ident'));
+
     var G = document.createElementNS(svgNS,"g");
-    G.setAttributeNS(null,"transform","translate(" + iDate * 1440 + ",500)");
-    G.setAttributeNS(null,"id","do_1");
-    G.setAttributeNS(null,"onclick","alert('click! do_1');");
-    activitiesId.appendChild(G);
+    G.setAttributeNS(null,"transform","translate(" + iDate * 1440 + ",50)");
+    G.setAttributeNS(null,"id", activity.get('ident'));
+    G.setAttributeNS(null,"onclick","alert('can display details here');");
+    parentId.appendChild(G);
 
     var Rect = document.createElementNS(svgNS,"rect");
-    Rect.setAttributeNS(null,"class","DO");
+    Rect.setAttributeNS(null,"class", activity.get('type'));
     Rect.setAttributeNS(null,"x","0");
     Rect.setAttributeNS(null,"y","0");
     Rect.setAttributeNS(null,"rx","20");
     Rect.setAttributeNS(null,"ry","20");
-    Rect.setAttributeNS(null,"width","1440");
+    Rect.setAttributeNS(null,"width", activity.get('width'));
     Rect.setAttributeNS(null,"height","100");
     G.appendChild(Rect);
 
@@ -205,7 +208,7 @@ require([
     Text.setAttributeNS(null,"text-anchor","start");
     G.appendChild(Text);
 
-    var TextNode = document.createTextNode("DO");
+    var TextNode = document.createTextNode(activity.get('name'));
     Text.appendChild(TextNode);
   }
 
@@ -253,6 +256,23 @@ require([
     validateOnSet: false
   });
 
+  var ActivityModel = declare(Model, {
+    schema: {
+      name: 'string',
+      position: 'numeric',
+      width: 'numeric',
+      type: 'string',
+      cmPosition: 'numeric',
+      ident: new ComputedProperty({ 
+        dependsOn: ['position', 'type'],
+        getValue: function(position, type){
+          return type + position;  // DOxxx or TRPxxx or  .. 
+        }
+      }),
+    },
+    validateOnSet: false
+  });
+
 
 
   var calendarStore = new TrackableMemory({
@@ -279,8 +299,10 @@ require([
   });
 
   var calendarStoreAdapter = new DstoreAdapter(calendarStore);
-  registry.byId("CalendarStartPeriods").set("labelAttr", "label");
+  registry.byId("CalendarStartPeriods").set("labelAttr", "name");
   registry.byId("CalendarStartPeriods").setStore(calendarStoreAdapter);
+  registry.byId("DayOffDatesSelect").set("labelAttr", "name");
+  registry.byId("DayOffDatesSelect").setStore(calendarStoreAdapter);
  
   var crewMemberStore = new TrackableMemory({
     Model: CrewMemberModel,
@@ -306,7 +328,40 @@ require([
   });
 
   var crewMemberStoreAdapter = new DstoreAdapter(crewMemberStore);
-  registry.byId("crewMemberSelect").set("store", crewMemberStoreAdapter);
+  registry.byId("DayOffCrewMemberSelect").set("store", crewMemberStoreAdapter);
+
+
+  var activityStore = new TrackableMemory({
+    Model: ActivityModel,
+    idProperty: "position",
+  });
+
+  activityStore.on('add', function(event){
+    console.log("activity store add");
+    console.log(event.target);
+    var line = crewMemberStore.getSync(event.target.get('cmPosition'));
+    console.log(line);
+
+    SVG_drawActivity(event.target, line);
+  });
+
+  activityStore.on('update', function(event){
+    var item = svg.getElementById(event.target.get('ident'));
+    
+    item.parentNode.removeChild(item);
+    
+    var line = crewMemberStore.getSync(event.target.get('cmPosition'));
+
+    SVG_drawActivity(event.target, line);
+  });
+
+  activityStore.on('delete', function(event){
+    var item = svg.getElementById(event.target.get('ident'));
+    
+    item.parentNode.removeChild(item);
+  });
+
+
   // ===============================================
   // DIALOGs
   // ===============================================
@@ -328,45 +383,24 @@ require([
   registry.byId("SHCalendarHours").on("change", function(isChecked){
     var divs = svg.getElementsByClassName('hour_label');
 
-    if( isChecked ) {
-      for (var i = 0; i < divs.length; i++) {
-        divs[i].setAttribute("display", "block");
-      }
-    }
-    else {
-      for (var i = 0; i < divs.length; i++) {
-        divs[i].setAttribute("display", "none");
-      }
+    for (var i = 0; i < divs.length; i++) {
+      divs[i].setAttribute("display", isChecked ? "block" : "none");
     }
   }, true);
   
   registry.byId("SHCalendarDayX").on("change", function(isChecked){
     var divs = svg.getElementsByClassName('relative');
 
-    if( isChecked ) {
-      for (var i = 0; i < divs.length; i++) {
-        divs[i].setAttribute("display", "block");
-      }
-    }
-    else {
-      for (var i = 0; i < divs.length; i++) {
-        divs[i].setAttribute("display", "none");
-      }
+    for (var i = 0; i < divs.length; i++) {
+      divs[i].setAttribute("display", isChecked ? "block" : "none");
     }
   }, true);
   
   registry.byId("SHCalendarDayYYYYMMDD").on("change", function(isChecked){
     var divs = svg.getElementsByClassName('yyyymmdd');
 
-    if( isChecked ) {
-      for (var i = 0; i < divs.length; i++) {
-        divs[i].setAttribute("display", "block");
-      }
-    }
-    else {
-      for (var i = 0; i < divs.length; i++) {
-        divs[i].setAttribute("display", "none");
-      }
+    for (var i = 0; i < divs.length; i++) {
+      divs[i].setAttribute("display", isChecked ? "block" : "none");
     }
   }, true);
 
@@ -399,12 +433,10 @@ require([
 
   registry.byId("CalendarStart").on("change", function(){
     registry.byId("CalendarEnd").constraints.min = Date.add(this.get("value"), "day", 1);
-//    registry.byId("DayOffDate").constraints.min = this.get("value");
   }, true);
   
   registry.byId("CalendarEnd").on("change", function(){
     registry.byId("CalendarStart").constraints.max = Date.add(this.get("value"), "day", -1);
-//    registry.byId("DayOffDate").constraints.max = Date.add(this.get("value"), "day", -1);
   }, true);
 
   registry.byId("SetCalendar").on("click", function(){
@@ -437,20 +469,6 @@ require([
         date = Date.add(date, "day", 1); 
       }
 
-      /*
-      selectbox = registry.byId("CalendarStartPeriods").domNode;
-      for(i=selectbox.options.length-1;i>=0;i--){
-        selectbox.remove(i);
-      }
-
-      calendarStore.forEach(function(item){
-        var optn = document.createElement("OPTION");
-        optn.text = item.get('name');
-        optn.value = item.get('position');
-        selectbox.options.add(optn);
-      });
-      */
-
       // enabled some menu items.
       registry.byId("FileSaveMenu").set('disabled', false);
       registry.byId("CalendarSetStartPeriodsMenu").set('disabled', false);
@@ -462,10 +480,6 @@ require([
   
   // Redraw start periods
   registry.byId("SetStartPeriods").on("click", function(){
-    var newStarts = registry.byId("CalendarStartPeriods");
-    var i=10;
-
-    /*
     var newStarts = registry.byId("CalendarStartPeriods").value;
 
     if(newStarts.length > 0 ){
@@ -481,7 +495,6 @@ require([
       var day = svg.getElementById(item.get('ident'));
       day.setAttribute('class', 'start_period');
     }); 
-    */
     
     SetStartPeriodsDialog.hide();
   });
@@ -513,23 +526,6 @@ require([
     registry.byId("CrewMemberName").set('value', '');
     registry.byId("CrewMemberBirthDate").set('value', null);
 
-/*
-    var selectbox = registry.byId("CalendarStartPeriods").domNode;
-    for(i=selectbox.options.length-1;i>=0;i--){
-      selectbox.remove(i);
-    }
-
-    calendarStore.forEach(function(item){
-      var optn = document.createElement("OPTION");
-      optn.text = item.get('name');
-      optn.value = item.get('position');
-      selectbox.options.add(optn);
-    });
-*/
-
-
-
-//    name, birthdate, position, y, height
     CreateCrewMemberDialog.hide();
   });
 
@@ -538,12 +534,32 @@ require([
   // Create Day Off dialog
   // -----------------------------------------------
   registry.byId("CreateDayOff").on("click", function(){
-    var svg          = dom.byId("graph").getSVGDocument();
-    var activitiesId = svg.getElementById("activities");
-//    var iDate        = Date.difference(registry.byId("CalendarStart").get("value"), registry.byId("DayOffDate").get("value"), "day");
 
-//    SVG_drawDO(activitiesId, iDate);
-  }, true);
+    var pos = 0;
+
+    // Compute the position and Y coordinate of the new crewmmember based on 
+    // existing data.
+    activityStore.forEach(function(item){
+      pos += 1;
+    }); 
+
+
+    var days = registry.byId("DayOffDatesSelect").value; 
+
+    days.forEach(function(day){
+      activityStore.addSync({
+        name: "DO",
+        class: "DO",
+        position: pos,
+        cmPosition: registry.byId("DayOffCrewMemberSelect").get('value'),
+        x: day * 1440,
+        width: 1440,
+      });
+      pos += 1;
+    });
+    
+    CreateDayOffDialog.hide();
+  });
 });
   </script>
 
@@ -680,11 +696,11 @@ require([
     <table class="dijitDialogPaneContentArea">
       <tr>
         <td><label for="crewmemeber">Crew member</label></td>
-        <td><select data-dojo-type="dijit/form/FilteringSelect" name="crewmember" id="crewMemberSelect"></td>
+        <td><select data-dojo-type="dijit/form/FilteringSelect" name="crewmember" id="DayOffCrewMemberSelect"></td>
       </tr>
       <tr>
         <td><label for="start">date(s)</label></td>
-        <td><select data-dojo-type="dojox/form/CheckedMultiSelect" name="start" id="DayOffDatesSelect" size="15"></td>
+        <td><select data-dojo-type="dojox/form/CheckedMultiSelect" name="start" id="DayOffDatesSelect" multiple="true"></td>
       </tr>
     </table>
 
