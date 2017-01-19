@@ -4,6 +4,7 @@
   <meta charset="UTF-8" /> 
   
   <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dijit/themes/claro/claro.css" />
+  <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dojox/form/resources/CheckedMultiSelect.css" />
   <script>
 var dojoConfig = {
   async: true,
@@ -42,15 +43,15 @@ require([
   "dijit/form/Button",
   "dijit/form/DateTextBox",
   "dijit/form/Select",
-  "dijit/form/MultiSelect",
-  "dijit/form/ComboBox",
+  "dojox/form/CheckedMultiSelect",
+  "dijit/form/FilteringSelect",
   "dijit/layout/TabContainer", 
   "dijit/layout/ContentPane", 
   "dojox/layout/TableContainer",
   "dojo/date",
   "dstore/Memory",
   "dstore/Trackable",
-  "dstore/legacy/StoreAdapter-Memory",
+  "dstore/legacy/DstoreAdapter",
   "dmodel/Model",
   "dmodel/ComputedProperty",
   "dojo/domReady!"
@@ -74,15 +75,15 @@ require([
   Button, 
   DateTextBox, 
   Select,
-  MultiSelect,
-  ComboBox,
+  CheckedMultiSelect,
+  FilteringSelect,
   TabContainer,
   ContentPane,
   TableContainer, 
   Date,
   Memory,
   Trackable,
-  StoreAdapter,
+  DstoreAdapter,
   Model,
   ComputedProperty){
 
@@ -149,7 +150,7 @@ require([
     TextYYYYMMDDDate.setAttributeNS(null,"y","-20");
     G.appendChild(TextYYYYMMDDDate);
     
-    var TextNodeYYYYMMDDDate = document.createTextNode(item.get('label'));
+    var TextNodeYYYYMMDDDate = document.createTextNode(item.get('name'));
     TextYYYYMMDDDate.appendChild(TextNodeYYYYMMDDDate);
 
     var UseHours = document.createElementNS(svgNS,"use");
@@ -216,7 +217,7 @@ require([
 
   var CalendarModel = declare(Model, {
     schema: {
-      label: 'string',
+      name: 'string',
       relative: 'numeric',
       position: 'numeric',
       class: new ComputedProperty({
@@ -277,13 +278,14 @@ require([
     item.parentNode.removeChild(item);
   });
 
-
-  var crewMemberStore=  new StoreAdapter(
-    new TrackableMemory({
-      Model: CrewMemberModel,
-      idProperty: "position",
-    })
-    );
+  var calendarStoreAdapter = new DstoreAdapter(calendarStore);
+  registry.byId("CalendarStartPeriods").set("labelAttr", "label");
+  registry.byId("CalendarStartPeriods").setStore(calendarStoreAdapter);
+ 
+  var crewMemberStore = new TrackableMemory({
+    Model: CrewMemberModel,
+    idProperty: "position",
+  });
 
   crewMemberStore.on('add', function(event){
     SVG_drawCrewMember(event.target);
@@ -303,8 +305,8 @@ require([
     item.parentNode.removeChild(item);
   });
 
-
-
+  var crewMemberStoreAdapter = new DstoreAdapter(crewMemberStore);
+  registry.byId("crewMemberSelect").set("store", crewMemberStoreAdapter);
   // ===============================================
   // DIALOGs
   // ===============================================
@@ -397,12 +399,12 @@ require([
 
   registry.byId("CalendarStart").on("change", function(){
     registry.byId("CalendarEnd").constraints.min = Date.add(this.get("value"), "day", 1);
-    registry.byId("DayOffDate").constraints.min = this.get("value");
+//    registry.byId("DayOffDate").constraints.min = this.get("value");
   }, true);
   
   registry.byId("CalendarEnd").on("change", function(){
     registry.byId("CalendarStart").constraints.max = Date.add(this.get("value"), "day", -1);
-    registry.byId("DayOffDate").constraints.max = Date.add(this.get("value"), "day", -1);
+//    registry.byId("DayOffDate").constraints.max = Date.add(this.get("value"), "day", -1);
   }, true);
 
   registry.byId("SetCalendar").on("click", function(){
@@ -427,7 +429,7 @@ require([
       });        
       for(i = 0; i < range; i++) {
         calendarStore.addSync({
-          label: date.toISOString().substring(0, 10),
+          name: date.toISOString().substring(0, 10),
           relative: i,
           position: i
         });
@@ -435,18 +437,19 @@ require([
         date = Date.add(date, "day", 1); 
       }
 
-      var selectbox = registry.byId("CalendarStartPeriods").domNode;
+      /*
+      selectbox = registry.byId("CalendarStartPeriods").domNode;
       for(i=selectbox.options.length-1;i>=0;i--){
         selectbox.remove(i);
       }
 
       calendarStore.forEach(function(item){
         var optn = document.createElement("OPTION");
-        optn.text = item.get('label');
+        optn.text = item.get('name');
         optn.value = item.get('position');
         selectbox.options.add(optn);
       });
-
+      */
 
       // enabled some menu items.
       registry.byId("FileSaveMenu").set('disabled', false);
@@ -459,6 +462,10 @@ require([
   
   // Redraw start periods
   registry.byId("SetStartPeriods").on("click", function(){
+    var newStarts = registry.byId("CalendarStartPeriods");
+    var i=10;
+
+    /*
     var newStarts = registry.byId("CalendarStartPeriods").value;
 
     if(newStarts.length > 0 ){
@@ -474,7 +481,8 @@ require([
       var day = svg.getElementById(item.get('ident'));
       day.setAttribute('class', 'start_period');
     }); 
-
+    */
+    
     SetStartPeriodsDialog.hide();
   });
 
@@ -513,17 +521,12 @@ require([
 
     calendarStore.forEach(function(item){
       var optn = document.createElement("OPTION");
-      optn.text = item.get('label');
+      optn.text = item.get('name');
       optn.value = item.get('position');
       selectbox.options.add(optn);
     });
 */
 
-  var select = new ComboBox({
-                name: 'crewMember',
-                store: crewMemberStore,
-            }, 'crewMemberSelect');
-            select.startup();
 
 
 //    name, birthdate, position, y, height
@@ -537,9 +540,9 @@ require([
   registry.byId("CreateDayOff").on("click", function(){
     var svg          = dom.byId("graph").getSVGDocument();
     var activitiesId = svg.getElementById("activities");
-    var iDate        = Date.difference(registry.byId("CalendarStart").get("value"), registry.byId("DayOffDate").get("value"), "day");
+//    var iDate        = Date.difference(registry.byId("CalendarStart").get("value"), registry.byId("DayOffDate").get("value"), "day");
 
-    SVG_drawDO(activitiesId, iDate);
+//    SVG_drawDO(activitiesId, iDate);
   }, true);
 });
   </script>
@@ -663,7 +666,7 @@ require([
     <table class="dijitDialogPaneContentArea">
       <tr>
         <td><label for="start">Start period date(s)</label></td>
-        <td><select data-dojo-type="dijit/form/MultiSelect" name="start" id="CalendarStartPeriods" size="15"></td>
+        <td><input data-dojo-type="dojox/form/CheckedMultiSelect" name="start" id="CalendarStartPeriods" multiple="true"></td>
       </tr>
     </table>
 
@@ -676,12 +679,12 @@ require([
   <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateDayOffDialog" title="Create day off" style="display: none;">
     <table class="dijitDialogPaneContentArea">
       <tr>
-        <td><label for="day">Crew member</label></td>
-        <td><div id="crewMemberSelect"></div></td>
+        <td><label for="crewmemeber">Crew member</label></td>
+        <td><select data-dojo-type="dijit/form/FilteringSelect" name="crewmember" id="crewMemberSelect"></td>
       </tr>
       <tr>
         <td><label for="start">date(s)</label></td>
-        <td><select data-dojo-type="dijit/form/MultiSelect" name="start" id="DayOffDatesSelect" size="15"></td>
+        <td><select data-dojo-type="dojox/form/CheckedMultiSelect" name="start" id="DayOffDatesSelect" size="15"></td>
       </tr>
     </table>
 
