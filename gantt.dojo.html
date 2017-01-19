@@ -185,7 +185,7 @@ require([
     var parentId = svg.getElementById(line.get('ident'));
 
     var G = document.createElementNS(svgNS,"g");
-    G.setAttributeNS(null,"transform","translate(" + iDate * 1440 + ",50)");
+    G.setAttributeNS(null,"transform","translate(" + activity.get('x') + ",50)");
     G.setAttributeNS(null,"id", activity.get('ident'));
     G.setAttributeNS(null,"onclick","alert('can display details here');");
     parentId.appendChild(G);
@@ -260,6 +260,7 @@ require([
     schema: {
       name: 'string',
       position: 'numeric',
+      x: 'numeric',
       width: 'numeric',
       type: 'string',
       cmPosition: 'numeric',
