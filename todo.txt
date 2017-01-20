@@ -1,18 +1,8 @@
 TODO:
 
-Create calendar menu with "initialize" and "set day start period" submenu.
-and draw the svg accordingly.
-
-
 
 show/hide (day color / day yyyy-mm-yy / day relative)
-
-
-display crewmember line.
-
-
 show/hide (hour color / hour label )
-
 show/hide (legs)
 
 done - save svg, and ask file name.
@@ -27,9 +17,8 @@ https://www.w3.org/TR/SVG/extend.html#AnExample
 http://archive.dojotoolkit.org/nightly/checkout/dijit/tests/layout/test_TabContainer.html
 
 
-dstore sur fiddle...
-http://jsfiddle.net/zz4mLw73/3/
 
 datetime picker dojo...
 http://jsfiddle.net/dacrazycoder/8sraoao9/
+http://jsfiddle.net/FjuCa/
 
