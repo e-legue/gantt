@@ -127,7 +127,7 @@ require([
 
     var G       = document.createElementNS(svgNS,"g");
     G.setAttributeNS(null,"transform","translate(" + 1440 * item.get('position') + ",0)");
-    G.setAttributeNS(null,"class", item.get('class'));
+    G.setAttributeNS(null,"class", item.get('type'));
     G.setAttributeNS(null,"id", item.get('ident'));
     calendarId.appendChild(G);
 
@@ -223,7 +223,7 @@ require([
       name: 'string',
       relative: 'numeric',
       position: 'numeric',
-      class: new ComputedProperty({
+      type: new ComputedProperty({
         dependsOn: ['position'],
         getValue: function(position){
           return position % 2 ? "uneven" : "even";
@@ -267,7 +267,7 @@ require([
       ident: new ComputedProperty({ 
         dependsOn: ['position', 'type'],
         getValue: function(position, type){
-          return type + position;  // DOxxx or TRPxxx or  .. 
+          return type.toLowerCase() + position;  // DOxxx or TRPxxx or  .. 
         }
       }),
     },
@@ -523,11 +523,11 @@ require([
       height:200,
     });
 
-    // Reset dialog input.
-    registry.byId("CrewMemberName").set('value', '');
-    registry.byId("CrewMemberBirthDate").set('value', null);
-
     CreateCrewMemberDialog.hide();
+
+    // Reset dialog input.
+    registry.byId("CrewMemberName").reset();
+    registry.byId("CrewMemberBirthDate").reset();
   });
 
 
@@ -550,7 +550,7 @@ require([
     days.forEach(function(day){
       activityStore.addSync({
         name: "DO",
-        class: "DO",
+        type: "DO",
         position: pos,
         cmPosition: registry.byId("DayOffCrewMemberSelect").get('value'),
         x: day * 1440,
@@ -697,11 +697,11 @@ require([
     <table class="dijitDialogPaneContentArea">
       <tr>
         <td><label for="crewmemeber">Crew member</label></td>
-        <td><select data-dojo-type="dijit/form/FilteringSelect" name="crewmember" id="DayOffCrewMemberSelect"></td>
+        <td><select data-dojo-type="dijit/form/FilteringSelect" name="crewmember" id="DayOffCrewMemberSelect" required="true"></td>
       </tr>
       <tr>
         <td><label for="start">date(s)</label></td>
-        <td><select data-dojo-type="dojox/form/CheckedMultiSelect" name="start" id="DayOffDatesSelect" multiple="true"></td>
+        <td><select data-dojo-type="dojox/form/CheckedMultiSelect" name="start" id="DayOffDatesSelect" required="true" multiple="true"></td>
       </tr>
     </table>
 
@@ -734,20 +734,37 @@ require([
 
 
   <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateCrewMemberDialog" title="Create crew member" style="display: none;">
-    <table class="dijitDialogPaneContentArea">
-      <tr>
-        <td><label for="name">Name</label></td>
-        <td><input data-dojo-type="dijit/form/TextBox" name="name" id="CrewMemberName" required="true"></td>
-      </tr>
-      <tr>
-        <td><label for="start">Birth date</label></td>
-        <td><input data-dojo-type="dijit/form/DateTextBox" name="day" id="CrewMemberBirthDate" required="true"></td>
-      </tr>
-    </table>
+      <table class="dijitDialogPaneContentArea">
+        <tr>
+          <td><label for="name">Name</label></td>
+          <td><input data-dojo-type="dijit/form/TextBox" name="name" id="CrewMemberName" required="true"></td>
+        </tr>
+        <tr>
+          <td><label for="start">Birth date</label></td>
+          <td><input data-dojo-type="dijit/form/DateTextBox" name="day" id="CrewMemberBirthDate" required="true"></td>
+        </tr>
+      </table>
 
     <div class="dijitDialogPaneActionBar">
-      <button data-dojo-type="dijit/form/Button" type="submit" id="CreateCrewMember">Create</button>
+      <button data-dojo-type="dijit/form/Button" type="submit" id="CreateCrewMember" value="submit">Create</button>
     </div>
   </div>
+<!--
+  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateCrewMemberDialog" title="Create crew member" style="display: none;">
+    <div data-dojo-type="dijit/form/Form" id="CreateCrewMemberForm" data-dojo-id="CreateCrewMemberForm">
+      <table class="dijitDialogPaneContentArea">
+        <tr>
+          <td><label for="name">Name</label></td>
+          <td><input data-dojo-type="dijit/form/TextBox" name="name" id="CrewMemberName" required="true"></td>
+        </tr>
+        <tr>
+          <td><label for="start">Birth date</label></td>
+          <td><input data-dojo-type="dijit/form/DateTextBox" name="day" id="CrewMemberBirthDate" required="true"></td>
+        </tr>
+      </table>
 
+      <button data-dojo-type="dijit/form/Button" type="submit" id="CreateCrewMember" value="Submit">Create</button>
+    </div>
+  </div>
+  -->
 </html>
