@@ -38,7 +38,7 @@
 .datetime > .dijitTimeTextBox {
   border: none;
   padding-left: .25em;
-  width: 7.25em;
+  width: 4.25em;
 }
 
 .datetime > .dijitTimeTextBox > .dijitArrowButton {
@@ -60,6 +60,13 @@
 
 .datetime > .dijitTimeTextBox > .dijitInputContainer > span.dijitPlaceHolder {
   padding-top: 2px;
+}
+
+.durationHour {
+  width: 4.25em;
+}
+.durationMinute {
+  width: 3.25em;
 }
   </style>
 
@@ -96,13 +103,16 @@ require([
   "dijit/DropDownMenu",
   "dijit/CheckedMenuItem",
   "dijit/Dialog",
+  "dijit/form/Form",
   "dijit/form/CheckBox",
   "dijit/form/TextBox",
   "dijit/form/Button",
   "dijit/form/DateTextBox",
+  "dijit/form/TimeTextBox",
   "dijit/form/Select",
   "dojox/form/CheckedMultiSelect",
   "dijit/form/FilteringSelect",
+  "dijit/form/NumberSpinner",
   "dijit/layout/TabContainer", 
   "dijit/layout/ContentPane", 
   "dojox/layout/TableContainer",
@@ -128,17 +138,20 @@ require([
   DropDownMenu,
   CheckedMenuItem, 
   Dialog, 
+  Form,
   CheckBox, 
   TextBox, 
   Button, 
   DateTextBox, 
+  TimeTextBox, 
   Select,
   CheckedMultiSelect,
   FilteringSelect,
+  NumberSpinner,
   TabContainer,
   ContentPane,
   TableContainer, 
-  Date,
+  date,
   Memory,
   Trackable,
   DstoreAdapter,
@@ -167,7 +180,30 @@ require([
   }
   browserResize();
 
+  // ===============================================
+  // Start Date Time + duration Hour Minute => 
+  // End Date Time (readonly).
+  // ===============================================
+  function UpdateEndDateTime(prefixId){
+  
+    var mytime = registry.byId(prefixId + "StartTime").get("value");
+    var mydate = registry.byId(prefixId + "StartDate").get("value");
 
+    var year   = mydate.getFullYear(),
+        month  = mydate.getMonth(),
+        day    = mydate.getDate(),
+        hour   = mytime.getHours(),
+        minute = mytime.getMinutes();
+
+    var mydatetime = new Date(year, month, day, hour, minute);
+    hour = registry.byId(prefixId + "DurationHour").value;
+    mydatetime = date.add(mydatetime, "hour", hour);
+    minute = registry.byId(prefixId + "DurationMinute").value;
+    mydatetime = date.add(mydatetime, "minute", minute);
+
+    registry.byId(prefixId + "EndDate").set('value', mydatetime);
+    registry.byId(prefixId + "EndTime").set('value', mydatetime);
+  } 
 
   // ===============================================
   // SVG drawing
@@ -510,11 +546,17 @@ require([
   // Calendar range set up dialog
   // -----------------------------------------------
   registry.byId("CalendarStart").on("change", function(){
-    registry.byId("CalendarEnd").constraints.min = Date.add(this.get("value"), "day", 1);
+    registry.byId("CalendarEnd").constraints.min = date.add(this.get("value"), "day", 1);
+
+    registry.byId("TrainingStartDate").constraints.min = this.get("value");
   }, true);
   
   registry.byId("CalendarEnd").on("change", function(){
-    registry.byId("CalendarStart").constraints.max = Date.add(this.get("value"), "day", -1);
+    var maxDate = date.add(this.get("value"), "day", -1);
+
+    registry.byId("CalendarStart").constraints.max = maxDate;
+
+    registry.byId("TrainingStartDate").constraints.max = maxDate;
   }, true);
 
   registry.byId("SetCalendar").on("click", function(){
@@ -524,8 +566,8 @@ require([
     if( start.get("value") != null && end.get("value") != null ) {
       SetCalendarDialog.hide();
 
-      var range = Date.difference(start.get("value"), end.get("value"), "day");
-      var date = start.get("value");
+      var range = date.difference(start.get("value"), end.get("value"), "day");
+      var mydate = start.get("value");
 
       var intro = svg.getElementById('intro');
       if(intro){
@@ -539,12 +581,12 @@ require([
       });        
       for(i = 0; i < range; i++) {
         calendarStore.addSync({
-          name: date.toISOString().substring(0, 10),
+          name: mydate.toISOString().substring(0, 10),
           relative: i,
           position: i
         });
 
-        date = Date.add(date, "day", 1); 
+        mydate = date.add(mydate, "day", 1); 
       }
 
       // enabled some menu items.
@@ -638,6 +680,38 @@ require([
     
     CreateDayOffDialog.hide();
   });
+
+  // -----------------------------------------------
+  // Create Training dialog
+  // -----------------------------------------------
+
+  registry.byId("TrainingStartDate").on("click", function(){
+    if( registry.byId("TrainingStartTime").get("value") ){
+      registry.byId("TrainingDurationHour").readOnly = false;
+      registry.byId("TrainingDurationMinute").readOnly = false;
+
+      UpdateEndDateTime("Training");
+    }
+  });
+
+  registry.byId("TrainingStartTime").on("click", function(){
+    if( registry.byId("TrainingStartDate").get("value") ){
+      registry.byId("TrainingDurationHour").readOnly = false;
+      registry.byId("TrainingDurationMinute").readOnly = false;
+      
+      UpdateEndDateTime("Training");
+    }
+  });
+
+  registry.byId("TrainingDurationHour").on("click", function(){
+    UpdateEndDateTime("Training");
+  });
+  
+  registry.byId("TrainingDurationMinute").on("click", function(){
+    UpdateEndDateTime("Training");
+  });
+
+  
 });
   </script>
 
@@ -698,8 +772,8 @@ require([
     Sorry, your browser does not support SVG.
   </object>
   
-  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateTrainingDialog" title="Create training" style="display: none;">
-    <!-- <div data-dojo-type="dijit/form/Form" data-dojo-id="CreateTrainingForm"> -->
+  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateTrainingDialog" title="Create training" style="display: none;" data-dojo-props="onHide: function(){CreateTrainingForm.reset();}" >
+    <div data-dojo-type="dijit/form/Form" id="CreateTrainingForm" data-dojo-id="CreateTrainingForm" encType="multipart/form-data" action="" method="">
       <table class="dijitDialogPaneContentArea">
         <tr>
           <td><label for="name">Name</label></td>
@@ -709,27 +783,33 @@ require([
           <td><label for="TrnCm">Crew member</label></td>
           <td><select data-dojo-type="dijit/form/FilteringSelect" name="TrnCm" id="TrnCMSelect" required="true"></td>
         </tr>
-        <!-- <tr> -->
-        <!--   <td><label for="start">Start date time</label></td> -->
-        <!--   <td class="datetime"> -->
-        <!--     <input name="start" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'" id="date" /> -->
-        <!--     <input type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'" id="time" /> -->
-        <!--   </td> -->
-        <!-- </tr> -->
+        <tr>
+          <td><label for="start">Start date time</label></td>
+          <td class="datetime">
+            <input id="TrainingStartDate" name="start" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"/>
+            <input id="TrainingStartTime" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'"/>
+          </td>
+        </tr>
         <tr>
           <td><label for="duration">Duration</label></td>
-          <td><input data-dojo-type="dijit/form/DateTextBox" name="duration" id="TrainingDuration" required="true"></td>
+          <td>
+            <input id="TrainingDurationHour"   class="durationHour" data-dojo-type="dijit/form/NumberSpinner" name="duration" data-dojo-props="constraints:{min:0,max:999}, placeHolder:'0'" required="true" readonly="true"> h
+            <input id="TrainingDurationMinute" class="durationMinute" data-dojo-type="dijit/form/NumberSpinner" name="duration" data-dojo-props="constraints:{min:0,max:59}, placeHolder:'00'" required="true" readonly="true">
+          </td>
         </tr>
-        <!-- <tr> -->
-        <!--   <td><label for="end">End date time</label></td> -->
-        <!--    <td class="datetime"> -->
-        <!--     <input name="start" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'" id="date_end" /> -->
-        <!--     <input type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'" id="time_end" /> -->
-        <!--   </td> -->
-        <!-- </tr> -->
+        <tr>
+          <td><label for="end">End date time</label></td>
+          <td class="datetime">
+            <input id="TrainingEndDate" name="start" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'" readonly="true" />
+            <input id="TrainingEndTime" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'" readonly="true" />
+          </td>
+        </tr>
         <tr>
           <td><label for="restafter">Rest after</label></td>
-          <td><input data-dojo-type="dijit/form/DateTextBox" name="restafter" id="TrainingRestAfter" required="true"></td>
+          <td>
+            <input class="durationHour" data-dojo-type="dijit/form/NumberSpinner" name="duration" id="TrainingRestAfterHH" value="0" data-dojo-props="constraints:{min:0}" required="true">h
+            <input class="durationMinute" data-dojo-type="dijit/form/NumberSpinner" name="duration" id="TrainingRestAfterMM" value="0" data-dojo-props="constraints:{min:0,max:59}" required="true">
+          </td>
         </tr>
         <tr>
           <td><label for="transportationtime">Transportation time apply</label></td>
@@ -740,7 +820,7 @@ require([
       <div class="dijitDialogPaneActionBar">
         <button data-dojo-type="dijit/form/Button" type="submit" id="CreateTraining">Create</button>
       </div>
-    <!-- </div> -->
+    </div>
   </div>
 
 
@@ -790,11 +870,11 @@ require([
     <table class="dijitDialogPaneContentArea">
       <tr>
         <td><label for="start">Start date</label></td>
-        <td><input data-dojo-type="dijit/form/DateTextBox" name="start" id="CalendarStart" required="true" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"></td>
+        <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="start" id="CalendarStart" required="true" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"></td>
       </tr>
       <tr>
         <td><label for="end">End date (excluded)</label></td>
-        <td><input data-dojo-type="dijit/form/DateTextBox" name="end" id="CalendarEnd" required="true" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"></td>
+        <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="end" id="CalendarEnd" required="true" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"></td>
       </tr>
     </table>
 
@@ -857,51 +937,6 @@ require([
     </div>
   </div>
 
-
-  <!-- <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateTrainingDialog" title="Create training" style="display: none;"> -->
-  <!--   <div data-dojo-type="dijit/form/Form" data-dojo-id="CreateTrainingForm"> -->
-  <!--     <table class="dijitDialogPaneContentArea"> -->
-  <!--       <tr> -->
-  <!--         <td><label for="name">Name</label></td> -->
-  <!--         <td><input data-dojo-type="dijit/form/TextBox" name="name" id="TrainingName" required="true"></td> -->
-  <!--       </tr> -->
-  <!--       <tr> -->
-  <!--         <td><label for="crewmemeber">Crew member</label></td> -->
-  <!--         <td><select data-dojo-type="dijit/form/FilteringSelect" name="crewmember" data-dojo-id="TrnCMSelect" id="TrainingCrewMemberSelect" required="true"></td> -->
-  <!--       </tr> -->
-  <!--       <tr> -->
-  <!--         <td><label for="start">Start date time</label></td> -->
-  <!--         <td class="datetime"> -->
-  <!--           <input name="start" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'" id="date" /> -->
-  <!--           <input type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'" id="time" /> -->
-  <!--         </td> -->
-  <!--       </tr> -->
-  <!--       <tr> -->
-  <!--         <td><label for="duration">Duration</label></td> -->
-  <!--         <td><input data-dojo-type="dijit/form/DateTextBox" name="duration" id="TrainingDuration" required="true"></td> -->
-  <!--       </tr> -->
-  <!--       <tr> -->
-  <!--         <td><label for="end">End date time</label></td> -->
-  <!--          <td class="datetime"> -->
-  <!--           <input name="start" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'" id="date_end" /> -->
-  <!--           <input type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'" id="time_end" /> -->
-  <!--         </td> -->
-  <!--       </tr> -->
-  <!--       <tr> -->
-  <!--         <td><label for="restafter">Rest after</label></td> -->
-  <!--         <td><input data-dojo-type="dijit/form/DateTextBox" name="restafter" id="TrainingRestAfter" required="true"></td> -->
-  <!--       </tr> -->
-  <!--       <tr> -->
-  <!--         <td><label for="transportationtime">Transportation time apply</label></td> -->
-  <!--         <td><input data-dojo-type="dijit/form/CheckBox" name="transportationtime" id="TrainingTransportationTime" required="true"></td> -->
-  <!--       </tr> -->
-  <!--     </table> -->
-
-  <!--     <div class="dijitDialogPaneActionBar"> -->
-  <!--       <button data-dojo-type="dijit/form/Button" type="submit" id="CreateTraining">Create</button> -->
-  <!--     </div> -->
-  <!--   </div> -->
-  <!-- </div> -->
 
 
 
