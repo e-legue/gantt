@@ -18,12 +18,12 @@
 .datetime > .dijitDateTextBox {
   border: none;
   padding-left: .25em;
-  width: 6.5em;
+  width: 10em;
 }
 
 .datetime > .dijitDateTextBox > .dijitButtonNode {
   border: none;
-  background-image: url("http://i.imgur.com/puVUpm5.png");
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAABp0lEQVQ4y43TP2hTcRAH8E/CI4QGRKSGugkiooNUhYh9k6i4COIah4JDFkclKthFUfHFvRBQqEMGQR2LoHaKfzKo7dBRFBxEHByaIkGiyz14hoIe/Ljffe9+x9337lcyIWkrW8UBpP1ue1DAP6OOI/1uez3HS2krq+AyjuEWlrEd53AeU7iG1XhzHJfwGvcSLOJCOO9PFHQyknUm8DNx9iRoFhyHcBN78Q3bAp/FAnZNJGqWUS0A13EKO/AU5cA7OIppPC7EV5O4vIpTlIe2lgeh5zCXJ1jAGxzEZr/bXktbWYLDGOPdcNAb1xrNWVSwFglelNJW9juYPY2rkXA/GlgK+yy+4m3YVzDASrnYz8R90p7aKjYpgEv4iSHW8R23w/cyfDeihUeY+SvBcND7UGs0P2HU77ZH+JK2srsY97vtjdjGDpLhoPej1mjO5JuYczAXmzjCviAwH9mJqOh9jPZiVLlSbGFn6EpsX73gq8c0cs6mixyMQy9jNzbxEb/wJOIG2IjeK3gepI5LaSvrB0F34tH/SBIfrJpgPibwrFDiv2Qcizf/B6rfbiV80qpEAAAAAElFTkSuQmCC);
   background-color: transparent;
   background-repeat: no-repeat;
   background-position: center;
@@ -39,12 +39,12 @@
 .datetime > .dijitTimeTextBox {
   border: none;
   padding-left: .25em;
-  width: 4.25em;
+  width: 5em;
 }
 
 .datetime > .dijitTimeTextBox > .dijitArrowButton {
   border: none;
-  background-image: url("http://i.imgur.com/MQVTsvY.png");
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAB9ElEQVQ4y7WVP2gUQRTGf1mWrSSIEYuUqcTqPAiIf1aCzXkowTKt0wSzTYoUB8oRPEhxRZpRYjGWkjZNuEaEASHVkTqF5SFyhJBKDjnSfIOTIXeXQl/1dt5737739ptv55hiZeXmgTqwqKMB0PfWnE+qmZsA9ABoAQ2gSMIjoAfseGuOpgKWlSuAXeBNdDwGhvJvA1l0vgdsemtGITlLwA4isGNgDVgAngMv5a8plin3QLWXAdVZQ34HWPbW7HtrzoAaUPfWnHlr9oFl5aCa3Usja2ff9YKOt+Yd17Cycu+Btxr/kbfmKFesJbBjoD0D5B6wCWwA28ALTdACVjNRI4za9daMo+LHZeXuJGBfgYdA5q35A3TD6GXl5nPxrFDbh0lDn4C8rNwKcFNgp8Azb81v5RyqtgDqWUTaIbBUVm49AnwF3AC+JWA/1fFr4G5Eq8Vs2r68NSfAikAHwNMAlvCUmDaDiLQ/vDV7V4DeB554a4ZJ7DNwolqAQQ70dZ0KoAl8uaLTX1MGaaqxEdDPdNF7Cm6Vlcu5pil3S489b8152OGOdlGbxcPE2qoZC+OvOJSV+xDd4w6wLZ6Fr1mE/aqztm4JwEdvzUYKGMShEYlDVzxbAnJ9gKbGrIVRgdWgOJPkaz2RqVP5t2bJ1/8V2H/xC7gA3Mu8RLBms9sAAAAASUVORK5CYII%3D);
   background-color: transparent;
   background-repeat: no-repeat;
   background-position: center;
@@ -82,8 +82,9 @@
 
   <script>
 var dojoConfig = {
-  async: true,
-  gfxRenderer: "svg",
+  async: true, 
+  debug: true,
+//   gfxRenderer: "svg",
   packages: [{
     name: 'dstore',
     location: 'http://cdn.rawgit.com/SitePen/dstore/v1.0.0'
@@ -121,7 +122,6 @@ require([
   "dijit/form/TimeTextBox",
   "dijit/form/Select",
   "dojox/form/CheckedMultiSelect",
-  "dojox/form/DateTextBox",
   "dijit/form/FilteringSelect",
   "dijit/form/NumberSpinner",
   "dijit/layout/TabContainer", 
@@ -159,7 +159,6 @@ require([
   CheckedMultiSelect,
   FilteringSelect,
   NumberSpinner,
-  DojoxDateTextBox,
   TabContainer,
   ContentPane,
   TableContainer, 
@@ -169,6 +168,20 @@ require([
   DstoreAdapter,
   Model,
   ComputedProperty){
+
+
+  // ===============================================
+  // Fix to support reset on CheckedMultiSelect.
+  // ===============================================
+  // source: http://jsfiddle.net/FNL3h/
+  FixedCheckedMultiSelect = declare("dojox/form/FixedCheckedMultiSelect", [ CheckedMultiSelect ], {
+    reset: function() {
+      this.inherited(arguments);
+      if (!this._resetValue || !this._resetValue.length) {
+        this._updateSelection();
+      }
+    }
+  });
 
   parser.parse();
 
@@ -686,9 +699,6 @@ require([
     });
 
     CreateDayOffDialog.hide();
-
-    DayOffDatesSelect.set('value',[]);
-    DayOffDatesSelect._updateSelection();
   });
 
   // -----------------------------------------------
@@ -901,7 +911,7 @@ require([
     <table class="dijitDialogPaneContentArea">
       <tr>
         <td><label for="start">Start period date(s)</label></td>
-        <td><input data-dojo-type="dojox/form/CheckedMultiSelect" name="start" id="CalendarStartPeriods" multiple="true"></td>
+        <td><input multiple="true" data-dojo-type="dojox/form/CheckedMultiSelect" name="start" id="CalendarStartPeriods"></td>
       </tr>
     </table>
 
@@ -912,7 +922,7 @@ require([
 
 
 
-  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateDayOffDialog" title="Create day off" style="display: none;" data-dojo-props="onHide: function(){CreateDayOffForm.reset(); DayOffDatesSelect.set('value',[]); DayOffDatesSelect._updateSelection();}" >
+  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateDayOffDialog" title="Create day off" style="display: none;" data-dojo-props="onHide: function(){CreateDayOffForm.reset();}" >
     <div data-dojo-type="dijit/form/Form" id="CreateDayOffForm" data-dojo-id="CreateDayOffForm" encType="multipart/form-data" action="" method="">
       <table class="dijitDialogPaneContentArea">
         <tr>
@@ -921,7 +931,7 @@ require([
         </tr>
         <tr>
           <td><label for="start">date(s)</label></td>
-          <td><select data-dojo-type="dojox/form/CheckedMultiSelect" name="start" id="DayOffDatesSelect" required="true" multiple="true"></td>
+          <td><select multiple="true" data-dojo-type="dojox/form/FixedCheckedMultiSelect" name="start" id="DayOffDatesSelect" required="true"></td>
         </tr>
       </table>
 
