@@ -5,6 +5,7 @@
   
   <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dijit/themes/claro/claro.css" />
   <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dojox/form/resources/CheckedMultiSelect.css" />
+
   <style type="text/css">
 .datetime {
   border: 1px solid #759dc0;
@@ -68,6 +69,15 @@
 .durationMinute {
   width: 3.25em;
 }
+
+/*
+.durationHour::after { 
+      content: "h";
+}
+.durationMinute::after { 
+      content: "m";
+}
+*/
   </style>
 
   <script>
@@ -111,6 +121,7 @@ require([
   "dijit/form/TimeTextBox",
   "dijit/form/Select",
   "dojox/form/CheckedMultiSelect",
+  "dojox/form/DateTextBox",
   "dijit/form/FilteringSelect",
   "dijit/form/NumberSpinner",
   "dijit/layout/TabContainer", 
@@ -148,6 +159,7 @@ require([
   CheckedMultiSelect,
   FilteringSelect,
   NumberSpinner,
+  DojoxDateTextBox,
   TabContainer,
   ContentPane,
   TableContainer, 
@@ -626,7 +638,7 @@ require([
     var coordY = 100;
     var pos = 0;
 
-    // Compute the position and Y coordinate of the new crewmmember based on 
+    // Compute the position and Y coordinate of the new crewmember based on 
     // existing data.
     crewMemberStore.sort('position').forEach(function(item){
       pos += 1;
@@ -643,10 +655,6 @@ require([
     });
 
     CreateCrewMemberDialog.hide();
-
-    // Reset dialog input.
-    registry.byId("CrewMemberName").reset();
-    registry.byId("CrewMemberBirthDate").reset();
   });
 
 
@@ -654,10 +662,9 @@ require([
   // Create Day Off dialog
   // -----------------------------------------------
   registry.byId("CreateDayOff").on("click", function(){
-
     var pos = 0;
 
-    // Compute the position and Y coordinate of the new crewmmember based on 
+    // Compute the position and Y coordinate of the new crewmember based on 
     // existing data.
     activityStore.forEach(function(item){
       pos += 1;
@@ -677,16 +684,20 @@ require([
       });
       pos += 1;
     });
-    
+
     CreateDayOffDialog.hide();
+
+    DayOffDatesSelect.set('value',[]);
+    DayOffDatesSelect._updateSelection();
   });
 
   // -----------------------------------------------
   // Create Training dialog
   // -----------------------------------------------
 
-  registry.byId("TrainingStartDate").on("click", function(){
-    if( registry.byId("TrainingStartTime").get("value") ){
+  registry.byId("TrainingStartDate").on("click,change", function(){
+    if(   registry.byId("TrainingStartTime").get("value") != null 
+       && registry.byId("TrainingStartDate").get("value") != null ){
       registry.byId("TrainingDurationHour").readOnly = false;
       registry.byId("TrainingDurationMinute").readOnly = false;
 
@@ -694,8 +705,9 @@ require([
     }
   });
 
-  registry.byId("TrainingStartTime").on("click", function(){
-    if( registry.byId("TrainingStartDate").get("value") ){
+  registry.byId("TrainingStartTime").on("click,change", function(){
+    if(   registry.byId("TrainingStartTime").get("value") != null 
+       && registry.byId("TrainingStartDate").get("value") != null ){
       registry.byId("TrainingDurationHour").readOnly = false;
       registry.byId("TrainingDurationMinute").readOnly = false;
       
@@ -703,11 +715,11 @@ require([
     }
   });
 
-  registry.byId("TrainingDurationHour").on("click", function(){
+  registry.byId("TrainingDurationHour").on("click,change", function(){
     UpdateEndDateTime("Training");
   });
   
-  registry.byId("TrainingDurationMinute").on("click", function(){
+  registry.byId("TrainingDurationMinute").on("click,change", function(){
     UpdateEndDateTime("Training");
   });
 
@@ -793,21 +805,21 @@ require([
         <tr>
           <td><label for="duration">Duration</label></td>
           <td>
-            <input id="TrainingDurationHour"   class="durationHour" data-dojo-type="dijit/form/NumberSpinner" name="duration" data-dojo-props="constraints:{min:0,max:999}, placeHolder:'0'" required="true" readonly="true"> h
-            <input id="TrainingDurationMinute" class="durationMinute" data-dojo-type="dijit/form/NumberSpinner" name="duration" data-dojo-props="constraints:{min:0,max:59}, placeHolder:'00'" required="true" readonly="true">
+            <input id="TrainingDurationHour"   class="durationHour" data-dojo-type="dijit/form/NumberSpinner" name="duration" data-dojo-props="constraints:{min:0,max:999}, placeHolder:'hhh'" required="true" readonly="true">
+            <input id="TrainingDurationMinute" class="durationMinute" data-dojo-type="dijit/form/NumberSpinner" name="duration" data-dojo-props="constraints:{min:0,max:59}, placeHolder:'mm'" required="true" readonly="true">
           </td>
         </tr>
         <tr>
           <td><label for="end">End date time</label></td>
           <td class="datetime">
-            <input id="TrainingEndDate" name="start" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'" readonly="true" />
-            <input id="TrainingEndTime" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'" readonly="true" />
+            <input id="TrainingEndDate" name="start" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'" readonly="true" disabled="true" />
+            <input id="TrainingEndTime" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'" readonly="true" disabled="true" />
           </td>
         </tr>
         <tr>
           <td><label for="restafter">Rest after</label></td>
           <td>
-            <input class="durationHour" data-dojo-type="dijit/form/NumberSpinner" name="duration" id="TrainingRestAfterHH" value="0" data-dojo-props="constraints:{min:0}" required="true">h
+            <input class="durationHour" data-dojo-type="dijit/form/NumberSpinner" name="duration" id="TrainingRestAfterHH" value="0" data-dojo-props="constraints:{min:0}" required="true">
             <input class="durationMinute" data-dojo-type="dijit/form/NumberSpinner" name="duration" id="TrainingRestAfterMM" value="0" data-dojo-props="constraints:{min:0,max:59}" required="true">
           </td>
         </tr>
@@ -818,7 +830,7 @@ require([
       </table>
 
       <div class="dijitDialogPaneActionBar">
-        <button data-dojo-type="dijit/form/Button" type="submit" id="CreateTraining">Create</button>
+        <button data-dojo-type="dijit/form/Button" type="button" id="CreateTraining">Create</button>
       </div>
     </div>
   </div>
@@ -861,7 +873,7 @@ require([
     </table>
 
     <div class="dijitDialogPaneActionBar">
-      <button data-dojo-type="dijit/form/Button" type="submit" id="SaveFile">Save file</button>
+      <button data-dojo-type="dijit/form/Button" type="button" id="SaveFile">Save file</button>
     </div>
   </div>
 
@@ -879,7 +891,7 @@ require([
     </table>
 
     <div class="dijitDialogPaneActionBar">
-      <button data-dojo-type="dijit/form/Button" type="submit" id="SetCalendar">Set</button>
+      <button data-dojo-type="dijit/form/Button" type="button" id="SetCalendar">Set</button>
     </div>
   </div>
 
@@ -894,49 +906,52 @@ require([
     </table>
 
     <div class="dijitDialogPaneActionBar">
-      <button data-dojo-type="dijit/form/Button" type="submit" id="SetStartPeriods">Set</button>
+      <button data-dojo-type="dijit/form/Button" type="button" id="SetStartPeriods">Set</button>
     </div>
   </div>
 
 
 
-  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateDayOffDialog" title="Create day off" style="display: none;">
-    <table class="dijitDialogPaneContentArea">
-      <tr>
-        <td><label for="crewmemeber">Crew member</label></td>
-        <td><select data-dojo-type="dijit/form/FilteringSelect" name="crewmember" id="DayOffCrewMemberSelect" required="true"></td>
-      </tr>
-      <tr>
-        <td><label for="start">date(s)</label></td>
-        <td><select data-dojo-type="dojox/form/CheckedMultiSelect" name="start" id="DayOffDatesSelect" required="true" multiple="true"></td>
-      </tr>
-    </table>
+  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateDayOffDialog" title="Create day off" style="display: none;" data-dojo-props="onHide: function(){CreateDayOffForm.reset(); DayOffDatesSelect.set('value',[]); DayOffDatesSelect._updateSelection();}" >
+    <div data-dojo-type="dijit/form/Form" id="CreateDayOffForm" data-dojo-id="CreateDayOffForm" encType="multipart/form-data" action="" method="">
+      <table class="dijitDialogPaneContentArea">
+        <tr>
+          <td><label for="crewmemeber">Crew member</label></td>
+          <td><select data-dojo-type="dijit/form/FilteringSelect" name="crewmember" id="DayOffCrewMemberSelect" required="true"></td>
+        </tr>
+        <tr>
+          <td><label for="start">date(s)</label></td>
+          <td><select data-dojo-type="dojox/form/CheckedMultiSelect" name="start" id="DayOffDatesSelect" required="true" multiple="true"></td>
+        </tr>
+      </table>
 
-    <div class="dijitDialogPaneActionBar">
-      <button data-dojo-type="dijit/form/Button" type="submit" id="CreateDayOff">Create</button>
+      <div class="dijitDialogPaneActionBar">
+        <button data-dojo-type="dijit/form/Button" type="button" id="CreateDayOff">Create</button>
+      </div>
     </div>
   </div>
 
 
 
-  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateCrewMemberDialog" title="Create crew member" style="display: none;">
-    <table class="dijitDialogPaneContentArea">
-      <tr>
-        <td><label for="name">Name</label></td>
-        <td><input data-dojo-type="dijit/form/TextBox" name="name" id="CrewMemberName" required="true"></td>
-      </tr>
-      <tr>
-        <td><label for="start">Birth date</label></td>
-        <td><input data-dojo-type="dijit/form/DateTextBox" name="day" id="CrewMemberBirthDate" required="true"  data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"   ></td>
-      </tr>
-    </table>
+  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateCrewMemberDialog" title="Create crew member" style="display: none;" data-dojo-props="onHide: function(){CreateCrewMemberForm.reset();}" >
+    <div data-dojo-type="dijit/form/Form" id="CreateCrewMemberForm" data-dojo-id="CreateCrewMemberForm" encType="multipart/form-data" action="" method="">
+      <table class="dijitDialogPaneContentArea">
+        <tr>
+          <td><label for="name">Name</label></td>
+          <td><input data-dojo-type="dijit/form/TextBox" name="name" id="CrewMemberName" required="true"></td>
+        </tr>
+        <tr>
+          <td><label for="start">Birth date</label></td>
+          <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="day" id="CrewMemberBirthDate" required="true"  data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"   ></td>
+        </tr>
+      </table>
 
 
-    <div class="dijitDialogPaneActionBar">
-      <button data-dojo-type="dijit/form/Button" type="submit" id="CreateCrewMember" value="submit">Create</button>
+      <div class="dijitDialogPaneActionBar">
+        <button data-dojo-type="dijit/form/Button" type="button" id="CreateCrewMember">Create</button>
+      </div>
     </div>
   </div>
-
 
 
 

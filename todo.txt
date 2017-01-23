@@ -22,3 +22,7 @@ datetime picker dojo...
 http://jsfiddle.net/dacrazycoder/8sraoao9/
 http://jsfiddle.net/FjuCa/
 
+
+multiselect reset.
+http://jsfiddle.net/FNL3h/
+m
