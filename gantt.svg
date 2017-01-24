@@ -5,6 +5,23 @@
 <!ENTITY % SVG.metadata.extra.content "|meta" >
 <!ELEMENT meta (#PCDATA) >
 <!ATTLIST meta name CDATA #REQUIRED>
+
+
+
+<!ENTITY % SVG.station.extra.content "|station" >
+<!ELEMENT station (code, name, dst-shift, dst-start-lst, dst-end-lst, utc-offset, region-list)>
+<!ATTLIST station id CDATA #REQUIRED>
+
+<!ELEMENT code (#PCDATA) >
+<!ELEMENT name (#PCDATA) >
+<!ELEMENT dst-shift (#PCDATA) >
+<!ELEMENT dst-start-lst (#PCDATA) >
+<!ELEMENT dst-end-lst (#PCDATA) >
+<!ELEMENT utc-offset (#PCDATA) >
+
+<!ELEMENT region-list (region) >
+
+<!ELEMENT region (#PCDATA) >
 ]
 >
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink">

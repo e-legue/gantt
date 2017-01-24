@@ -106,6 +106,15 @@ require([
   "dojo/dom-construct",
   "dojo/parser",
   "dijit/registry",
+  "dojox/form/CheckedMultiSelect",
+  "dojo/date",
+  "dstore/Memory",
+  "dstore/Trackable",
+  "dstore/legacy/DstoreAdapter",
+  "dmodel/Model",
+  "dmodel/ComputedProperty",
+  "dojo/domReady!",
+
   "dijit/MenuBar",
   "dijit/PopupMenuBarItem",
   "dijit/Menu",
@@ -120,20 +129,14 @@ require([
   "dijit/form/Button",
   "dijit/form/DateTextBox",
   "dijit/form/TimeTextBox",
-  "dijit/form/Select",
-  "dojox/form/CheckedMultiSelect",
+  "dijit/form/NumberTextBox",
   "dijit/form/FilteringSelect",
   "dijit/form/NumberSpinner",
   "dijit/layout/TabContainer", 
   "dijit/layout/ContentPane", 
   "dojox/layout/TableContainer",
-  "dojo/date",
-  "dstore/Memory",
-  "dstore/Trackable",
-  "dstore/legacy/DstoreAdapter",
-  "dmodel/Model",
-  "dmodel/ComputedProperty",
-  "dojo/domReady!"
+  "dijit/form/Select",
+
 ], function(
   declare,
   on, 
@@ -141,27 +144,21 @@ require([
   domConstruct, 
   parser, 
   registry, 
-  MenuBar, 
-  PopupMenuBarItem, 
-  Menu, 
-  MenuItem, 
-  MenuBarItem, 
-  DropDownMenu,
-  CheckedMenuItem, 
-  Dialog, 
+/*  Dialog, 
   Form,
   CheckBox, 
   TextBox, 
   Button, 
   DateTextBox, 
   TimeTextBox, 
-  Select,
+  NumberTextBox, 
+  Select,*/
   CheckedMultiSelect,
-  FilteringSelect,
+/*  FilteringSelect,
   NumberSpinner,
   TabContainer,
   ContentPane,
-  TableContainer, 
+  TableContainer, */
   date,
   Memory,
   Trackable,
@@ -709,7 +706,9 @@ require([
     if(   registry.byId("TrainingStartTime").get("value") != null 
        && registry.byId("TrainingStartDate").get("value") != null ){
       registry.byId("TrainingDurationHour").readOnly = false;
+      registry.byId("TrainingDurationHour").set("value", 0);
       registry.byId("TrainingDurationMinute").readOnly = false;
+      registry.byId("TrainingDurationMinute").set("value", 0);
 
       UpdateEndDateTime("Training");
     }
@@ -719,7 +718,9 @@ require([
     if(   registry.byId("TrainingStartTime").get("value") != null 
        && registry.byId("TrainingStartDate").get("value") != null ){
       registry.byId("TrainingDurationHour").readOnly = false;
+      registry.byId("TrainingDurationHour").set("value", 0);
       registry.byId("TrainingDurationMinute").readOnly = false;
+      registry.byId("TrainingDurationMinute").set("value", 0);
       
       UpdateEndDateTime("Training");
     }
@@ -758,6 +759,7 @@ require([
     <div id="BusinessObjectMenu" data-dojo-type="dijit/PopupMenuBarItem" data-dojo-props="disabled:true">
       <span>Business objects</span>
       <div data-dojo-type="dijit/DropDownMenu" id="businessObjectMenu">
+        <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){ShowConstantsDialog.show();}">Show constants</div>
         <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateCrewMemberDialog.show();}">Create crewmember</div>
         <div data-dojo-type="dijit/PopupMenuItem">
           <span>Create activity</span>
@@ -963,6 +965,19 @@ require([
     </div>
   </div>
 
+
+  <div data-dojo-type="dijit/Dialog" data-dojo-id="ShowConstantsDialog" title="Set constants" style="display: none;">
+    <table class="dijitDialogPaneContentArea">
+      <tr>
+        <td><label for="transportationtime">Transportation time duration (in minutes)</label></td>
+        <td><input data-dojo-type="dijit/form/NumberTextBox" name="transportationtime" id="TransportationTimeDuration" value="0" data-dojo-props="constraints:{min:0, places:0}" required="true" style="width: 5em;"></td>
+      </tr>
+    </table>
+
+    <div class="dijitDialogPaneActionBar">
+      <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){ShowConstantsDialog.hide();}">Close</button>
+    </div>
+  </div>
 
 
 </html>

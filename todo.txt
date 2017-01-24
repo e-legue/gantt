@@ -22,7 +22,5 @@ datetime picker dojo...
 http://jsfiddle.net/dacrazycoder/8sraoao9/
 http://jsfiddle.net/FjuCa/
 
-
-multiselect reset.
-http://jsfiddle.net/FNL3h/
-m
+dojo date locale.
+https://dojotoolkit.org/reference-guide/1.10/dojo/cldr.html#dojo-cldr
