@@ -27,4 +27,19 @@ https://dojotoolkit.org/reference-guide/1.10/dojo/cldr.html#dojo-cldr
 
 
 At least one item must be selected.
+http://download.dojotoolkit.org/release-1.6.1/dojo-release-1.6.1/dojox/form/tests/test_CheckedMultiSelect.html
+
+dojox calendar.
+http://archive.dojotoolkit.org/nightly/dojotoolkit/dojox/widget/tests/test_Calendar.html?theme=soria
+
+
+graph compression on X.
+save stores on svg file save.
+load stores on svg file load.
+generate xslt to generate planner files.
+
+
+
+
+
 

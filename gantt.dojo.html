@@ -163,7 +163,24 @@ require([
       if (!this._resetValue || !this._resetValue.length) {
         this._updateSelection();
       }
-    }
+    },
+    displayMessage : function(){}, // to disable 
+    validator: function() {
+        if (!this.required)
+            return true;
+
+        var isValid = false;
+
+        var opts = this.value;
+        console.log('validator');
+        console.log(opts);
+        for (var i = 0, l = opts.length; i < l; i++)
+            if (opts[i].selected && opts[i].value != null && opts[i].value.toString().length != 0)
+            isValid = true;
+
+        console.log(isValid);
+        return isValid;
+    },
   });
 
   parser.parse();
@@ -237,9 +254,9 @@ require([
     var calendarId = svg.getElementById("calendar");
 
     var G       = document.createElementNS(svgNS,"g");
-    G.setAttributeNS(null,"transform","translate(" + 1440 * item.get('position') + ",0)");
-    G.setAttributeNS(null,"class", item.get('type'));
-    G.setAttributeNS(null,"id", item.get('ident'));
+    G.setAttributeNS(null, "transform", "translate(" + 1440 * item.get('position') + ",0)");
+    G.setAttributeNS(null, "class", item.get('type'));
+    G.setAttributeNS(null, "id", item.get('ident'));
     calendarId.appendChild(G);
 
     var UseDay = document.createElementNS(svgNS, "use");
@@ -247,18 +264,18 @@ require([
     G.appendChild(UseDay);
 
     var TextRelativeDate = document.createElementNS(svgNS,"text");
-    TextRelativeDate.setAttributeNS(null,"class","day_label relative");
-    TextRelativeDate.setAttributeNS(null,"x","720");
-    TextRelativeDate.setAttributeNS(null,"y","-70");
+    TextRelativeDate.setAttributeNS(null, "class", "day_label relative");
+    TextRelativeDate.setAttributeNS(null, "x", 720);
+    TextRelativeDate.setAttributeNS(null, "y", -70);
     G.appendChild(TextRelativeDate);
 
     var TextNodeRelativeDate = document.createTextNode("Day " + item.get('relative') );
     TextRelativeDate.appendChild(TextNodeRelativeDate);
 
     var TextYYYYMMDDDate = document.createElementNS(svgNS,"text");
-    TextYYYYMMDDDate.setAttributeNS(null,"class","day_label yyyymmdd");
-    TextYYYYMMDDDate.setAttributeNS(null,"x","720");
-    TextYYYYMMDDDate.setAttributeNS(null,"y","-20");
+    TextYYYYMMDDDate.setAttributeNS(null, "class", "day_label yyyymmdd");
+    TextYYYYMMDDDate.setAttributeNS(null, "x", 720);
+    TextYYYYMMDDDate.setAttributeNS(null, "y", -20);
     G.appendChild(TextYYYYMMDDDate);
     
     var TextNodeYYYYMMDDDate = document.createTextNode(item.get('name'));
@@ -276,18 +293,18 @@ require([
   function SVG_drawCrewMember(item){
     var crewMemberId = svg.getElementById("crewmembers");
 
-    var G = document.createElementNS(svgNS,"g");
-    G.setAttributeNS(null,"transform","translate(0," + item.get('y') + ")");
+    var G = document.createElementNS(svgNS, "g");
+    G.setAttributeNS(null,"transform","translate(0, " + item.get('y') + ")");
     G.setAttributeNS(null,"id", item.get('ident'));
     crewMemberId.appendChild(G);
 
-    var TextName = document.createElementNS(svgNS,"text");
-    TextName.setAttributeNS(null,"class","crewmember");
-    TextName.setAttributeNS(null,"x","-50");
-    TextName.setAttributeNS(null,"y", "100");
+    var TextName = document.createElementNS(svgNS, "text");
+    TextName.setAttributeNS(null, "class", "crewmember");
+    TextName.setAttributeNS(null, "x", -50);
+    TextName.setAttributeNS(null, "y", 100);
     G.appendChild(TextName);
 
-    var TextNodeName = document.createTextNode(item.get('name') );
+    var TextNodeName = document.createTextNode(item.get('name'));
     TextName.appendChild(TextNodeName);
   }
 
@@ -295,6 +312,17 @@ require([
   // with a translation on y, and belongs to crewmember or opentime line.
   // Therefore no y translation is necessary, a x is used to draw the activity on
   // the rigth place in the calendar.
+  function SVG_drawRect(type, x, y, width){
+    var Rect = document.createElementNS(svgNS,"rect");
+    Rect.setAttributeNS(null, "class", type);
+    Rect.setAttributeNS(null, "x", x);
+    Rect.setAttributeNS(null, "y", y);
+    Rect.setAttributeNS(null, "width", width);
+    Rect.setAttributeNS(null, "height", 30);
+    return Rect;
+  }
+
+
   function SVG_drawActivity(activity, line){
 
     var parentId = svg.getElementById(line.get('ident'));
@@ -329,44 +357,49 @@ require([
     // transporation time
     if( activity.get('tp') > 0 ){
       // before.
-      var RectTPB = document.createElementNS(svgNS,"rect");
+/*      var RectTPB = document.createElementNS(svgNS,"rect");
       RectTPB.setAttributeNS(null, "class", "TP");
       RectTPB.setAttributeNS(null, "x", activity.get('tp') * -1);
       RectTPB.setAttributeNS(null, "y", 20);
       RectTPB.setAttributeNS(null, "width", activity.get('tp'));
       RectTPB.setAttributeNS(null, "height", 30);
-      G.appendChild(RectTPB);
+      G.appendChild(RectTPB);*/
+      G.appendChild(SVG_drawRect("TP", activity.get('tp') * -1, 20, activity.get('tp')));
+
       // after.
-      var RectTPA = document.createElementNS(svgNS,"rect");
+/*      var RectTPA = document.createElementNS(svgNS,"rect");
       RectTPA.setAttributeNS(null, "class", "TP");
       RectTPA.setAttributeNS(null, "x", activity.get('width'));
       RectTPA.setAttributeNS(null, "y", 50);
       RectTPA.setAttributeNS(null, "width", activity.get('tp'));
       RectTPA.setAttributeNS(null, "height", 30);
-      G.appendChild(RectTPA);
+      G.appendChild(RectTPA);*/
+      G.appendChild(SVG_drawRect("TP", activity.get('width') * -1, 50, activity.get('tp')));
     }
 
     // rest before
     if( activity.get('restb') > 0 ){
       // before.
-      var RectTPB = document.createElementNS(svgNS,"rect");
+/*      var RectTPB = document.createElementNS(svgNS,"rect");
       RectTPB.setAttributeNS(null, "class", "REST");
       RectTPB.setAttributeNS(null, "x", (activity.get('restb') + activity.get('tp') ) * -1);
       RectTPB.setAttributeNS(null, "y", 20);
       RectTPB.setAttributeNS(null, "width", activity.get('restb'));
       RectTPB.setAttributeNS(null, "height", 30);
-      G.appendChild(RectTPB);
+      G.appendChild(RectTPB);*/
+      G.appendChild(SVG_drawRect("REST", (activity.get('restb') + activity.get('tp') ) * -1, 20, activity.get('restb')));
     }
     
     // rest after. 
     if( activity.get('resta') > 0 ){
-      var RectTPA = document.createElementNS(svgNS,"rect");
+/*      var RectTPA = document.createElementNS(svgNS,"rect");
       RectTPA.setAttributeNS(null, "class", "REST");
       RectTPA.setAttributeNS(null, "x", activity.get('width') + activity.get('tp'));
       RectTPA.setAttributeNS(null, "y", 50);
       RectTPA.setAttributeNS(null, "width", activity.get('resta'));
       RectTPA.setAttributeNS(null, "height", 30);
-      G.appendChild(RectTPA);
+      G.appendChild(RectTPA);*/
+      G.appendChild(SVG_drawRect("REST", activity.get('width') + activity.get('tp'), 50, activity.get('resta')));
     }
 
   }
@@ -765,7 +798,9 @@ require([
       pos += 1;
     }); 
 
-
+    console.log("DayOffDatesSelect :");
+    console.log(registry.byId("DayOffDatesSelect").isValid());
+    console.log(registry.byId("DayOffDatesSelect"));
     var days = registry.byId("DayOffDatesSelect").value; 
 
     days.forEach(function(day){
