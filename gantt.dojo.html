@@ -144,21 +144,7 @@ require([
   domConstruct, 
   parser, 
   registry, 
-/*  Dialog, 
-  Form,
-  CheckBox, 
-  TextBox, 
-  Button, 
-  DateTextBox, 
-  TimeTextBox, 
-  NumberTextBox, 
-  Select,*/
   CheckedMultiSelect,
-/*  FilteringSelect,
-  NumberSpinner,
-  TabContainer,
-  ContentPane,
-  TableContainer, */
   date,
   Memory,
   Trackable,
@@ -313,32 +299,76 @@ require([
 
     var parentId = svg.getElementById(line.get('ident'));
 
-    var G = document.createElementNS(svgNS,"g");
-    G.setAttributeNS(null,"transform","translate(" + activity.get('x') + ",50)");
-    G.setAttributeNS(null,"id", activity.get('ident'));
-    G.setAttributeNS(null,"onclick","alert('can display details here');");
+    var G = document.createElementNS(svgNS, "g");
+    G.setAttributeNS(null, "transform", "translate(" + activity.get('x') + ",50)");
+    G.setAttributeNS(null, "id", activity.get('ident'));
+    G.setAttributeNS(null, "onclick", "alert('can display details here');");
     parentId.appendChild(G);
 
     var Rect = document.createElementNS(svgNS,"rect");
-    Rect.setAttributeNS(null,"class", activity.get('type'));
-    Rect.setAttributeNS(null,"x","0");
-    Rect.setAttributeNS(null,"y","0");
-    Rect.setAttributeNS(null,"rx","20");
-    Rect.setAttributeNS(null,"ry","20");
-    Rect.setAttributeNS(null,"width", activity.get('width'));
-    Rect.setAttributeNS(null,"height","100");
+    Rect.setAttributeNS(null, "class", activity.get('type'));
+    Rect.setAttributeNS(null, "x", 0);
+    Rect.setAttributeNS(null, "y", 0);
+    Rect.setAttributeNS(null, "rx", 20);
+    Rect.setAttributeNS(null, "ry", 20);
+    Rect.setAttributeNS(null, "width", activity.get('width'));
+    Rect.setAttributeNS(null, "height", 100);
     G.appendChild(Rect);
 
     var Text = document.createElementNS(svgNS,"text");
-    Text.setAttributeNS(null,"class","label");
-    Text.setAttributeNS(null,"x","10");
-    Text.setAttributeNS(null,"y","50");
-    Text.setAttributeNS(null,"font-size","50");
-    Text.setAttributeNS(null,"text-anchor","start");
+    Text.setAttributeNS(null, "class", "label");
+    Text.setAttributeNS(null, "x", 10);
+    Text.setAttributeNS(null, "y", 50);
+    Text.setAttributeNS(null, "font-size", 50);
+    Text.setAttributeNS(null, "text-anchor", "start");
     G.appendChild(Text);
 
     var TextNode = document.createTextNode(activity.get('name'));
     Text.appendChild(TextNode);
+
+    // transporation time
+    if( activity.get('tp') > 0 ){
+      // before.
+      var RectTPB = document.createElementNS(svgNS,"rect");
+      RectTPB.setAttributeNS(null, "class", "TP");
+      RectTPB.setAttributeNS(null, "x", activity.get('tp') * -1);
+      RectTPB.setAttributeNS(null, "y", 20);
+      RectTPB.setAttributeNS(null, "width", activity.get('tp'));
+      RectTPB.setAttributeNS(null, "height", 30);
+      G.appendChild(RectTPB);
+      // after.
+      var RectTPA = document.createElementNS(svgNS,"rect");
+      RectTPA.setAttributeNS(null, "class", "TP");
+      RectTPA.setAttributeNS(null, "x", activity.get('width'));
+      RectTPA.setAttributeNS(null, "y", 50);
+      RectTPA.setAttributeNS(null, "width", activity.get('tp'));
+      RectTPA.setAttributeNS(null, "height", 30);
+      G.appendChild(RectTPA);
+    }
+
+    // rest before
+    if( activity.get('restb') > 0 ){
+      // before.
+      var RectTPB = document.createElementNS(svgNS,"rect");
+      RectTPB.setAttributeNS(null, "class", "REST");
+      RectTPB.setAttributeNS(null, "x", (activity.get('restb') + activity.get('tp') ) * -1);
+      RectTPB.setAttributeNS(null, "y", 20);
+      RectTPB.setAttributeNS(null, "width", activity.get('restb'));
+      RectTPB.setAttributeNS(null, "height", 30);
+      G.appendChild(RectTPB);
+    }
+    
+    // rest after. 
+    if( activity.get('resta') > 0 ){
+      var RectTPA = document.createElementNS(svgNS,"rect");
+      RectTPA.setAttributeNS(null, "class", "REST");
+      RectTPA.setAttributeNS(null, "x", activity.get('width') + activity.get('tp'));
+      RectTPA.setAttributeNS(null, "y", 50);
+      RectTPA.setAttributeNS(null, "width", activity.get('resta'));
+      RectTPA.setAttributeNS(null, "height", 30);
+      G.appendChild(RectTPA);
+    }
+
   }
 
   // ===============================================
@@ -391,6 +421,9 @@ require([
       position: 'numeric',
       x: 'numeric',
       width: 'numeric',
+      tp: 'numeric',
+      resta: 'numeric',
+      restb: 'numeric',
       type: 'string',
       cmPosition: 'numeric', // foreign key to CrewMember.
       ident: new ComputedProperty({ 
@@ -402,7 +435,20 @@ require([
     },
     validateOnSet: false
   });
-
+ 
+  var StationModel = declare(Model, {
+    schema: {
+      id: 'string',
+      code: 'string',
+      name: 'string',
+      dstShift: 'string',
+      dstStartLst: 'string',
+      dstEndLst: 'string',
+      utcOffset: 'string',
+      regionList: 'array',
+    },
+    validateOnSet: false
+  });
 
   // ===============================================
   // Data STOREs and events.
@@ -468,7 +514,7 @@ require([
 
   var crewMemberStoreAdapter = new DstoreAdapter(crewMemberStore);
   registry.byId("DayOffCrewMemberSelect").set("store", crewMemberStoreAdapter);
-  registry.byId("TrnCMSelect").set("store", crewMemberStoreAdapter);
+  registry.byId("TrainingCrewMemberSelect").set("store", crewMemberStoreAdapter);
 
 
   // -----------------------------------------------
@@ -504,6 +550,40 @@ require([
     item.parentNode.removeChild(item);
   });
 
+  // -----------------------------------------------
+  // stationStore
+  // -----------------------------------------------
+  var stationStore = new Memory({
+    Model: StationModel,
+    idProperty: "id",
+  });
+
+  // ===============================================
+  // LOADING STORES FROM SVG
+  // ===============================================
+  function LoadStationStore(){
+    var rootStationStoreChildren = svg.getElementsByTagName("station");
+
+    for(var i = 0; i < rootStationStoreChildren.length; i ++){
+      var obj = rootStationStoreChildren[i];
+
+      stationStore.addSync({
+        id: obj.getAttribute('id'),
+        code: obj.getElementsByTagName('code')[0].textContent,
+        name: obj.getElementsByTagName('name')[0].textContent,
+        dstShift: obj.getElementsByTagName('dst-shift')[0].textContent,
+        dstStartLst: obj.getElementsByTagName('dst-start-lst')[0].textContent,
+        dstEndLst: obj.getElementsByTagName('dst-end-lst')[0].textContent,
+        utcOffset: obj.getElementsByTagName('utc-offset')[0].textContent,
+      });
+    }
+  }
+
+  // load data about stations.
+  LoadStationStore();
+
+  var stationStoreAdapter = new DstoreAdapter(stationStore);
+  registry.byId("CalendarStation").set("store", stationStoreAdapter);
 
   // ===============================================
   // EVENTS on dijit
@@ -584,6 +664,11 @@ require([
   registry.byId("SetCalendar").on("click", function(){
     var start = registry.byId("CalendarStart");
     var end   = registry.byId("CalendarEnd");
+    
+    console.log("station");
+    var key = registry.byId("CalendarStation").get('value');
+    console.log(key);
+    console.log(stationStore.getSync(key));
 
     if( start.get("value") != null && end.get("value") != null ) {
       SetCalendarDialog.hide();
@@ -691,6 +776,9 @@ require([
         cmPosition: registry.byId("DayOffCrewMemberSelect").get('value'),
         x: day * 1440,
         width: 1440,
+        tp: 0,
+        resta: 0,
+        restb: 0,
       });
       pos += 1;
     });
@@ -732,6 +820,34 @@ require([
   
   registry.byId("TrainingDurationMinute").on("click,change", function(){
     UpdateEndDateTime("Training");
+  });
+
+  registry.byId("CreateTraining").on("click", function(){
+    var pos = 0;
+
+    // Compute the position and Y coordinate of the new crewmember based on 
+    // existing data.
+    activityStore.forEach(function(item){
+      pos += 1;
+    }); 
+
+    var startCalendar = registry.byId("CalendarStart").get("value");
+    var startDateTraining = registry.byId("TrainingStartDate").get("value");
+    var startTimeTraining = registry.byId("TrainingStartTime").get("value");
+
+    activityStore.addSync({
+      name: registry.byId("TrainingName").get("value"),
+      type: "TRN",
+      position: pos,
+      cmPosition: registry.byId("TrainingCrewMemberSelect").get('value'),
+      x: date.difference(startCalendar, startDateTraining, "day") * 1440 + startTimeTraining.getHours() * 60 + startTimeTraining.getMinutes(),
+      width: registry.byId("TrainingDurationHour").get('value') * 60 + registry.byId("TrainingDurationMinute").get('value'),
+      tp: registry.byId("TrainingTransportationTime").checked ? registry.byId("TransportationTimeDuration").get('value') : 0,
+      resta: registry.byId("TrainingRestAfterH").get('value') * 60 + registry.byId("TrainingRestAfterM").get('value'),
+      restb: registry.byId("TrainingRestBeforeH").get('value') * 60 + registry.byId("TrainingRestBeforeM").get('value'),
+    });
+
+    CreateTrainingDialog.hide();
   });
 
   
@@ -805,7 +921,18 @@ require([
         </tr>
         <tr>
           <td><label for="TrnCm">Crew member</label></td>
-          <td><select data-dojo-type="dijit/form/FilteringSelect" name="TrnCm" id="TrnCMSelect" required="true"></td>
+          <td><select data-dojo-type="dijit/form/FilteringSelect" name="TrnCm" id="TrainingCrewMemberSelect" required="true"></td>
+        </tr>
+        <tr>
+          <td><label for="transportationtime">Transportation time apply</label></td>
+          <td><input data-dojo-type="dijit/form/CheckBox" name="transportationtime" id="TrainingTransportationTime" value="true" required="true"></td>
+        </tr>
+        <tr>
+          <td><label for="restbefore">Rest before</label></td>
+          <td>
+            <input class="durationHour" data-dojo-type="dijit/form/NumberSpinner" name="restbefore" id="TrainingRestBeforeH" value="0" data-dojo-props="constraints:{min:0}" required="true">
+            <input class="durationMinute" data-dojo-type="dijit/form/NumberSpinner" name="restbefore" id="TrainingRestBeforeM" value="0" data-dojo-props="constraints:{min:0,max:59}" required="true">
+          </td>
         </tr>
         <tr>
           <td><label for="start">Start date time</label></td>
@@ -831,13 +958,9 @@ require([
         <tr>
           <td><label for="restafter">Rest after</label></td>
           <td>
-            <input class="durationHour" data-dojo-type="dijit/form/NumberSpinner" name="duration" id="TrainingRestAfterHH" value="0" data-dojo-props="constraints:{min:0}" required="true">
-            <input class="durationMinute" data-dojo-type="dijit/form/NumberSpinner" name="duration" id="TrainingRestAfterMM" value="0" data-dojo-props="constraints:{min:0,max:59}" required="true">
+            <input class="durationHour" data-dojo-type="dijit/form/NumberSpinner" name="restafter" id="TrainingRestAfterH" value="0" data-dojo-props="constraints:{min:0}" required="true">
+            <input class="durationMinute" data-dojo-type="dijit/form/NumberSpinner" name="restafter" id="TrainingRestAfterM" value="0" data-dojo-props="constraints:{min:0,max:59}" required="true">
           </td>
-        </tr>
-        <tr>
-          <td><label for="transportationtime">Transportation time apply</label></td>
-          <td><input data-dojo-type="dijit/form/CheckBox" name="transportationtime" id="TrainingTransportationTime" required="true"></td>
         </tr>
       </table>
 
@@ -892,6 +1015,10 @@ require([
 
   <div data-dojo-type="dijit/Dialog" data-dojo-id="SetCalendarDialog" title="Set calendar" style="display: none;">
     <table class="dijitDialogPaneContentArea">
+      <tr>
+        <td><label for="station">Station</label></td>
+        <td><input data-dojo-type="dijit/form/FilteringSelect" name="station" id="CalendarStation" required="true"></td>
+      </tr>
       <tr>
         <td><label for="start">Start date</label></td>
         <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="start" id="CalendarStart" required="true" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"></td>

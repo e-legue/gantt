@@ -24,3 +24,7 @@ http://jsfiddle.net/FjuCa/
 
 dojo date locale.
 https://dojotoolkit.org/reference-guide/1.10/dojo/cldr.html#dojo-cldr
+
+
+At least one item must be selected.
+
