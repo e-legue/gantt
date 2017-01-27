@@ -26,14 +26,20 @@
 >
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink">
   <style>
-.day {
+.day_bar {
   fill-opacity: 0.2;
 }
+
+.day_line, .cm_line {
+  fill: gray;
+  fill-opacity: 0.5;
+}
+
 .start_period {
   fill: green;
 }
 
-.hour {
+.hour_bar {
   fill-opacity: 0.1;
 }
 
@@ -403,25 +409,24 @@
 
   <defs>
     <g id="day">
-      <rect class="day" x="0" y="0" width="1440"  height="2000"/>
-    </g>
-    <g id="hour">
-      <rect class="hour" x="0" y="0" width="60"  height="2000"/>
+      <rect class="day_line" x="0" y="0" width="1" height="1"/>
+      <rect class="day_bar"  x="0" y="0" width="1440" height="1"/>
     </g>
     <g id="hours">
-      <use xlink:href="#hour" transform="translate(60,0)"/>
-      <use xlink:href="#hour" transform="translate(180,0)"/>
-      <use xlink:href="#hour" transform="translate(300,0)"/>
-      <use xlink:href="#hour" transform="translate(420,0)"/>
-      <use xlink:href="#hour" transform="translate(540,0)"/>
-      <use xlink:href="#hour" transform="translate(660,0)"/>
-      <use xlink:href="#hour" transform="translate(780,0)"/>
-      <use xlink:href="#hour" transform="translate(900,0)"/>
-      <use xlink:href="#hour" transform="translate(1020,0)"/>
-      <use xlink:href="#hour" transform="translate(1140,0)"/>
-      <use xlink:href="#hour" transform="translate(1260,0)"/>
-      <use xlink:href="#hour" transform="translate(1380,0)"/>
-
+      <rect class="hour_bar" x="60" y="0" width="60" height="1"/>
+      <rect class="hour_bar" x="180" y="0" width="60" height="1"/>
+      <rect class="hour_bar" x="300" y="0" width="60" height="1"/>
+      <rect class="hour_bar" x="420" y="0" width="60" height="1"/>
+      <rect class="hour_bar" x="540" y="0" width="60" height="1"/>
+      <rect class="hour_bar" x="660" y="0" width="60" height="1"/>
+      <rect class="hour_bar" x="780" y="0" width="60" height="1"/>
+      <rect class="hour_bar" x="900" y="0" width="60" height="1"/>
+      <rect class="hour_bar" x="1020" y="0" width="60" height="1"/>
+      <rect class="hour_bar" x="1140" y="0" width="60" height="1"/>
+      <rect class="hour_bar" x="1260" y="0" width="60" height="1"/>
+      <rect class="hour_bar" x="1380" y="0" width="60" height="1"/>
+    </g>
+    <g id="hour_labels">
       <text class="hour_label" x="0" y="20">0h</text>
       <text class="hour_label" x="180" y="20">3h</text>
       <text class="hour_label" x="360" y="20">6h</text>
@@ -441,6 +446,8 @@
     -->
     <g id="calendar">
       <text id="intro" x="100" y="50" style="fill:black;font-size:40p">To start, please load a file or set up a calendar through the menu.</text>
+      <g id="calendar_bar" transform="scale(1,200)">
+      </g>
     </g>
 
     <!--

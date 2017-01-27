@@ -108,6 +108,7 @@ require([
   "dijit/registry",
   "dojox/form/CheckedMultiSelect",
   "dojo/date",
+  "dojox/date/timezone", 
   "dstore/Memory",
   "dstore/Trackable",
   "dstore/legacy/DstoreAdapter",
@@ -146,6 +147,7 @@ require([
   registry, 
   CheckedMultiSelect,
   date,
+  TimeZone,
   Memory,
   Trackable,
   DstoreAdapter,
@@ -184,6 +186,7 @@ require([
   });
 
   parser.parse();
+
 
   // ===============================================
   // Resize graph size
@@ -251,19 +254,17 @@ require([
   // to the position. This way, each drawing into the g node is strictly the 
   // same for each day, except labels.
   function SVG_drawCalendarDate(item){
-    var calendarId = svg.getElementById("calendar");
+    var calendarId    = svg.getElementById("calendar");
+    var calendarBarId = svg.getElementById("calendar_bar");
 
-    var G       = document.createElementNS(svgNS,"g");
+    var G       = document.createElementNS(svgNS, "g");
     G.setAttributeNS(null, "transform", "translate(" + 1440 * item.get('position') + ",0)");
     G.setAttributeNS(null, "class", item.get('type'));
     G.setAttributeNS(null, "id", item.get('ident'));
     calendarId.appendChild(G);
 
-    var UseDay = document.createElementNS(svgNS, "use");
-    UseDay.setAttributeNS(xlinkNS, 'href', "#day");
-    G.appendChild(UseDay);
 
-    var TextRelativeDate = document.createElementNS(svgNS,"text");
+    var TextRelativeDate = document.createElementNS(svgNS, "text");
     TextRelativeDate.setAttributeNS(null, "class", "day_label relative");
     TextRelativeDate.setAttributeNS(null, "x", 720);
     TextRelativeDate.setAttributeNS(null, "y", -70);
@@ -272,7 +273,7 @@ require([
     var TextNodeRelativeDate = document.createTextNode("Day " + item.get('relative') );
     TextRelativeDate.appendChild(TextNodeRelativeDate);
 
-    var TextYYYYMMDDDate = document.createElementNS(svgNS,"text");
+    var TextYYYYMMDDDate = document.createElementNS(svgNS, "text");
     TextYYYYMMDDDate.setAttributeNS(null, "class", "day_label yyyymmdd");
     TextYYYYMMDDDate.setAttributeNS(null, "x", 720);
     TextYYYYMMDDDate.setAttributeNS(null, "y", -20);
@@ -281,9 +282,24 @@ require([
     var TextNodeYYYYMMDDDate = document.createTextNode(item.get('name'));
     TextYYYYMMDDDate.appendChild(TextNodeYYYYMMDDDate);
 
-    var UseHours = document.createElementNS(svgNS,"use");
+    var UseHourLabel = document.createElementNS(svgNS, "use");
+    UseHourLabel.setAttributeNS(xlinkNS, 'href', "#hour_labels");
+    G.appendChild(UseHourLabel);
+
+
+    var Gbar     = document.createElementNS(svgNS, "g");
+    Gbar.setAttributeNS(null, "transform", "translate(" + 1440 * item.get('position') + ",0)");
+    Gbar.setAttributeNS(null, "class", item.get('type'));
+    Gbar.setAttributeNS(null, "id", "bar_" + item.get('ident'));
+    calendarBarId.appendChild(Gbar);
+
+    var UseDay = document.createElementNS(svgNS, "use");
+    UseDay.setAttributeNS(xlinkNS, 'href', "#day");
+    Gbar.appendChild(UseDay);
+
+    var UseHours = document.createElementNS(svgNS, "use");
     UseHours.setAttributeNS(xlinkNS, 'href', "#hours");
-    G.appendChild(UseHours);
+    Gbar.appendChild(UseHours);
   }
 
   // Draw a crewmember. The drawing is embedded into a g node 
@@ -306,12 +322,28 @@ require([
 
     var TextNodeName = document.createTextNode(item.get('name'));
     TextName.appendChild(TextNodeName);
+
+    var Line1 = document.createElementNS(svgNS,"line");
+    Line1.setAttributeNS(null, "class", "cm_line");
+    Line1.setAttributeNS(null, "x1", 0);
+    Line1.setAttributeNS(null, "y1", 0);
+    Line1.setAttributeNS(null, "x2", 14400);
+    Line1.setAttributeNS(null, "y2", 0);
+    Line1.setAttributeNS(null, "stroke-width", 1);
+
+    G.appendChild(Line1);
+
+    var Line2 = document.createElementNS(svgNS,"line");
+    Line2.setAttributeNS(null, "class", "cm_line");
+    Line2.setAttributeNS(null, "x1", 0);
+    Line2.setAttributeNS(null, "y1", 200);
+    Line2.setAttributeNS(null, "x2", 14400);
+    Line2.setAttributeNS(null, "y2", 200);
+    Line1.setAttributeNS(null, "stroke-width", 1);
+    G.appendChild(Line2);
   }
 
-  // Draw an activity. As the others, the drawing is embedded into a g node 
-  // with a translation on y, and belongs to crewmember or opentime line.
-  // Therefore no y translation is necessary, a x is used to draw the activity on
-  // the rigth place in the calendar.
+  // Draw a rectangle that modelizes a transportation time or a rest.
   function SVG_drawRect(type, x, y, width){
     var Rect = document.createElementNS(svgNS,"rect");
     Rect.setAttributeNS(null, "class", type);
@@ -321,8 +353,11 @@ require([
     Rect.setAttributeNS(null, "height", 30);
     return Rect;
   }
-
-
+  
+  // Draw an activity. As the others, the drawing is embedded into a g node 
+  // with a translation on y, and belongs to crewmember or opentime line.
+  // Therefore no y translation is necessary, a x is used to draw the activity on
+  // the rigth place in the calendar.
   function SVG_drawActivity(activity, line){
 
     var parentId = svg.getElementById(line.get('ident'));
@@ -357,48 +392,19 @@ require([
     // transporation time
     if( activity.get('tp') > 0 ){
       // before.
-/*      var RectTPB = document.createElementNS(svgNS,"rect");
-      RectTPB.setAttributeNS(null, "class", "TP");
-      RectTPB.setAttributeNS(null, "x", activity.get('tp') * -1);
-      RectTPB.setAttributeNS(null, "y", 20);
-      RectTPB.setAttributeNS(null, "width", activity.get('tp'));
-      RectTPB.setAttributeNS(null, "height", 30);
-      G.appendChild(RectTPB);*/
       G.appendChild(SVG_drawRect("TP", activity.get('tp') * -1, 20, activity.get('tp')));
 
       // after.
-/*      var RectTPA = document.createElementNS(svgNS,"rect");
-      RectTPA.setAttributeNS(null, "class", "TP");
-      RectTPA.setAttributeNS(null, "x", activity.get('width'));
-      RectTPA.setAttributeNS(null, "y", 50);
-      RectTPA.setAttributeNS(null, "width", activity.get('tp'));
-      RectTPA.setAttributeNS(null, "height", 30);
-      G.appendChild(RectTPA);*/
       G.appendChild(SVG_drawRect("TP", activity.get('width') * -1, 50, activity.get('tp')));
     }
 
     // rest before
     if( activity.get('restb') > 0 ){
-      // before.
-/*      var RectTPB = document.createElementNS(svgNS,"rect");
-      RectTPB.setAttributeNS(null, "class", "REST");
-      RectTPB.setAttributeNS(null, "x", (activity.get('restb') + activity.get('tp') ) * -1);
-      RectTPB.setAttributeNS(null, "y", 20);
-      RectTPB.setAttributeNS(null, "width", activity.get('restb'));
-      RectTPB.setAttributeNS(null, "height", 30);
-      G.appendChild(RectTPB);*/
       G.appendChild(SVG_drawRect("REST", (activity.get('restb') + activity.get('tp') ) * -1, 20, activity.get('restb')));
     }
     
     // rest after. 
     if( activity.get('resta') > 0 ){
-/*      var RectTPA = document.createElementNS(svgNS,"rect");
-      RectTPA.setAttributeNS(null, "class", "REST");
-      RectTPA.setAttributeNS(null, "x", activity.get('width') + activity.get('tp'));
-      RectTPA.setAttributeNS(null, "y", 50);
-      RectTPA.setAttributeNS(null, "width", activity.get('resta'));
-      RectTPA.setAttributeNS(null, "height", 30);
-      G.appendChild(RectTPA);*/
       G.appendChild(SVG_drawRect("REST", activity.get('width') + activity.get('tp'), 50, activity.get('resta')));
     }
 
@@ -508,9 +514,11 @@ require([
   });
 
   calendarStore.on('delete', function(event){
-    var item = svg.getElementById(event.target.get('ident'));
+    var item  = svg.getElementById(event.target.get('ident'));
+    var item2 = svg.getElementById("bar_" + event.target.get('ident'));
     
     item.parentNode.removeChild(item);
+    item2.parentNode.removeChild(item2);
   });
 
   var calendarStoreAdapter = new DstoreAdapter(calendarStore);
@@ -654,6 +662,27 @@ require([
     }
   }, true);
 
+  registry.byId("SHCalendarDayBars").on("change", function(isChecked){
+    var divs = svg.getElementsByClassName('day_bar');
+
+    for (var i = 0; i < divs.length; i++) {
+      divs[i].setAttribute("display", isChecked ? "block" : "none");
+    }
+  }, true);
+
+  registry.byId("SHCalendarHourBars").on("change", function(isChecked){
+    var divs = svg.getElementsByClassName('hour_bar');
+    console.log("je detecte le clic");
+
+    for (var i = 0; i < divs.length; i++) {
+      console.log("je change");
+      divs[i].setAttribute("display", isChecked ? "block" : "none");
+    }
+  }, true);
+
+
+
+
   // -----------------------------------------------
   // Save file dialog
   // -----------------------------------------------
@@ -782,6 +811,10 @@ require([
       height:200,
     });
 
+    coordY += 200;
+    var bars = svg.getElementById("calendar_bar");
+    bars.setAttribute("transform", "scale(1," + coordY + ")");
+
     CreateCrewMemberDialog.hide();
   });
 
@@ -886,6 +919,7 @@ require([
   });
 
   
+  console.log(TimeZone.getAllZones());
 });
   </script>
 
@@ -1015,8 +1049,12 @@ require([
         <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCoordinates" id="SHCoordinates" checked></td>
       </tr>
       <tr>
-        <td><label for="SHCalendarHours">Show calendar hours</label></td>
+        <td><label for="SHCalendarHours">Show calendar hour label</label></td>
         <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarHours" id="SHCalendarHours" checked></td>
+      </tr>
+      <tr>
+        <td><label for="SHCalendarHourBars">Show calendar hour bars</label></td>
+        <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarHourBars" id="SHCalendarHourBars" checked></td>
       </tr>
       <tr>
         <td><label for="SHCalendarDayX">Show calendar Day X</label></td>
@@ -1025,6 +1063,10 @@ require([
       <tr>
         <td><label for="SHCalendarDayYYYYMMDD">Show calendar day YYYY-MM-DD</label></td>
         <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarDayYYYYMMDD" id="SHCalendarDayYYYYMMDD" checked></td>
+      </tr>
+      <tr>
+        <td><label for="SHCalendarDayBars">Show calendar day bars</label></td>
+        <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarDayBars" id="SHCalendarDayBars" checked></td>
       </tr>
     </table>
 

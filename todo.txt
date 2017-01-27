@@ -32,6 +32,10 @@ http://download.dojotoolkit.org/release-1.6.1/dojo-release-1.6.1/dojox/form/test
 dojox calendar.
 http://archive.dojotoolkit.org/nightly/dojotoolkit/dojox/widget/tests/test_Calendar.html?theme=soria
 
+multi date.
+http://download.dojotoolkit.org/release-1.9.4/dojo-release-1.9.4/dojox/widget/tests/test_MultiSelectCalendar.html
+
+https://dojotoolkit.org/reference-guide/1.10/dojox/mobile/SpinWheelDatePicker.html#examples
 
 graph compression on X.
 save stores on svg file save.
