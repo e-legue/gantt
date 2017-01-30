@@ -1,6 +1,11 @@
 TODO:
 
+date timezone.
+http://jsfiddle.net/uq99udc9/4/
 
+http://momentjs.com/timezone/docs/
+
+ 
 show/hide (day color / day yyyy-mm-yy / day relative)
 show/hide (hour color / hour label )
 show/hide (legs)

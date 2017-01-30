@@ -99,7 +99,7 @@ var dojoConfig = {
 
   <script>
 
-require([
+  require([
   "dojo/_base/declare",
   "dojo/on",
   "dojo/dom",
@@ -108,7 +108,6 @@ require([
   "dijit/registry",
   "dojox/form/CheckedMultiSelect",
   "dojo/date",
-  "dojox/date/timezone", 
   "dstore/Memory",
   "dstore/Trackable",
   "dstore/legacy/DstoreAdapter",
@@ -138,6 +137,8 @@ require([
   "dojox/layout/TableContainer",
   "dijit/form/Select",
 
+  "https://cdn.rawgit.com/moment/moment/2.7.0/moment.js",
+  "https://cdn.rawgit.com/moment/moment-timezone/0.0.1/moment-timezone.js"
 ], function(
   declare,
   on, 
@@ -147,13 +148,12 @@ require([
   registry, 
   CheckedMultiSelect,
   date,
-  TimeZone,
   Memory,
   Trackable,
   DstoreAdapter,
   Model,
-  ComputedProperty){
-
+  ComputedProperty
+  ){
 
   // ===============================================
   // Fix to support reset on CheckedMultiSelect.
@@ -166,24 +166,42 @@ require([
         this._updateSelection();
       }
     },
-    displayMessage : function(){}, // to disable 
+    //displayMessage : function(){}, // to disable message "At least one item must be selected".
     validator: function() {
-        if (!this.required)
-            return true;
-
-        var isValid = false;
-
-        var opts = this.value;
-        console.log('validator');
-        console.log(opts);
-        for (var i = 0, l = opts.length; i < l; i++)
-            if (opts[i].selected && opts[i].value != null && opts[i].value.toString().length != 0)
-            isValid = true;
-
-        console.log(isValid);
-        return isValid;
+      console.log('je passe dans validator...');
+      if (!this.required){
+        return true;
+      }
+      return this.value.length > 0 ? true : false; 
     },
   });
+  
+/*
+  FixedTimeZone = declare("dojox/date/timezone", [ TimeZone ], {
+    loadZoneFile: function(/* String  fileName){
+    // summary:
+    //fileNameLoads the given URL of the Olson zone information into the
+    //intozone database
+    //
+    // fileName: String
+    //fileName:The zoneinfo file name to load
+
+    // TODO: Maybe behave similar to requireLocalization - rather than
+    //ratherUsing request.get?
+    _loadedZones[fileName] = true;
+    request.get(require.toUrl((config.timezoneFileBasePath || "dojox/date/zoneinfo") + "/" + fileName), {
+      handleAs: "olson_zoneinfo",
+      sync: true, 
+      headers: {
+        "X-Requested-With": null
+      }
+      }).then(loadZoneData, function(e){
+      console.error("Error loading zone file:", e);
+      throw e;
+    });
+  },
+  });
+*/
 
   parser.parse();
 
@@ -259,7 +277,7 @@ require([
 
     var G       = document.createElementNS(svgNS, "g");
     G.setAttributeNS(null, "transform", "translate(" + 1440 * item.get('position') + ",0)");
-    G.setAttributeNS(null, "class", item.get('type'));
+    //G.setAttributeNS(null, "class", item.get('type'));
     G.setAttributeNS(null, "id", item.get('ident'));
     calendarId.appendChild(G);
 
@@ -307,7 +325,8 @@ require([
   // There is no x translation, so every activity attached to the 
   // crewmember will be add into the g node.
   function SVG_drawCrewMember(item){
-    var crewMemberId = svg.getElementById("crewmembers");
+    var crewMemberId    = svg.getElementById("crewmembers");
+    var crewMemberBarId = svg.getElementById("crewmember_bar");
 
     var G = document.createElementNS(svgNS, "g");
     G.setAttributeNS(null,"transform","translate(0, " + item.get('y') + ")");
@@ -323,24 +342,27 @@ require([
     var TextNodeName = document.createTextNode(item.get('name'));
     TextName.appendChild(TextNodeName);
 
-    var Line1 = document.createElementNS(svgNS,"line");
-    Line1.setAttributeNS(null, "class", "cm_line");
-    Line1.setAttributeNS(null, "x1", 0);
-    Line1.setAttributeNS(null, "y1", 0);
-    Line1.setAttributeNS(null, "x2", 14400);
-    Line1.setAttributeNS(null, "y2", 0);
-    Line1.setAttributeNS(null, "stroke-width", 1);
+    
+    var Gbar = document.createElementNS(svgNS, "g");
+    Gbar.setAttributeNS(null,"transform","translate(0, " + item.get('y') + ")");
+    Gbar.setAttributeNS(null,"id", "bar_" + item.get('ident'));
+    crewMemberBarId.appendChild(Gbar);
 
-    G.appendChild(Line1);
-
-    var Line2 = document.createElementNS(svgNS,"line");
-    Line2.setAttributeNS(null, "class", "cm_line");
-    Line2.setAttributeNS(null, "x1", 0);
-    Line2.setAttributeNS(null, "y1", 200);
-    Line2.setAttributeNS(null, "x2", 14400);
-    Line2.setAttributeNS(null, "y2", 200);
-    Line1.setAttributeNS(null, "stroke-width", 1);
-    G.appendChild(Line2);
+    var Rect1 = document.createElementNS(svgNS, "rect");
+    Rect1.setAttributeNS(null, "class", "line");
+    Rect1.setAttributeNS(null, "x", 0);
+    Rect1.setAttributeNS(null, "y", 0);
+    Rect1.setAttributeNS(null, "width", 1);
+    Rect1.setAttributeNS(null, "height", 1);
+    Gbar.appendChild(Rect1);
+   
+    var Rect2 = document.createElementNS(svgNS, "rect");
+    Rect2.setAttributeNS(null, "class", "line");
+    Rect2.setAttributeNS(null, "x", 0);
+    Rect2.setAttributeNS(null, "y", 200);
+    Rect2.setAttributeNS(null, "width", 1);
+    Rect2.setAttributeNS(null, "height", 1);
+    Gbar.appendChild(Rect2);
   }
 
   // Draw a rectangle that modelizes a transportation time or a rest.
@@ -506,9 +528,11 @@ require([
   });
 
   calendarStore.on('update', function(event){
-    var item = svg.getElementById(event.target.get('ident'));
+    var item  = svg.getElementById(event.target.get('ident'));
+    var item2 = svg.getElementById("bar_" + event.target.get('ident'));
     
     item.parentNode.removeChild(item);
+    item2.parentNode.removeChild(item2);
 
     SVG_drawCalendarDate(event.target);
   });
@@ -727,10 +751,7 @@ require([
     var start = registry.byId("CalendarStart");
     var end   = registry.byId("CalendarEnd");
     
-    console.log("station");
     var key = registry.byId("CalendarStation").get('value');
-    console.log(key);
-    console.log(stationStore.getSync(key));
 
     if( start.get("value") != null && end.get("value") != null ) {
       SetCalendarDialog.hide();
@@ -758,6 +779,10 @@ require([
         mydate = date.add(mydate, "day", 1); 
       }
 
+
+      var bars = svg.getElementById("crewmember_bar");
+      bars.setAttribute("transform", "scale(" + range * 1440 + ",1)");
+
       // enabled some menu items.
       registry.byId("FileSaveMenu").set('disabled', false);
       registry.byId("CalendarSetStartPeriodsMenu").set('disabled', false);
@@ -781,7 +806,7 @@ require([
     newStarts.forEach(function(position){
       var item = calendarStore.getSync(position);
 
-      var day = svg.getElementById(item.get('ident'));
+      var day = svg.getElementById("bar_" + item.get('ident'));
       day.setAttribute('class', 'start_period');
     }); 
     
@@ -823,6 +848,11 @@ require([
   // Create Day Off dialog
   // -----------------------------------------------
   registry.byId("CreateDayOff").on("click", function(){
+    console.log("createdayoffform.validate");
+    if( !registry.byId("CreateDayOffForm").validate() ){
+      return;
+    }
+    
     var pos = 0;
 
     // Compute the position and Y coordinate of the new crewmember based on 
@@ -918,8 +948,9 @@ require([
     CreateTrainingDialog.hide();
   });
 
-  
-  console.log(TimeZone.getAllZones());
+   
+  // console.log(FixedTimeZone.getAllZones());
+  console.log(moment().format('LLLL'));
 });
   </script>
 

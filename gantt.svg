@@ -30,7 +30,7 @@
   fill-opacity: 0.2;
 }
 
-.day_line, .cm_line {
+.line {
   fill: gray;
   fill-opacity: 0.5;
 }
@@ -409,8 +409,9 @@
 
   <defs>
     <g id="day">
-      <rect class="day_line" x="0" y="0" width="1" height="1"/>
+      <rect class="line" x="0" y="0" width="1" height="1"/>
       <rect class="day_bar"  x="0" y="0" width="1440" height="1"/>
+      <rect class="line" x="1440" y="0" width="1" height="1"/>
     </g>
     <g id="hours">
       <rect class="hour_bar" x="60" y="0" width="60" height="1"/>
@@ -446,8 +447,7 @@
     -->
     <g id="calendar">
       <text id="intro" x="100" y="50" style="fill:black;font-size:40p">To start, please load a file or set up a calendar through the menu.</text>
-      <g id="calendar_bar" transform="scale(1,200)">
-      </g>
+      <g id="calendar_bar" transform="scale(1,100)"></g>
     </g>
 
     <!--
@@ -456,6 +456,7 @@
     ====================================================================================
     -->
     <g id="crewmembers">
+      <g id="crewmember_bar" transform="scale(1,1)"></g>
     </g>
 
     <!--
