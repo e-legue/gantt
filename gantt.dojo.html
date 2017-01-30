@@ -91,6 +91,13 @@ var dojoConfig = {
   }, {
     name: 'dmodel',
     location: 'http://cdn.rawgit.com/SitePen/dmodel/master'
+  }, {
+    name: 'moment',
+    location: 'http://cdn.rawgit.com/moment/moment/2.7.0',
+    main: 'moment'
+  }, {
+    name: 'moment-timezone',
+    location: 'http://cdn.rawgit.com/moment/moment-timezone/0.0.1'
   }]
 };
   </script>
@@ -113,6 +120,8 @@ var dojoConfig = {
   "dstore/legacy/DstoreAdapter",
   "dmodel/Model",
   "dmodel/ComputedProperty",
+  "moment/moment",
+  "moment-timezone/moment-timezone",
   "dojo/domReady!",
 
   "dijit/MenuBar",
@@ -135,10 +144,10 @@ var dojoConfig = {
   "dijit/layout/TabContainer", 
   "dijit/layout/ContentPane", 
   "dojox/layout/TableContainer",
-  "dijit/form/Select",
+  "dijit/form/Select"
 
-  "https://cdn.rawgit.com/moment/moment/2.7.0/moment.js",
-  "https://cdn.rawgit.com/moment/moment-timezone/0.0.1/moment-timezone.js"
+//  "https://cdn.rawgit.com/moment/moment/2.7.0/moment.js",
+//  "https://cdn.rawgit.com/moment/moment-timezone/0.0.1/moment-timezone.js"
 ], function(
   declare,
   on, 
@@ -152,7 +161,9 @@ var dojoConfig = {
   Trackable,
   DstoreAdapter,
   Model,
-  ComputedProperty
+  ComputedProperty,
+  Moment,
+  Timezone
   ){
 
   // ===============================================
@@ -951,6 +962,7 @@ var dojoConfig = {
    
   // console.log(FixedTimeZone.getAllZones());
   console.log(moment().format('LLLL'));
+  //console.log(moment.tz.names());
 });
   </script>
 
