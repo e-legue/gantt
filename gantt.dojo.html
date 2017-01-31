@@ -278,6 +278,31 @@ var dojoConfig = {
   var svgNS   = "http://www.w3.org/2000/svg";
   var xlinkNS = "http://www.w3.org/1999/xlink";
 
+  // Draw a rectangle.
+  function SVG_drawRect(type, x, y, width, height){
+    var Rect = document.createElementNS(svgNS,"rect");
+    Rect.setAttributeNS(null, "class", type);
+    Rect.setAttributeNS(null, "x", x);
+    Rect.setAttributeNS(null, "y", y);
+    Rect.setAttributeNS(null, "width", width);
+    Rect.setAttributeNS(null, "height", height);
+    return Rect;
+  }
+
+  // Draw a text. 
+  function SVG_drawText(type, x, y, label){
+    var Text = document.createElementNS(svgNS, "text");
+    Text.setAttributeNS(null, "class", type);
+    Text.setAttributeNS(null, "x", x);
+    Text.setAttributeNS(null, "y", y);
+    
+    Text.appendChild(document.createTextNode(label));
+    
+    return Text;
+  }
+
+ 
+
   // Draw a calendar date. The drawing belongs to id calendar in the SVG.
   // Each "date" is embedded in a g node, with a translation on X, according
   // to the position. This way, each drawing into the g node is strictly the 
@@ -287,48 +312,40 @@ var dojoConfig = {
     var calendarBarId = svg.getElementById("calendar_bar");
 
     var G       = document.createElementNS(svgNS, "g");
-    G.setAttributeNS(null, "transform", "translate(" + 1440 * item.get('position') + ",0)");
-    //G.setAttributeNS(null, "class", item.get('type'));
+    G.setAttributeNS(null, "transform", "translate(" + item.get('x') + ",0)");
     G.setAttributeNS(null, "id", item.get('ident'));
     calendarId.appendChild(G);
 
+    G.appendChild(SVG_drawText("day_label relative", 720, -70, "Day " + item.get('relative')));
 
-    var TextRelativeDate = document.createElementNS(svgNS, "text");
-    TextRelativeDate.setAttributeNS(null, "class", "day_label relative");
-    TextRelativeDate.setAttributeNS(null, "x", 720);
-    TextRelativeDate.setAttributeNS(null, "y", -70);
-    G.appendChild(TextRelativeDate);
+    G.appendChild(SVG_drawText("day_label yyyymmdd", 720, -20, item.get('name')));
 
-    var TextNodeRelativeDate = document.createTextNode("Day " + item.get('relative') );
-    TextRelativeDate.appendChild(TextNodeRelativeDate);
+    var minutes = 120;
+    var time = moment(item.get('name'));
+    var duration = moment.duration(minutes, 'minutes');
 
-    var TextYYYYMMDDDate = document.createElementNS(svgNS, "text");
-    TextYYYYMMDDDate.setAttributeNS(null, "class", "day_label yyyymmdd");
-    TextYYYYMMDDDate.setAttributeNS(null, "x", 720);
-    TextYYYYMMDDDate.setAttributeNS(null, "y", -20);
-    G.appendChild(TextYYYYMMDDDate);
-    
-    var TextNodeYYYYMMDDDate = document.createTextNode(item.get('name'));
-    TextYYYYMMDDDate.appendChild(TextNodeYYYYMMDDDate);
+    for(var i = 0; i < item.get('width'); i += minutes){ 
+      G.appendChild(SVG_drawText('hour_label', i, 20, time.format("H:mm")));
+      time.add(duration);   
+    }
 
-    var UseHourLabel = document.createElementNS(svgNS, "use");
-    UseHourLabel.setAttributeNS(xlinkNS, 'href', "#hour_labels");
-    G.appendChild(UseHourLabel);
-
-
+    // a scale is used to extend the bars, that's why they are defined into
+    // a specific group.
     var Gbar     = document.createElementNS(svgNS, "g");
-    Gbar.setAttributeNS(null, "transform", "translate(" + 1440 * item.get('position') + ",0)");
+    Gbar.setAttributeNS(null, "transform", "translate(" + item.get('x') + ",0)");
     Gbar.setAttributeNS(null, "class", item.get('type'));
     Gbar.setAttributeNS(null, "id", "bar_" + item.get('ident'));
     calendarBarId.appendChild(Gbar);
 
     var UseDay = document.createElementNS(svgNS, "use");
     UseDay.setAttributeNS(xlinkNS, 'href', "#day");
-    Gbar.appendChild(UseDay);
+    Gbar.appendChild(SVG_drawRect('day_bar', 0, 0, item.get('width'), 1));
+    Gbar.appendChild(SVG_drawRect('line', 0, 0, 1, 1));
+    Gbar.appendChild(SVG_drawRect('line', item.get('width'), 0, 1, 1));
 
-    var UseHours = document.createElementNS(svgNS, "use");
-    UseHours.setAttributeNS(xlinkNS, 'href', "#hours");
-    Gbar.appendChild(UseHours);
+    for(var i = 60; i < item.get('width'); i += 120){ 
+      Gbar.appendChild(SVG_drawRect('hour_bar', i, 0, 60, 1));
+    }
   }
 
   // Draw a crewmember. The drawing is embedded into a g node 
@@ -376,17 +393,6 @@ var dojoConfig = {
     Gbar.appendChild(Rect2);
   }
 
-  // Draw a rectangle that modelizes a transportation time or a rest.
-  function SVG_drawRect(type, x, y, width){
-    var Rect = document.createElementNS(svgNS,"rect");
-    Rect.setAttributeNS(null, "class", type);
-    Rect.setAttributeNS(null, "x", x);
-    Rect.setAttributeNS(null, "y", y);
-    Rect.setAttributeNS(null, "width", width);
-    Rect.setAttributeNS(null, "height", 30);
-    return Rect;
-  }
-  
   // Draw an activity. As the others, the drawing is embedded into a g node 
   // with a translation on y, and belongs to crewmember or opentime line.
   // Therefore no y translation is necessary, a x is used to draw the activity on
@@ -425,20 +431,20 @@ var dojoConfig = {
     // transporation time
     if( activity.get('tp') > 0 ){
       // before.
-      G.appendChild(SVG_drawRect("TP", activity.get('tp') * -1, 20, activity.get('tp')));
+      G.appendChild(SVG_drawRect("TP", activity.get('tp') * -1, 20, activity.get('tp'), 30));
 
       // after.
-      G.appendChild(SVG_drawRect("TP", activity.get('width') * -1, 50, activity.get('tp')));
+      G.appendChild(SVG_drawRect("TP", activity.get('width') * -1, 50, activity.get('tp'), 30));
     }
 
     // rest before
     if( activity.get('restb') > 0 ){
-      G.appendChild(SVG_drawRect("REST", (activity.get('restb') + activity.get('tp') ) * -1, 20, activity.get('restb')));
+      G.appendChild(SVG_drawRect("REST", (activity.get('restb') + activity.get('tp') ) * -1, 20, activity.get('restb'), 30));
     }
     
     // rest after. 
     if( activity.get('resta') > 0 ){
-      G.appendChild(SVG_drawRect("REST", activity.get('width') + activity.get('tp'), 50, activity.get('resta')));
+      G.appendChild(SVG_drawRect("REST", activity.get('width') + activity.get('tp'), 50, activity.get('resta'), 30));
     }
 
   }
@@ -466,6 +472,8 @@ var dojoConfig = {
           return "cd" + position;  // cd stands for Calendar Day.
         }
       }),
+      x: 'numeric',
+      width: 'numeric',
     },
     validateOnSet: false
   });
@@ -746,8 +754,10 @@ var dojoConfig = {
   // -----------------------------------------------
   registry.byId("CalendarStart").on("change", function(){
     registry.byId("CalendarEnd").constraints.min = date.add(this.get("value"), "day", 1);
+    registry.byId("CalendarEnd").set("value", date.add(this.get("value"), "day", 1));     
 
     registry.byId("TrainingStartDate").constraints.min = this.get("value");
+    registry.byId("TrainingStartDate").set("value", this.get("value"));
   }, true);
   
   registry.byId("CalendarEnd").on("change", function(){
@@ -759,48 +769,83 @@ var dojoConfig = {
   }, true);
 
   registry.byId("SetCalendar").on("click", function(){
-    var start = registry.byId("CalendarStart");
-    var end   = registry.byId("CalendarEnd");
-    
-    var key = registry.byId("CalendarStation").get('value');
-
-    if( start.get("value") != null && end.get("value") != null ) {
-      SetCalendarDialog.hide();
-
-      var range = date.difference(start.get("value"), end.get("value"), "day");
-      var mydate = start.get("value");
-
-      var intro = svg.getElementById('intro');
-      if(intro){
-        intro.parentNode.removeChild(intro);
-      } 
-
-      calendarStore.fetch().then(function (users){
-        for (var i = users.length - 1; i >= 0; i--) {
-          calendarStore.remove(users[i].position);
-        }
-      });        
-      for(i = 0; i < range; i++) {
-        calendarStore.addSync({
-          name: mydate.toISOString().substring(0, 10),
-          relative: i,
-          position: i
-        });
-
-        mydate = date.add(mydate, "day", 1); 
-      }
-
-
-      var bars = svg.getElementById("crewmember_bar");
-      bars.setAttribute("transform", "scale(" + range * 1440 + ",1)");
-
-      // enabled some menu items.
-      registry.byId("FileSaveMenu").set('disabled', false);
-      registry.byId("CalendarSetStartPeriodsMenu").set('disabled', false);
-      registry.byId("BusinessObjectMenu").set('disabled', false);
-      registry.byId("GraphOptionMenu").set('disabled', false);
-      registry.byId("HighlightsMenu").set('disabled', false);
+    if( !registry.byId("SetCalendarForm").validate() ){
+      return;
     }
+
+    var CalStart = registry.byId("CalendarStart");
+    var CalEnd   = registry.byId("CalendarEnd");
+    
+    var intro = svg.getElementById('intro');
+    if(intro){
+      intro.parentNode.removeChild(intro);
+    } 
+    SetCalendarDialog.hide();
+
+    var start = moment(CalStart.get("value"));
+    var end   = moment(CalEnd.get("value")); 
+    var range = end.diff(start, 'days');
+
+
+    calendarStore.fetch().then(function (days){
+      for (var i = days.length - 1; i >= 0; i--) {
+        calendarStore.remove(days[i].position);
+      }
+    });        
+
+    var dstStatus = start.isDST();
+
+    var x = 0;
+    var width = 0;
+
+    for(i = 0; i < range; i++) {
+      
+      var nextDay = moment(start).add(1, 'days');   
+      width = nextDay.diff(start, 'hours') * 60;
+
+      calendarStore.addSync({
+        name: start.format().substring(0, 10),
+        relative: i,
+        position: i,
+        x: x, 
+        width: width, 
+      });
+
+      x += width;
+      start = nextDay;
+/*
+      console.log(start.isDST());
+      var nextDay = moment(start);   
+         
+      start = nextDay;
+
+      if(start2.isDST() != dstStatus ){
+        var start3 = start2;
+         
+        while( start3.isDST() != dstStatus ) {
+          console.log("dst hour :" + start3.format());
+          start3.subtract(1, 'hours');
+        }
+        console.log("final dst hour :" + start3.format());
+
+         // moment().valueOf();
+         // moment().unix();
+      } 
+      dstStatus = start2.isDST();
+
+      mydate = date.add(mydate, "day", 1); */
+    }
+
+
+    var bars = svg.getElementById("crewmember_bar");
+    bars.setAttribute("transform", "scale(" + x + ",1)");
+
+    // enabled some menu items.
+    registry.byId("FileSaveMenu").set('disabled', false);
+    registry.byId("CalendarSetStartPeriodsMenu").set('disabled', false);
+    registry.byId("BusinessObjectMenu").set('disabled', false);
+    registry.byId("GraphOptionMenu").set('disabled', false);
+    registry.byId("HighlightsMenu").set('disabled', false);
   });
   
   // Redraw start periods
@@ -878,13 +923,15 @@ var dojoConfig = {
     var days = registry.byId("DayOffDatesSelect").value; 
 
     days.forEach(function(day){
+      var calendarDay = calendarStore.getSync(day); 
+
       activityStore.addSync({
         name: "DO",
         type: "DO",
         position: pos,
         cmPosition: registry.byId("DayOffCrewMemberSelect").get('value'),
-        x: day * 1440,
-        width: 1440,
+        x: calendarDay.get('x'),
+        width: calendarDay.get('width'),
         tp: 0,
         resta: 0,
         restb: 0,
@@ -1134,24 +1181,26 @@ var dojoConfig = {
 
 
   <div data-dojo-type="dijit/Dialog" data-dojo-id="SetCalendarDialog" title="Set calendar" style="display: none;">
-    <table class="dijitDialogPaneContentArea">
-      <tr>
-        <td><label for="station">Station</label></td>
-        <td><input data-dojo-type="dijit/form/FilteringSelect" name="station" id="CalendarStation" required="true"></td>
-      </tr>
-      <tr>
-        <td><label for="start">Start date</label></td>
-        <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="start" id="CalendarStart" required="true" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"></td>
-      </tr>
-      <tr>
-        <td><label for="end">End date (excluded)</label></td>
-        <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="end" id="CalendarEnd" required="true" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"></td>
-      </tr>
-    </table>
+    <div data-dojo-type="dijit/form/Form" id="SetCalendarForm" data-dojo-id="SetCalendarForm" encType="multipart/form-data" action="" method="">
+      <table class="dijitDialogPaneContentArea">
+        <tr>
+          <td><label for="station">Station</label></td>
+          <td><input data-dojo-type="dijit/form/FilteringSelect" name="station" id="CalendarStation" required="true"></td>
+        </tr>
+        <tr>
+          <td><label for="start">Start date</label></td>
+          <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="start" id="CalendarStart" required="true" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"></td>
+        </tr>
+        <tr>
+          <td><label for="end">End date (excluded)</label></td>
+          <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="end" id="CalendarEnd" required="true" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"></td>
+        </tr>
+      </table>
 
-    <div class="dijitDialogPaneActionBar">
-      <button data-dojo-type="dijit/form/Button" type="button" id="SetCalendar">Set</button>
-    </div>
+      <div class="dijitDialogPaneActionBar">
+        <button data-dojo-type="dijit/form/Button" type="button" id="SetCalendar">Set</button>
+      </div>
+
   </div>
 
 

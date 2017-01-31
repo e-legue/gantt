@@ -406,39 +406,6 @@
   <title>SVG rule demo</title>
   <desc>an awesome graph</desc>
 
-
-  <defs>
-    <g id="day">
-      <rect class="line" x="0" y="0" width="1" height="1"/>
-      <rect class="day_bar"  x="0" y="0" width="1440" height="1"/>
-      <rect class="line" x="1440" y="0" width="1" height="1"/>
-    </g>
-    <g id="hours">
-      <rect class="hour_bar" x="60" y="0" width="60" height="1"/>
-      <rect class="hour_bar" x="180" y="0" width="60" height="1"/>
-      <rect class="hour_bar" x="300" y="0" width="60" height="1"/>
-      <rect class="hour_bar" x="420" y="0" width="60" height="1"/>
-      <rect class="hour_bar" x="540" y="0" width="60" height="1"/>
-      <rect class="hour_bar" x="660" y="0" width="60" height="1"/>
-      <rect class="hour_bar" x="780" y="0" width="60" height="1"/>
-      <rect class="hour_bar" x="900" y="0" width="60" height="1"/>
-      <rect class="hour_bar" x="1020" y="0" width="60" height="1"/>
-      <rect class="hour_bar" x="1140" y="0" width="60" height="1"/>
-      <rect class="hour_bar" x="1260" y="0" width="60" height="1"/>
-      <rect class="hour_bar" x="1380" y="0" width="60" height="1"/>
-    </g>
-    <g id="hour_labels">
-      <text class="hour_label" x="0" y="20">0h</text>
-      <text class="hour_label" x="180" y="20">3h</text>
-      <text class="hour_label" x="360" y="20">6h</text>
-      <text class="hour_label" x="540" y="20">9h</text>
-      <text class="hour_label" x="720" y="20">12h</text>
-      <text class="hour_label" x="900" y="20">15h</text>
-      <text class="hour_label" x="1080" y="20">18h</text>
-      <text class="hour_label" x="1260" y="20">21h</text>
-    </g>
-  </defs>
-
   <g id="viewport">
     <!--
     ====================================================================================
