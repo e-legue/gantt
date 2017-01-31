@@ -72,6 +72,8 @@
 
 /* text inside a box */
 .label {
+  text-anchor: start; 
+  font-size: 50px;
   fill: black;
 }
 

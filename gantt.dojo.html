@@ -187,32 +187,6 @@ var dojoConfig = {
     },
   });
   
-/*
-  FixedTimeZone = declare("dojox/date/timezone", [ TimeZone ], {
-    loadZoneFile: function(/* String  fileName){
-    // summary:
-    //fileNameLoads the given URL of the Olson zone information into the
-    //intozone database
-    //
-    // fileName: String
-    //fileName:The zoneinfo file name to load
-
-    // TODO: Maybe behave similar to requireLocalization - rather than
-    //ratherUsing request.get?
-    _loadedZones[fileName] = true;
-    request.get(require.toUrl((config.timezoneFileBasePath || "dojox/date/zoneinfo") + "/" + fileName), {
-      handleAs: "olson_zoneinfo",
-      sync: true, 
-      headers: {
-        "X-Requested-With": null
-      }
-      }).then(loadZoneData, function(e){
-      console.error("Error loading zone file:", e);
-      throw e;
-    });
-  },
-  });
-*/
 
   parser.parse();
 
@@ -337,8 +311,6 @@ var dojoConfig = {
     Gbar.setAttributeNS(null, "id", "bar_" + item.get('ident'));
     calendarBarId.appendChild(Gbar);
 
-    var UseDay = document.createElementNS(svgNS, "use");
-    UseDay.setAttributeNS(xlinkNS, 'href', "#day");
     Gbar.appendChild(SVG_drawRect('day_bar', 0, 0, item.get('width'), 1));
     Gbar.appendChild(SVG_drawRect('line', 0, 0, 1, 1));
     Gbar.appendChild(SVG_drawRect('line', item.get('width'), 0, 1, 1));
@@ -361,14 +333,7 @@ var dojoConfig = {
     G.setAttributeNS(null,"id", item.get('ident'));
     crewMemberId.appendChild(G);
 
-    var TextName = document.createElementNS(svgNS, "text");
-    TextName.setAttributeNS(null, "class", "crewmember");
-    TextName.setAttributeNS(null, "x", -50);
-    TextName.setAttributeNS(null, "y", 100);
-    G.appendChild(TextName);
-
-    var TextNodeName = document.createTextNode(item.get('name'));
-    TextName.appendChild(TextNodeName);
+    G.appendChild(SVG_drawText('crewmember', -50, 100, item.get('name')));
 
     
     var Gbar = document.createElementNS(svgNS, "g");
@@ -376,21 +341,8 @@ var dojoConfig = {
     Gbar.setAttributeNS(null,"id", "bar_" + item.get('ident'));
     crewMemberBarId.appendChild(Gbar);
 
-    var Rect1 = document.createElementNS(svgNS, "rect");
-    Rect1.setAttributeNS(null, "class", "line");
-    Rect1.setAttributeNS(null, "x", 0);
-    Rect1.setAttributeNS(null, "y", 0);
-    Rect1.setAttributeNS(null, "width", 1);
-    Rect1.setAttributeNS(null, "height", 1);
-    Gbar.appendChild(Rect1);
-   
-    var Rect2 = document.createElementNS(svgNS, "rect");
-    Rect2.setAttributeNS(null, "class", "line");
-    Rect2.setAttributeNS(null, "x", 0);
-    Rect2.setAttributeNS(null, "y", 200);
-    Rect2.setAttributeNS(null, "width", 1);
-    Rect2.setAttributeNS(null, "height", 1);
-    Gbar.appendChild(Rect2);
+    Gbar.appendChild(SVG_drawRect("line", 0,   0, 1, 1));
+    Gbar.appendChild(SVG_drawRect("line", 0, 200, 1, 1));
   }
 
   // Draw an activity. As the others, the drawing is embedded into a g node 
@@ -417,16 +369,7 @@ var dojoConfig = {
     Rect.setAttributeNS(null, "height", 100);
     G.appendChild(Rect);
 
-    var Text = document.createElementNS(svgNS,"text");
-    Text.setAttributeNS(null, "class", "label");
-    Text.setAttributeNS(null, "x", 10);
-    Text.setAttributeNS(null, "y", 50);
-    Text.setAttributeNS(null, "font-size", 50);
-    Text.setAttributeNS(null, "text-anchor", "start");
-    G.appendChild(Text);
-
-    var TextNode = document.createTextNode(activity.get('name'));
-    Text.appendChild(TextNode);
+    G.appendChild(SVG_drawText("label", 10, 50, activity.get('name')));
 
     // transporation time
     if( activity.get('tp') > 0 ){
@@ -610,11 +553,8 @@ var dojoConfig = {
   });
 
   activityStore.on('add', function(event){
-    console.log("activity store add");
-    console.log(event.target);
     var line = crewMemberStore.getSync(event.target.get('cmPosition'));
-    console.log(line);
-
+   
     SVG_drawActivity(event.target, line);
   });
 
@@ -633,6 +573,26 @@ var dojoConfig = {
     
     item.parentNode.removeChild(item);
   });
+
+  function IsActivityOverlap(crewmember, x , width){
+    var isOverlap = false;
+    
+    console.log('IsActivityOverlap');
+    console.log(crewmember);
+    console.log(x);
+    console.log(width);
+    
+    activityStore.filter({cmPosition: crewmember})./*sort('x').*/forEach(function(object){
+      console.log(object);
+      if( !(   x            < object.get('x') + object.get('width') - 1 
+            || x + width -1 > object.get('x')                           )){
+        console.log("overlap detected");
+        isOverlap = true;
+      }
+    });
+
+    return isOverlap;
+  }
 
   // -----------------------------------------------
   // stationStore
@@ -780,7 +740,6 @@ var dojoConfig = {
     if(intro){
       intro.parentNode.removeChild(intro);
     } 
-    SetCalendarDialog.hide();
 
     var start = moment(CalStart.get("value"));
     var end   = moment(CalEnd.get("value")); 
@@ -846,6 +805,8 @@ var dojoConfig = {
     registry.byId("BusinessObjectMenu").set('disabled', false);
     registry.byId("GraphOptionMenu").set('disabled', false);
     registry.byId("HighlightsMenu").set('disabled', false);
+    
+    SetCalendarDialog.hide();
   });
   
   // Redraw start periods
@@ -925,18 +886,27 @@ var dojoConfig = {
     days.forEach(function(day){
       var calendarDay = calendarStore.getSync(day); 
 
-      activityStore.addSync({
-        name: "DO",
-        type: "DO",
-        position: pos,
-        cmPosition: registry.byId("DayOffCrewMemberSelect").get('value'),
-        x: calendarDay.get('x'),
-        width: calendarDay.get('width'),
-        tp: 0,
-        resta: 0,
-        restb: 0,
-      });
-      pos += 1;
+      var x          = calendarDay.get('x');
+      var width      = calendarDay.get('width');
+      var crewmember = registry.byId("DayOffCrewMemberSelect").get("value");
+
+      if( IsActivityOverlap(crewmember, x, width) ){
+        alert("Cannot create activity starting " + calendarDay.get("name")); 
+      }
+      else { 
+        activityStore.addSync({
+          name: "DO",
+          type: "DO",
+          position: pos,
+          cmPosition: registry.byId("DayOffCrewMemberSelect").get('value'),
+          x: calendarDay.get('x'),
+          width: calendarDay.get('width'),
+          tp: 0,
+          resta: 0,
+          restb: 0,
+        });
+        pos += 1;
+      }
     });
 
     CreateDayOffDialog.hide();
