@@ -51,4 +51,11 @@ generate xslt to generate planner files.
 
 
 
+tooltip svg
+http://jsfiddle.net/ALjJb/
 
+tooltip svg 2 - paragraphe 7 at the end....
+http://www.petercollingridge.co.uk/interactive-svg-components/tooltip
+
+analog clock
+http://thenewcode.com/943/An-SVG-Analog-Clock-In-6-Lines-of-JavaScript

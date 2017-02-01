@@ -145,9 +145,6 @@ var dojoConfig = {
   "dijit/layout/ContentPane", 
   "dojox/layout/TableContainer",
   "dijit/form/Select"
-
-//  "https://cdn.rawgit.com/moment/moment/2.7.0/moment.js",
-//  "https://cdn.rawgit.com/moment/moment-timezone/0.0.1/moment-timezone.js"
 ], function(
   declare,
   on, 
@@ -235,6 +232,10 @@ var dojoConfig = {
     registry.byId(prefixId + "EndDate").set('value', mydatetime);
     registry.byId(prefixId + "EndTime").set('value', mydatetime);
   } 
+   
+  function getPositionX(date) {
+    return (date.unix() - Xorig) / 60;
+  }
 
   // ===============================================
   // SVG drawing
@@ -251,6 +252,7 @@ var dojoConfig = {
   var svg     = dom.byId("graph").getSVGDocument();
   var svgNS   = "http://www.w3.org/2000/svg";
   var xlinkNS = "http://www.w3.org/1999/xlink";
+  var Xorig   = 0;
 
   // Draw a rectangle.
   function SVG_drawRect(type, x, y, width, height){
@@ -275,7 +277,27 @@ var dojoConfig = {
     return Text;
   }
 
- 
+  // Draw a highlight in calendar.
+  function SVG_drawHighlight(item){
+    var calendarId    = svg.getElementById("calendar");
+    var calendarBarId = svg.getElementById("calendar_bar");
+
+    var G       = document.createElementNS(svgNS, "g");
+    G.setAttributeNS(null, "id", item.get('ident'));
+    calendarId.appendChild(G);
+
+    G.appendChild(SVG_drawText("highlight_label", item.get('x'), 60, item.get('message')));
+
+    // a scale is used to extend the bars, that's why they are defined into
+    // a specific group.
+    var Gbar     = document.createElementNS(svgNS, "g");
+    Gbar.setAttributeNS(null, "id", "bar_" + item.get('ident'));
+    calendarBarId.appendChild(Gbar);
+
+    Gbar.appendChild(SVG_drawRect('highlight', item.get('x'), 0, 1, 1));
+  }
+
+
 
   // Draw a calendar date. The drawing belongs to id calendar in the SVG.
   // Each "date" is embedded in a g node, with a translation on X, according
@@ -377,7 +399,7 @@ var dojoConfig = {
       G.appendChild(SVG_drawRect("TP", activity.get('tp') * -1, 20, activity.get('tp'), 30));
 
       // after.
-      G.appendChild(SVG_drawRect("TP", activity.get('width') * -1, 50, activity.get('tp'), 30));
+      G.appendChild(SVG_drawRect("TP", activity.get('width'), 50, activity.get('tp'), 30));
     }
 
     // rest before
@@ -473,6 +495,22 @@ var dojoConfig = {
     validateOnSet: false
   });
 
+  var HighlightModel = declare(Model, {
+    schema: {
+      message: 'string',
+      pk: 'numeric',
+      x: 'numeric',
+      ident: new ComputedProperty({ 
+        dependsOn: ['pk'],
+        getValue: function(pk){
+          return "hl" + pk;  // hl stands for HighLight
+        }
+      }),
+
+    },
+    validateOnSet: false
+  });
+ 
   // ===============================================
   // Data STOREs and events.
   // ===============================================
@@ -512,7 +550,9 @@ var dojoConfig = {
   registry.byId("CalendarStartPeriods").setStore(calendarStoreAdapter);
   registry.byId("DayOffDatesSelect").set("labelAttr", "name");
   registry.byId("DayOffDatesSelect").setStore(calendarStoreAdapter);
- 
+  registry.byId("HighlightDatesSelect").set("labelAttr", "name");
+  registry.byId("HighlightDatesSelect").setStore(calendarStoreAdapter);
+
   // -----------------------------------------------
   // crewMemberStore
   // -----------------------------------------------
@@ -574,19 +614,17 @@ var dojoConfig = {
     item.parentNode.removeChild(item);
   });
 
+  function IsValueInRange(value, x, width){ 
+    return (value >= x ) && (value <= x + width -1); 
+  }
+
   function IsActivityOverlap(crewmember, x , width){
     var isOverlap = false;
     
-    console.log('IsActivityOverlap');
-    console.log(crewmember);
-    console.log(x);
-    console.log(width);
-    
-    activityStore.filter({cmPosition: crewmember})./*sort('x').*/forEach(function(object){
+    activityStore.filter({cmPosition: crewmember}).forEach(function(object){
       console.log(object);
-      if( !(   x            < object.get('x') + object.get('width') - 1 
-            || x + width -1 > object.get('x')                           )){
-        console.log("overlap detected");
+      if(   IsValueInRange(x, object.get('x'), object.get('width'))
+          || IsValueInRange(x + width -1, object.get('x'), object.get('width'))){
         isOverlap = true;
       }
     });
@@ -601,6 +639,40 @@ var dojoConfig = {
     Model: StationModel,
     idProperty: "id",
   });
+
+  // -----------------------------------------------
+  // highlightStore
+  // -----------------------------------------------
+  var highlightStore = new Memory({
+    Model: HighlightModel,
+    idProperty: "pk",
+  });
+
+  highlightStore.on('add', function(event){
+    SVG_drawHighlight(event.target);
+  });
+  
+  highlightStore.on('update', function(event){
+    var item  = svg.getElementById(event.target.get('ident'));
+    var item2 = svg.getElementById("bar_" + event.target.get('ident'));
+    
+    item.parentNode.removeChild(item);
+    item2.parentNode.removeChild(item2);
+
+    SVG_drawHighlight(event.target);
+  });
+
+  highlightStore.on('delete', function(event){
+    var item  = svg.getElementById(event.target.get('ident'));
+    var item2 = svg.getElementById("bar_" + event.target.get('ident'));
+    
+    item.parentNode.removeChild(item);
+    item2.parentNode.removeChild(item2);
+  });
+
+
+
+
 
   // ===============================================
   // LOADING STORES FROM SVG
@@ -742,6 +814,7 @@ var dojoConfig = {
     } 
 
     var start = moment(CalStart.get("value"));
+    Xorig = start.unix();
     var end   = moment(CalEnd.get("value")); 
     var range = end.diff(start, 'days');
 
@@ -865,10 +938,17 @@ var dojoConfig = {
   // Create Day Off dialog
   // -----------------------------------------------
   registry.byId("CreateDayOff").on("click", function(){
-    console.log("createdayoffform.validate");
     if( !registry.byId("CreateDayOffForm").validate() ){
       return;
     }
+
+    CreateDayOffDialog.hide();
+    var crewmemberId = registry.byId("DayOffCrewMemberSelect").get("value");
+    var days = registry.byId("DayOffDatesSelect").value; 
+
+    // to avoid the "at least one item must be selected" message, form data are save in 
+    // local variables before reseting the form.
+    registry.byId("CreateDayOffForm").reset();
     
     var pos = 0;
 
@@ -878,27 +958,22 @@ var dojoConfig = {
       pos += 1;
     }); 
 
-    console.log("DayOffDatesSelect :");
-    console.log(registry.byId("DayOffDatesSelect").isValid());
-    console.log(registry.byId("DayOffDatesSelect"));
-    var days = registry.byId("DayOffDatesSelect").value; 
 
     days.forEach(function(day){
       var calendarDay = calendarStore.getSync(day); 
 
       var x          = calendarDay.get('x');
       var width      = calendarDay.get('width');
-      var crewmember = registry.byId("DayOffCrewMemberSelect").get("value");
 
-      if( IsActivityOverlap(crewmember, x, width) ){
-        alert("Cannot create activity starting " + calendarDay.get("name")); 
+      if( IsActivityOverlap(crewmemberId, x, width) ){
+        alert("Cannot create activity starting " + calendarDay.get("name") + " because of an overlap with another activity."); 
       }
       else { 
         activityStore.addSync({
           name: "DO",
           type: "DO",
           position: pos,
-          cmPosition: registry.byId("DayOffCrewMemberSelect").get('value'),
+          cmPosition: crewmemberId,
           x: calendarDay.get('x'),
           width: calendarDay.get('width'),
           tp: 0,
@@ -909,7 +984,6 @@ var dojoConfig = {
       }
     });
 
-    CreateDayOffDialog.hide();
   });
 
   // -----------------------------------------------
@@ -976,10 +1050,55 @@ var dojoConfig = {
     CreateTrainingDialog.hide();
   });
 
-   
-  // console.log(FixedTimeZone.getAllZones());
-  console.log(moment().format('LLLL'));
-  //console.log(moment.tz.names());
+ 
+  // -----------------------------------------------
+  // Create Highlight dialog
+  // -----------------------------------------------
+
+  registry.byId("CreateHighlight").on("click", function(){
+    if( !registry.byId("CreateHighlightForm").validate() ){
+      return;
+    }
+
+    CreateHighlightDialog.hide();
+    var label   = registry.byId("HighlightLabel").get("value");
+    var days    = registry.byId("HighlightDatesSelect").value; 
+    var time    = registry.byId("HighlightTime").value; 
+
+    // to avoid the "at least one item must be selected" message, form data are save in 
+    // local variables before reseting the form.
+    registry.byId("CreateHighlightForm").reset();
+
+    var pos = 0;
+
+    // Compute the size of the store.
+    highlightStore.forEach(function(item){
+      pos += 1;
+    }); 
+ 
+    if( days.length == 0 ){
+      calendarStore.forEach(function(item){
+        days.push(item.get('position'));
+      }); 
+    }
+
+    for(i = 0; i < days.length; i++){
+      var calDay = calendarStore.getSync(days[i]);
+      
+      var when = moment(calDay.get('name'));
+      when.add(time.getHours(), 'hours');
+      when.add(time.getMinutes(), 'minutes');
+
+      if( when.isValid() ){   
+        highlightStore.addSync({
+          message: label,
+          x: getPositionX(when),
+          pk: pos,
+        });
+        pos += 1;
+      }
+    }
+  });  
 });
   </script>
 
@@ -1027,7 +1146,7 @@ var dojoConfig = {
     <div id="HighlightsMenu" data-dojo-type="dijit/PopupMenuBarItem" data-dojo-props="disabled:true">
       <span>Highlights</span>
       <div data-dojo-type="dijit/DropDownMenu" id="highlightsMenu">
-        <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true, onClick:function(){alert('not yet available');}">Specific date(s)</div>
+        <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateHighlightDialog.show();}">Specific date(s)</div>
         <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true, onClick:function(){alert('not yet available');}">Distance</div>
         <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true, onClick:function(){alert('not yet available');}">Window</div>
       </div>
@@ -1244,6 +1363,33 @@ var dojoConfig = {
       <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){ShowConstantsDialog.hide();}">Close</button>
     </div>
   </div>
+
+
+  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateHighlightDialog" title="Create highlight" style="display: none;" data-dojo-props="onHide: function(){CreateHighlightForm.reset();}" >
+    <div data-dojo-type="dijit/form/Form" id="CreateHighlightForm" data-dojo-id="CreateHighlightForm" encType="multipart/form-data" action="" method="">
+      <table class="dijitDialogPaneContentArea">
+        <tr>
+          <td><label for="lbl">Label</label></td>
+          <td><input data-dojo-type="dijit/form/TextBox" name="lbl" id="HighlightLabel"></td>
+        </tr>
+        <tr>
+          <td><label for="days">Date(s)</label></td>
+          <td><select multiple="true" data-dojo-type="dojox/form/FixedCheckedMultiSelect" name="days" id="HighlightDatesSelect"></td>
+        </tr>
+        <tr>
+          <td><label for="time">Time</label></td>
+          <td class="datetime">
+            <input id="HighlightTime" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'"/>
+          </td>
+        </tr>
+      </table>
+
+      <div class="dijitDialogPaneActionBar">
+        <button data-dojo-type="dijit/form/Button" type="button" id="CreateHighlight">Create</button>
+      </div>
+    </div>
+  </div>
+
 
 
 </html>
