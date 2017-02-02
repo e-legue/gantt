@@ -843,29 +843,29 @@ var dojoConfig = {
         width: width, 
       });
 
+      // look for DST
+      var InitialState =  start.isDST();
+      if( width != 1440 ){ 
+        while( start.isDST() == InitialState ){
+          start.add(1, 'minutes');
+        }
+
+        var pos = 0;
+
+        // Compute the size of the store.
+        highlightStore.forEach(function(item){
+          pos += 1;
+        }); 
+     
+        highlightStore.addSync({
+          message: InitialState ? "End DST" : "Start DST",
+          x: getPositionX(start),
+          pk: pos,
+        });
+      }
+
       x += width;
       start = nextDay;
-/*
-      console.log(start.isDST());
-      var nextDay = moment(start);   
-         
-      start = nextDay;
-
-      if(start2.isDST() != dstStatus ){
-        var start3 = start2;
-         
-        while( start3.isDST() != dstStatus ) {
-          console.log("dst hour :" + start3.format());
-          start3.subtract(1, 'hours');
-        }
-        console.log("final dst hour :" + start3.format());
-
-         // moment().valueOf();
-         // moment().unix();
-      } 
-      dstStatus = start2.isDST();
-
-      mydate = date.add(mydate, "day", 1); */
     }
 
 
@@ -1054,7 +1054,7 @@ var dojoConfig = {
   // -----------------------------------------------
   // Create Highlight dialog
   // -----------------------------------------------
-
+   
   registry.byId("CreateHighlight").on("click", function(){
     if( !registry.byId("CreateHighlightForm").validate() ){
       return;
