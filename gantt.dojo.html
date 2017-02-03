@@ -477,9 +477,11 @@ var dojoConfig = {
       SVG_drawCrewMember(this); 
     },
     ClearSVG: function(){
-      var item = svg.getElementById(this.get('ident'));
+      var item_lbl = svg.getElementById(this.get('ident'));
+      var item_bar = svg.getElementById("bar_" + this.get('ident'));
       
-      item.parentNode.removeChild(item);
+      item_lbl.parentNode.removeChild(item_lbl);
+      item_bar.parentNode.removeChild(item_bar);
     },
   });
 
@@ -687,12 +689,30 @@ var dojoConfig = {
   // ===============================================
   // Redraw SVG
   // ===============================================
+  function RemoveIntroMessage(){
+    var intro = svg.getElementById('intro');
+    if(intro){
+      intro.parentNode.removeChild(intro);
+    } 
+  }
+
+  function AdjustCrewmemberBarScaleX(x){
+    var bars = svg.getElementById("crewmember_bar");
+    bars.setAttribute("transform", "scale(" + x + ",1)");
+  }
+
   function RedrawSVG(){
+    RemoveIntroMessage();
+
+    var x = 0;
     calendarStore.forEach(function(item){
       // on.emit(item, "update", { bubbles: true, cancelable: true });
       item.ClearSVG();
       item.DrawSVG();
+      x = Math.max(x, item.get('x') + item.get('width')); 
     });
+    AdjustCrewmemberBarScaleX(x);
+
     highlightStore.forEach(function(item){
       item.ClearSVG();
       item.DrawSVG();
@@ -841,20 +861,15 @@ var dojoConfig = {
     if( !registry.byId("SetCalendarForm").validate() ){
       return;
     }
+    RemoveIntroMessage();
 
     var CalStart = registry.byId("CalendarStart");
     var CalEnd   = registry.byId("CalendarEnd");
-    
-    var intro = svg.getElementById('intro');
-    if(intro){
-      intro.parentNode.removeChild(intro);
-    } 
 
     var start = moment(CalStart.get("value"));
     Xorig = start.unix();
     var end   = moment(CalEnd.get("value")); 
     var range = end.diff(start, 'days');
-
 
     calendarStore.fetch().then(function (days){
       for (var i = days.length - 1; i >= 0; i--) {
@@ -906,9 +921,7 @@ var dojoConfig = {
       start = nextDay;
     }
 
-
-    var bars = svg.getElementById("crewmember_bar");
-    bars.setAttribute("transform", "scale(" + x + ",1)");
+    AdjustCrewmemberBarScaleX(x);
 
     // enabled some menu items.
     registry.byId("FileSaveMenu").set('disabled', false);
