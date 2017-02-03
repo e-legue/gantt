@@ -220,8 +220,8 @@ var dojoConfig = {
     datetime = datetime.add(registry.byId(prefixId + "DurationHour").get("value"), "hours");
     datetime = datetime.add(registry.byId(prefixId + "DurationMinute").get("value"), "minutes");
 
-    registry.byId(prefixId + "EndDate").set('value', datetime);
-    registry.byId(prefixId + "EndTime").set('value', datetime);
+    registry.byId(prefixId + "EndDate").set('value', datetime.format());
+    registry.byId(prefixId + "EndTime").set('value', datetime.format());
   } 
 
 
