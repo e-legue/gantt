@@ -1,13 +1,9 @@
 TODO:
 
-date timezone.
-http://jsfiddle.net/uq99udc9/4/
 
 http://momentjs.com/timezone/docs/
 
  
-show/hide (day color / day yyyy-mm-yy / day relative)
-show/hide (hour color / hour label )
 show/hide (legs)
 
 done - save svg, and ask file name.
@@ -19,20 +15,12 @@ http://stackoverflow.com/questions/11219973/how-to-upload-file-using-dojo
 ref to extend svg tags...
 https://www.w3.org/TR/SVG/extend.html#AnExample
 
-http://archive.dojotoolkit.org/nightly/checkout/dijit/tests/layout/test_TabContainer.html
-
-
 
 datetime picker dojo...
 http://jsfiddle.net/dacrazycoder/8sraoao9/
 http://jsfiddle.net/FjuCa/
 
-dojo date locale.
-https://dojotoolkit.org/reference-guide/1.10/dojo/cldr.html#dojo-cldr
 
-
-At least one item must be selected.
-http://download.dojotoolkit.org/release-1.6.1/dojo-release-1.6.1/dojox/form/tests/test_CheckedMultiSelect.html
 
 dojox calendar.
 http://archive.dojotoolkit.org/nightly/dojotoolkit/dojox/widget/tests/test_Calendar.html?theme=soria
@@ -48,6 +36,28 @@ load stores on svg file load.
 generate xslt to generate planner files.
 
 
+
+select init:
+http://stackoverflow.com/questions/7166925/programmaticly-declaring-the-values-of-a-dijit-form-select
+============
+var listOfOptions = [{
+    label: 'this',
+    value: '01'
+  },
+  {
+    label: 'that',
+    value: '02'
+  },
+  {
+    label: 'the other',
+    value: '03'
+  },
+  {
+    label: 'banana',
+    value: '04',
+  },
+  ];
+dijit.byId("option").addOption(listOfOptions);
 
 
 

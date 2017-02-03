@@ -84,7 +84,6 @@
 var dojoConfig = {
   async: true, 
   debug: true,
-//   gfxRenderer: "svg",
   packages: [{
     name: 'dstore',
     location: 'http://cdn.rawgit.com/SitePen/dstore/v1.0.0'
@@ -174,9 +173,7 @@ var dojoConfig = {
         this._updateSelection();
       }
     },
-    //displayMessage : function(){}, // to disable message "At least one item must be selected".
     validator: function() {
-      console.log('je passe dans validator...');
       if (!this.required){
         return true;
       }
@@ -215,26 +212,33 @@ var dojoConfig = {
   function UpdateEndDateTime(prefixId){
   
     var mytime = registry.byId(prefixId + "StartTime").get("value");
-    var mydate = registry.byId(prefixId + "StartDate").get("value");
 
-    var year   = mydate.getFullYear(),
-        month  = mydate.getMonth(),
-        day    = mydate.getDate(),
-        hour   = mytime.getHours(),
-        minute = mytime.getMinutes();
+    var datetime = moment(registry.byId(prefixId + "StartDate").get("value"));
+    datetime.hour(mytime.getHours());
+    datetime.minute(mytime.getMinutes());
 
-    var mydatetime = new Date(year, month, day, hour, minute);
-    hour = registry.byId(prefixId + "DurationHour").value;
-    mydatetime = date.add(mydatetime, "hour", hour);
-    minute = registry.byId(prefixId + "DurationMinute").value;
-    mydatetime = date.add(mydatetime, "minute", minute);
+    datetime = datetime.add(registry.byId(prefixId + "DurationHour").get("value"), "hours");
+    datetime = datetime.add(registry.byId(prefixId + "DurationMinute").get("value"), "minutes");
 
-    registry.byId(prefixId + "EndDate").set('value', mydatetime);
-    registry.byId(prefixId + "EndTime").set('value', mydatetime);
+    registry.byId(prefixId + "EndDate").set('value', datetime);
+    registry.byId(prefixId + "EndTime").set('value', datetime);
   } 
-   
+
+
+  
+  // ===============================================
+  // return the X position in SVG, based on starting
+  // calendar and the date provided in argument.
+  // ===============================================
   function getPositionX(date) {
     return (date.unix() - Xorig) / 60;
+  }
+
+  // ===============================================
+  //  apply the compression factor on axe X.
+  // ===============================================
+  function CompressX(x) {
+    return x / Xfactor;
   }
 
   // ===============================================
@@ -253,14 +257,15 @@ var dojoConfig = {
   var svgNS   = "http://www.w3.org/2000/svg";
   var xlinkNS = "http://www.w3.org/1999/xlink";
   var Xorig   = 0;
+  var Xfactor = registry.byId("XGraphCompression").get("value"); 
 
   // Draw a rectangle.
   function SVG_drawRect(type, x, y, width, height){
     var Rect = document.createElementNS(svgNS,"rect");
     Rect.setAttributeNS(null, "class", type);
-    Rect.setAttributeNS(null, "x", x);
+    Rect.setAttributeNS(null, "x", CompressX(x));
     Rect.setAttributeNS(null, "y", y);
-    Rect.setAttributeNS(null, "width", width);
+    Rect.setAttributeNS(null, "width", CompressX(width));
     Rect.setAttributeNS(null, "height", height);
     return Rect;
   }
@@ -269,7 +274,7 @@ var dojoConfig = {
   function SVG_drawText(type, x, y, label){
     var Text = document.createElementNS(svgNS, "text");
     Text.setAttributeNS(null, "class", type);
-    Text.setAttributeNS(null, "x", x);
+    Text.setAttributeNS(null, "x", CompressX(x));
     Text.setAttributeNS(null, "y", y);
     
     Text.appendChild(document.createTextNode(label));
@@ -308,7 +313,7 @@ var dojoConfig = {
     var calendarBarId = svg.getElementById("calendar_bar");
 
     var G       = document.createElementNS(svgNS, "g");
-    G.setAttributeNS(null, "transform", "translate(" + item.get('x') + ",0)");
+    G.setAttributeNS(null, "transform", "translate(" + CompressX(item.get('x')) + ",0)");
     G.setAttributeNS(null, "id", item.get('ident'));
     calendarId.appendChild(G);
 
@@ -328,7 +333,7 @@ var dojoConfig = {
     // a scale is used to extend the bars, that's why they are defined into
     // a specific group.
     var Gbar     = document.createElementNS(svgNS, "g");
-    Gbar.setAttributeNS(null, "transform", "translate(" + item.get('x') + ",0)");
+    Gbar.setAttributeNS(null, "transform", "translate(" + CompressX(item.get('x')) + ",0)");
     Gbar.setAttributeNS(null, "class", item.get('type'));
     Gbar.setAttributeNS(null, "id", "bar_" + item.get('ident'));
     calendarBarId.appendChild(Gbar);
@@ -376,7 +381,7 @@ var dojoConfig = {
     var parentId = svg.getElementById(line.get('ident'));
 
     var G = document.createElementNS(svgNS, "g");
-    G.setAttributeNS(null, "transform", "translate(" + activity.get('x') + ",50)");
+    G.setAttributeNS(null, "transform", "translate(" + CompressX(activity.get('x')) + ",50)");
     G.setAttributeNS(null, "id", activity.get('ident'));
     G.setAttributeNS(null, "onclick", "alert('can display details here');");
     parentId.appendChild(G);
@@ -385,9 +390,9 @@ var dojoConfig = {
     Rect.setAttributeNS(null, "class", activity.get('type'));
     Rect.setAttributeNS(null, "x", 0);
     Rect.setAttributeNS(null, "y", 0);
-    Rect.setAttributeNS(null, "rx", 20);
-    Rect.setAttributeNS(null, "ry", 20);
-    Rect.setAttributeNS(null, "width", activity.get('width'));
+    Rect.setAttributeNS(null, "rx", CompressX(20));
+    Rect.setAttributeNS(null, "ry", CompressX(20));
+    Rect.setAttributeNS(null, "width", CompressX(activity.get('width')));
     Rect.setAttributeNS(null, "height", 100);
     G.appendChild(Rect);
 
@@ -440,7 +445,17 @@ var dojoConfig = {
       x: 'numeric',
       width: 'numeric',
     },
-    validateOnSet: false
+    validateOnSet: false,
+    DrawSVG: function(){ 
+      SVG_drawCalendarDate(this); 
+    },
+    ClearSVG: function(){
+      var item_lbl = svg.getElementById(this.get('ident'));
+      var item_bar = svg.getElementById("bar_" + this.get('ident'));
+      
+      item_lbl.parentNode.removeChild(item_lbl);
+      item_bar.parentNode.removeChild(item_bar);
+    },
   });
 
   var CrewMemberModel = declare(Model, {
@@ -457,7 +472,15 @@ var dojoConfig = {
       y: 'numeric',
       height: 'numeric',
     },
-    validateOnSet: false
+    validateOnSet: false,
+    DrawSVG: function(){ 
+      SVG_drawCrewMember(this); 
+    },
+    ClearSVG: function(){
+      var item = svg.getElementById(this.get('ident'));
+      
+      item.parentNode.removeChild(item);
+    },
   });
 
   var ActivityModel = declare(Model, {
@@ -478,7 +501,17 @@ var dojoConfig = {
         }
       }),
     },
-    validateOnSet: false
+    validateOnSet: false,
+    DrawSVG: function(crewmember){ 
+      SVG_drawActivity(this, crewmember); 
+    },
+    ClearSVG: function(){
+      var item = svg.getElementById(this.get('ident'));
+    
+      // an activity belongs to a crewmember. If the crewmember was cleared,
+      // then the activity is also cleared !  
+      if( item ) item.parentNode.removeChild(item);
+    },
   });
  
   var StationModel = declare(Model, {
@@ -506,9 +539,21 @@ var dojoConfig = {
           return "hl" + pk;  // hl stands for HighLight
         }
       }),
-
     },
-    validateOnSet: false
+    validateOnSet: false,
+    DrawSVG: function(){ 
+      SVG_drawHighlight(this); 
+    },
+    ClearSVG: function(){
+      var item_lbl = svg.getElementById(this.get('ident'));
+      var item_bar = svg.getElementById("bar_" + this.get('ident'));
+      
+      // a hightligh  belongs to a calendar day. If a day was cleared,
+      // then the hightlight is also cleared !  
+      if( item_lbl ) item_lbl.parentNode.removeChild(item_lbl);
+      if( item_bar ) item_bar.parentNode.removeChild(item_bar);
+    },
+
   });
  
   // ===============================================
@@ -524,25 +569,16 @@ var dojoConfig = {
   });
 
   calendarStore.on('add', function(event){
-    SVG_drawCalendarDate(event.target);
+    event.target.DrawSVG();
   });
 
   calendarStore.on('update', function(event){
-    var item  = svg.getElementById(event.target.get('ident'));
-    var item2 = svg.getElementById("bar_" + event.target.get('ident'));
-    
-    item.parentNode.removeChild(item);
-    item2.parentNode.removeChild(item2);
-
-    SVG_drawCalendarDate(event.target);
+    event.target.ClearSVG();
+    event.target.DrawSVG();
   });
 
   calendarStore.on('delete', function(event){
-    var item  = svg.getElementById(event.target.get('ident'));
-    var item2 = svg.getElementById("bar_" + event.target.get('ident'));
-    
-    item.parentNode.removeChild(item);
-    item2.parentNode.removeChild(item2);
+    event.target.ClearSVG();
   });
 
   var calendarStoreAdapter = new DstoreAdapter(calendarStore);
@@ -562,21 +598,16 @@ var dojoConfig = {
   });
 
   crewMemberStore.on('add', function(event){
-    SVG_drawCrewMember(event.target);
+    event.target.DrawSVG();
   });
   
   crewMemberStore.on('update', function(event){
-    var item = svg.getElementById(event.target.get('ident'));
-    
-    item.parentNode.removeChild(item);
-
-    SVG_drawCrewMember(event.target);
+    event.target.ClearSVG();
+    event.target.DrawSVG();
   });
 
   crewMemberStore.on('delete', function(event){
-    var item = svg.getElementById(event.target.get('ident'));
-    
-    item.parentNode.removeChild(item);
+    event.target.ClearSVG();
   });
 
   var crewMemberStoreAdapter = new DstoreAdapter(crewMemberStore);
@@ -593,25 +624,16 @@ var dojoConfig = {
   });
 
   activityStore.on('add', function(event){
-    var line = crewMemberStore.getSync(event.target.get('cmPosition'));
-   
-    SVG_drawActivity(event.target, line);
+    event.target.DrawSVG(crewMemberStore.getSync(event.target.get('cmPosition')));
   });
 
   activityStore.on('update', function(event){
-    var item = svg.getElementById(event.target.get('ident'));
-    
-    item.parentNode.removeChild(item);
-    
-    var line = crewMemberStore.getSync(event.target.get('cmPosition'));
-
-    SVG_drawActivity(event.target, line);
+    event.target.ClearSVG();
+    event.target.DrawSVG(crewMemberStore.getSync(event.target.get('cmPosition')));
   });
 
   activityStore.on('delete', function(event){
-    var item = svg.getElementById(event.target.get('ident'));
-    
-    item.parentNode.removeChild(item);
+    event.target.ClearSVG();
   });
 
   function IsValueInRange(value, x, width){ 
@@ -622,7 +644,6 @@ var dojoConfig = {
     var isOverlap = false;
     
     activityStore.filter({cmPosition: crewmember}).forEach(function(object){
-      console.log(object);
       if(   IsValueInRange(x, object.get('x'), object.get('width'))
           || IsValueInRange(x + width -1, object.get('x'), object.get('width'))){
         isOverlap = true;
@@ -649,29 +670,42 @@ var dojoConfig = {
   });
 
   highlightStore.on('add', function(event){
-    SVG_drawHighlight(event.target);
+    event.target.DrawSVG();
   });
   
   highlightStore.on('update', function(event){
-    var item  = svg.getElementById(event.target.get('ident'));
-    var item2 = svg.getElementById("bar_" + event.target.get('ident'));
-    
-    item.parentNode.removeChild(item);
-    item2.parentNode.removeChild(item2);
-
-    SVG_drawHighlight(event.target);
+    event.target.ClearSVG();
+    event.target.DrawSVG();
   });
 
   highlightStore.on('delete', function(event){
-    var item  = svg.getElementById(event.target.get('ident'));
-    var item2 = svg.getElementById("bar_" + event.target.get('ident'));
-    
-    item.parentNode.removeChild(item);
-    item2.parentNode.removeChild(item2);
+    event.target.ClearSVG();
   });
 
 
 
+  // ===============================================
+  // Redraw SVG
+  // ===============================================
+  function RedrawSVG(){
+    calendarStore.forEach(function(item){
+      // on.emit(item, "update", { bubbles: true, cancelable: true });
+      item.ClearSVG();
+      item.DrawSVG();
+    });
+    highlightStore.forEach(function(item){
+      item.ClearSVG();
+      item.DrawSVG();
+    });
+    crewMemberStore.forEach(function(item){
+      item.ClearSVG();
+      item.DrawSVG();
+    });
+    activityStore.forEach(function(item){
+      item.ClearSVG();
+      item.DrawSVG(crewMemberStore.getSync(item.get('cmPosition')));
+    });
+  }
 
 
   // ===============================================
@@ -747,12 +781,15 @@ var dojoConfig = {
 
   registry.byId("SHCalendarHourBars").on("change", function(isChecked){
     var divs = svg.getElementsByClassName('hour_bar');
-    console.log("je detecte le clic");
 
     for (var i = 0; i < divs.length; i++) {
-      console.log("je change");
       divs[i].setAttribute("display", isChecked ? "block" : "none");
     }
+  }, true);
+
+  registry.byId("XGraphCompression").on("change", function(value){
+    Xfactor = value;
+    RedrawSVG ();
   }, true);
 
 
@@ -786,10 +823,10 @@ var dojoConfig = {
   // -----------------------------------------------
   registry.byId("CalendarStart").on("change", function(){
     registry.byId("CalendarEnd").constraints.min = date.add(this.get("value"), "day", 1);
-    registry.byId("CalendarEnd").set("value", date.add(this.get("value"), "day", 1));     
+    registry.byId("CalendarEnd").dropDownDefaultValue = this.get("value");     
 
     registry.byId("TrainingStartDate").constraints.min = this.get("value");
-    registry.byId("TrainingStartDate").set("value", this.get("value"));
+    registry.byId("TrainingStartDate").dropDownDefaultValue = this.get("value");
   }, true);
   
   registry.byId("CalendarEnd").on("change", function(){
@@ -844,8 +881,9 @@ var dojoConfig = {
       });
 
       // look for DST
-      var InitialState =  start.isDST();
       if( width != 1440 ){ 
+        var InitialState =  start.isDST();
+
         while( start.isDST() == InitialState ){
           start.add(1, 'minutes');
         }
@@ -983,7 +1021,6 @@ var dojoConfig = {
         pos += 1;
       }
     });
-
   });
 
   // -----------------------------------------------
@@ -1023,6 +1060,12 @@ var dojoConfig = {
   });
 
   registry.byId("CreateTraining").on("click", function(){
+    if( !registry.byId("CreateTrainingForm").validate() ){
+      return;
+    }
+
+    CreateTrainingDialog.hide();
+
     var pos = 0;
 
     // Compute the position and Y coordinate of the new crewmember based on 
@@ -1031,23 +1074,32 @@ var dojoConfig = {
       pos += 1;
     }); 
 
-    var startCalendar = registry.byId("CalendarStart").get("value");
-    var startDateTraining = registry.byId("TrainingStartDate").get("value");
     var startTimeTraining = registry.byId("TrainingStartTime").get("value");
 
-    activityStore.addSync({
-      name: registry.byId("TrainingName").get("value"),
-      type: "TRN",
-      position: pos,
-      cmPosition: registry.byId("TrainingCrewMemberSelect").get('value'),
-      x: date.difference(startCalendar, startDateTraining, "day") * 1440 + startTimeTraining.getHours() * 60 + startTimeTraining.getMinutes(),
-      width: registry.byId("TrainingDurationHour").get('value') * 60 + registry.byId("TrainingDurationMinute").get('value'),
-      tp: registry.byId("TrainingTransportationTime").checked ? registry.byId("TransportationTimeDuration").get('value') : 0,
-      resta: registry.byId("TrainingRestAfterH").get('value') * 60 + registry.byId("TrainingRestAfterM").get('value'),
-      restb: registry.byId("TrainingRestBeforeH").get('value') * 60 + registry.byId("TrainingRestBeforeM").get('value'),
-    });
+    var startTraining = moment(registry.byId("TrainingStartDate").get("value"));
+    startTraining.hour(startTimeTraining.getHours());
+    startTraining.minute(startTimeTraining.getMinutes());
 
-    CreateTrainingDialog.hide();
+    var crewmemberId = registry.byId("TrainingCrewMemberSelect").get('value');
+    var x     = getPositionX(startTraining);
+    var width = registry.byId("TrainingDurationHour").get('value') * 60 + registry.byId("TrainingDurationMinute").get('value');
+
+    if( IsActivityOverlap(crewmemberId, x, width) ){
+      alert("Cannot create training because of an overlap with another activity."); 
+    }
+    else { 
+      activityStore.addSync({
+        name: registry.byId("TrainingName").get("value"),
+        type: "TRN",
+        position: pos,
+        cmPosition: registry.byId("TrainingCrewMemberSelect").get('value'),
+        x: x,
+        width: width,
+        tp: registry.byId("TrainingTransportationTime").checked ? registry.byId("TransportationTimeDuration").get('value') : 0,
+        resta: registry.byId("TrainingRestAfterH").get('value') * 60 + registry.byId("TrainingRestAfterM").get('value'),
+        restb: registry.byId("TrainingRestBeforeH").get('value') * 60 + registry.byId("TrainingRestBeforeM").get('value'),
+      });
+    }
   });
 
  
@@ -1086,8 +1138,8 @@ var dojoConfig = {
       var calDay = calendarStore.getSync(days[i]);
       
       var when = moment(calDay.get('name'));
-      when.add(time.getHours(), 'hours');
-      when.add(time.getMinutes(), 'minutes');
+      when.hour(time.getHours());
+      when.minute(time.getMinutes());
 
       if( when.isValid() ){   
         highlightStore.addSync({
@@ -1146,7 +1198,7 @@ var dojoConfig = {
     <div id="HighlightsMenu" data-dojo-type="dijit/PopupMenuBarItem" data-dojo-props="disabled:true">
       <span>Highlights</span>
       <div data-dojo-type="dijit/DropDownMenu" id="highlightsMenu">
-        <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateHighlightDialog.show();}">Specific date(s)</div>
+        <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateHighlightDialog.show();}">Specific datetime(s)</div>
         <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true, onClick:function(){alert('not yet available');}">Distance</div>
         <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true, onClick:function(){alert('not yet available');}">Window</div>
       </div>
@@ -1246,6 +1298,20 @@ var dojoConfig = {
       <tr>
         <td><label for="SHCalendarDayBars">Show calendar day bars</label></td>
         <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarDayBars" id="SHCalendarDayBars" checked></td>
+      </tr>
+      <tr>
+        <td><label for="Xcompression">Graph factor compression on axe X</label></td>
+        <td>
+          <select data-dojo-type="dijit/form/Select" name="Xcompression" id="XGraphCompression">
+            <option value="1">1</option>
+            <option value="2" selected="selected">2</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="8">8</option>
+            <option value="10">10</option>
+          </select>
+        </td>
       </tr>
     </table>
 
