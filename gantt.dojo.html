@@ -296,7 +296,7 @@ var dojoConfig = {
     // a scale is used to extend the bars, that's why they are defined into
     // a specific group.
     var Gbar     = document.createElementNS(svgNS, "g");
-    Gbar.setAttributeNS(null, "id", "bar_" + item.get('ident'));
+    Gbar.setAttributeNS(null, "id", item.get('barident'));
     calendarBarId.appendChild(Gbar);
 
     Gbar.appendChild(SVG_drawRect('highlight', item.get('x'), 0, 1, 1));
@@ -335,7 +335,7 @@ var dojoConfig = {
     var Gbar     = document.createElementNS(svgNS, "g");
     Gbar.setAttributeNS(null, "transform", "translate(" + CompressX(item.get('x')) + ",0)");
     Gbar.setAttributeNS(null, "class", item.get('type'));
-    Gbar.setAttributeNS(null, "id", "bar_" + item.get('ident'));
+    Gbar.setAttributeNS(null, "id", item.get('barident'));
     calendarBarId.appendChild(Gbar);
 
     Gbar.appendChild(SVG_drawRect('day_bar', 0, 0, item.get('width'), 1));
@@ -365,7 +365,7 @@ var dojoConfig = {
     
     var Gbar = document.createElementNS(svgNS, "g");
     Gbar.setAttributeNS(null,"transform","translate(0, " + item.get('y') + ")");
-    Gbar.setAttributeNS(null,"id", "bar_" + item.get('ident'));
+    Gbar.setAttributeNS(null,"id", item.get('barident'));
     crewMemberBarId.appendChild(Gbar);
 
     Gbar.appendChild(SVG_drawRect("line", 0,   0, 1, 1));
@@ -442,6 +442,12 @@ var dojoConfig = {
           return "cd" + position;  // cd stands for Calendar Day.
         }
       }),
+      barident: new ComputedProperty({ 
+        dependsOn: ['position'],
+        getValue: function(position){
+          return "bcd" + position;  // bcd stands for Bar Calendar Day.
+        }
+      }),
       x: 'numeric',
       width: 'numeric',
     },
@@ -451,11 +457,13 @@ var dojoConfig = {
     },
     ClearSVG: function(){
       var item_lbl = svg.getElementById(this.get('ident'));
-      var item_bar = svg.getElementById("bar_" + this.get('ident'));
+      var item_bar = svg.getElementById(this.get('barident'));
       
       item_lbl.parentNode.removeChild(item_lbl);
       item_bar.parentNode.removeChild(item_bar);
     },
+    ToXML: function(){
+    }  
   });
 
   var CrewMemberModel = declare(Model, {
@@ -469,6 +477,12 @@ var dojoConfig = {
           return "cm" + position; // cm stands for CrewMember.
         }
       }),
+      barident: new ComputedProperty({ 
+        dependsOn: ['position'],
+        getValue: function(position){
+          return "bcm" + position; // bcm stands for Bar CrewMember.
+        }
+      }),
       y: 'numeric',
       height: 'numeric',
     },
@@ -478,7 +492,7 @@ var dojoConfig = {
     },
     ClearSVG: function(){
       var item_lbl = svg.getElementById(this.get('ident'));
-      var item_bar = svg.getElementById("bar_" + this.get('ident'));
+      var item_bar = svg.getElementById(this.get('barident'));
       
       item_lbl.parentNode.removeChild(item_lbl);
       item_bar.parentNode.removeChild(item_bar);
@@ -530,7 +544,7 @@ var dojoConfig = {
     validateOnSet: false
   });
 
-  var HighlightModel = declare(Model, {
+  var HighLightModel = declare(Model, {
     schema: {
       message: 'string',
       pk: 'numeric',
@@ -541,6 +555,12 @@ var dojoConfig = {
           return "hl" + pk;  // hl stands for HighLight
         }
       }),
+      barident: new ComputedProperty({ 
+        dependsOn: ['pk'],
+        getValue: function(pk){
+          return "bhl" + pk;  // bhl stands for Bar HighLight
+        }
+      }),
     },
     validateOnSet: false,
     DrawSVG: function(){ 
@@ -548,7 +568,7 @@ var dojoConfig = {
     },
     ClearSVG: function(){
       var item_lbl = svg.getElementById(this.get('ident'));
-      var item_bar = svg.getElementById("bar_" + this.get('ident'));
+      var item_bar = svg.getElementById(this.get('barident'));
       
       // a hightligh  belongs to a calendar day. If a day was cleared,
       // then the hightlight is also cleared !  
@@ -664,23 +684,23 @@ var dojoConfig = {
   });
 
   // -----------------------------------------------
-  // highlightStore
+  // highLightStore
   // -----------------------------------------------
-  var highlightStore = new Memory({
-    Model: HighlightModel,
+  var highLightStore = new Memory({
+    Model: HighLightModel,
     idProperty: "pk",
   });
 
-  highlightStore.on('add', function(event){
+  highLightStore.on('add', function(event){
     event.target.DrawSVG();
   });
   
-  highlightStore.on('update', function(event){
+  highLightStore.on('update', function(event){
     event.target.ClearSVG();
     event.target.DrawSVG();
   });
 
-  highlightStore.on('delete', function(event){
+  highLightStore.on('delete', function(event){
     event.target.ClearSVG();
   });
 
@@ -697,8 +717,8 @@ var dojoConfig = {
   }
 
   function AdjustCrewmemberBarScaleX(x){
-    var bars = svg.getElementById("crewmember_bar");
-    bars.setAttribute("transform", "scale(" + x + ",1)");
+    var bar = svg.getElementById("crewmember_bar");
+    bar.setAttribute("transform", "scale(" + x + ",1)");
   }
 
   function RedrawSVG(){
@@ -713,7 +733,7 @@ var dojoConfig = {
     });
     AdjustCrewmemberBarScaleX(x);
 
-    highlightStore.forEach(function(item){
+    highLightStore.forEach(function(item){
       item.ClearSVG();
       item.DrawSVG();
     });
@@ -906,11 +926,11 @@ var dojoConfig = {
         var pos = 0;
 
         // Compute the size of the store.
-        highlightStore.forEach(function(item){
+        highLightStore.forEach(function(item){
           pos += 1;
         }); 
      
-        highlightStore.addSync({
+        highLightStore.addSync({
           message: InitialState ? "End DST" : "Start DST",
           x: getPositionX(start),
           pk: pos,
@@ -947,7 +967,7 @@ var dojoConfig = {
     newStarts.forEach(function(position){
       var item = calendarStore.getSync(position);
 
-      var day = svg.getElementById("bar_" + item.get('ident'));
+      var day = svg.getElementById(item.get('barident'));
       day.setAttribute('class', 'start_period');
     }); 
     
@@ -978,8 +998,8 @@ var dojoConfig = {
     });
 
     coordY += 200;
-    var bars = svg.getElementById("calendar_bar");
-    bars.setAttribute("transform", "scale(1," + coordY + ")");
+    var bar = svg.getElementById("calendar_bar");
+    bar.setAttribute("transform", "scale(1," + coordY + ")");
 
     CreateCrewMemberDialog.hide();
   });
@@ -1137,7 +1157,7 @@ var dojoConfig = {
     var pos = 0;
 
     // Compute the size of the store.
-    highlightStore.forEach(function(item){
+    highLightStore.forEach(function(item){
       pos += 1;
     }); 
  
@@ -1155,7 +1175,7 @@ var dojoConfig = {
       when.minute(time.getMinutes());
 
       if( when.isValid() ){   
-        highlightStore.addSync({
+        highLightStore.addSync({
           message: label,
           x: getPositionX(when),
           pk: pos,

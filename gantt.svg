@@ -6,14 +6,23 @@
 <!ELEMENT meta (#PCDATA) >
 <!ATTLIST meta name CDATA #REQUIRED>
 
+<!ENTITY % SVG.calendar.extra.content "|calendar" >
+<!ELEMENT calendar (name, relative, position, type, ident, x, witdh)>
 
+<!ELEMENT name (#PCDATA) >
+<!ELEMENT relative (#PCDATA) >
+<!ELEMENT position (#PCDATA) >
+<!ELEMENT type (#PCDATA) >
+<!ELEMENT ident (#PCDATA) >
+<!ELEMENT x (#PCDATA) >
+<!ELEMENT width (#PCDATA) >
 
 <!ENTITY % SVG.station.extra.content "|station" >
 <!ELEMENT station (code, name, dst-shift, dst-start-lst, dst-end-lst, utc-offset, region-list)>
 <!ATTLIST station id CDATA #REQUIRED>
 
 <!ELEMENT code (#PCDATA) >
-<!ELEMENT name (#PCDATA) >
+<!--ELEMENT name (#PCDATA) -->
 <!ELEMENT dst-shift (#PCDATA) >
 <!ELEMENT dst-start-lst (#PCDATA) >
 <!ELEMENT dst-end-lst (#PCDATA) >
@@ -22,6 +31,8 @@
 <!ELEMENT region-list (region) >
 
 <!ELEMENT region (#PCDATA) >
+
+
 ]
 >
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -459,8 +470,18 @@
   DSTORE
   ====================================================================================
   -->
-   <g id="StoreStation">
+   <!-- Those stores are managed automatically by the graph editor. -->
+   <g id="ConfigurationData"></g>
+   <g id="CalendarStore"></g>
+   <g id="CrewMemberStore"></g>
+   <g id="ActivityStore"></g>
+   <g id="HighLightStore"></g>
 
+   <!-- This store, StationStore, is managed manually. The data come directly from
+        the xml file used by the planner. If a new field occurs, please update the 
+        DTD adequatly.
+   -->
+   <g id="StationStore">
         <station id="ADD">
 		<code>ADD</code>
 		<name>Addis Ababa</name>
