@@ -70,14 +70,14 @@
   width: 3.25em;
 }
 
-/*
+
 .durationHour::after { 
       content: "h";
 }
 .durationMinute::after { 
       content: "m";
 }
-*/
+
   </style>
 
   <script>
@@ -92,11 +92,12 @@ var dojoConfig = {
     location: 'http://cdn.rawgit.com/SitePen/dmodel/master'
   }, {
     name: 'moment',
-    location: 'http://cdn.rawgit.com/moment/moment/2.7.0',
+    location: 'http://cdn.rawgit.com/moment/moment/2.17.1',
     main: 'moment'
   }, {
     name: 'moment-timezone',
-    location: 'http://cdn.rawgit.com/moment/moment-timezone/0.0.1'
+    location: 'http://cdn.rawgit.com/moment/moment-timezone/0.5.10',
+    main: 'timezone'
   }]
 };
   </script>
@@ -111,6 +112,7 @@ var dojoConfig = {
   "dojo/dom",
   "dojo/dom-construct",
   "dojo/parser",
+  "dojo/request/script",
   "dijit/registry",
   "dojox/form/CheckedMultiSelect",
   "dojo/date",
@@ -120,7 +122,7 @@ var dojoConfig = {
   "dmodel/Model",
   "dmodel/ComputedProperty",
   "moment/moment",
-  "moment-timezone/moment-timezone",
+  "moment-timezone/builds/moment-timezone-with-data",
   "dojo/domReady!",
 
   "dijit/MenuBar",
@@ -150,6 +152,7 @@ var dojoConfig = {
   dom, 
   domConstruct, 
   parser, 
+  script,
   registry, 
   CheckedMultiSelect,
   date,
@@ -158,8 +161,8 @@ var dojoConfig = {
   DstoreAdapter,
   Model,
   ComputedProperty,
-  Moment,
-  Timezone
+  moment,
+  timezone
   ){
 
   // ===============================================
@@ -183,6 +186,9 @@ var dojoConfig = {
   
 
   parser.parse();
+  console.log(timezone.tz.names());
+
+
 
 
   // ===============================================
@@ -611,6 +617,7 @@ var dojoConfig = {
   registry.byId("HighlightDatesSelect").set("labelAttr", "name");
   registry.byId("HighlightDatesSelect").setStore(calendarStoreAdapter);
 
+
   // -----------------------------------------------
   // crewMemberStore
   // -----------------------------------------------
@@ -747,6 +754,34 @@ var dojoConfig = {
     });
   }
 
+  // ===============================================
+  // SAVING STORES TO SVG
+  // ===============================================
+  function SaveStore(store, id, obj_name, obj_def){
+    var InsertionPointId    = svg.getElementById(id);
+
+    store.forEach(function(item){
+      var objNode = document.createElementNS("", obj_name);
+
+      InsertionPointId.appendChild(objNode);
+
+      for(i =0; i < obj_def.length; i++) {
+        var node = document.createElementNS("", obj_def[i]);
+        t = document.createTextNode(item.get(obj_def[i])); 
+        node.appendChild(t);
+        objNode.appendChild(node);
+      }
+    });
+  }
+
+
+  function SaveStores(){
+    SaveStore(calendarStore, "CalendarStore", "calendar", ['name', 'relative', 'position', 'type', 'x', 'width']);
+    SaveStore(crewMemberStore, "CrewMemberStore", "crew", ['name', 'birthdate', 'position', 'y', 'height']);
+    SaveStore(activityStore, "ActivityStore", "activity", ['name', 'position', 'x', 'width', 'tp', 'resta', 'restb', 'type', 'cmPosition']);
+    SaveStore(highLightStore, "HighLightStore", "highligth", ['message', 'pk', 'x']);
+  }
+
 
   // ===============================================
   // LOADING STORES FROM SVG
@@ -771,6 +806,8 @@ var dojoConfig = {
 
   // load data about stations.
   LoadStationStore();
+
+
 
   var stationStoreAdapter = new DstoreAdapter(stationStore);
   registry.byId("CalendarStation").set("store", stationStoreAdapter);
@@ -839,6 +876,10 @@ var dojoConfig = {
   // Save file dialog
   // -----------------------------------------------
   registry.byId("SaveFile").on("click", function(){
+
+    SaveStores();
+
+
     var a           = document.createElement('a');
     var contentType = 'data:application/octet-stream,';
 

@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data xsi:schemaLocation="http://www.ad-opt.com/2009/Altitude/data D:/RosterOpt/MAPFOR~1/RosterCarryIn.xsd" xmlns="http://www.ad-opt.com/2009/Altitude/data" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <trip id="20140428-1">
+        <start-date-utc>2014-04-28</start-date-utc>
+        <template>
+            <name>1</name>
+            <base ref="AUH" />
+            <crew-composition>
+                <seat-role-requirement>
+                    <seat-role ref="CM" />
+                    <count>0</count>
+                </seat-role-requirement>
+                <seat-role-requirement>
+                    <seat-role ref="CP" />
+                    <count>1</count>
+                </seat-role-requirement>
+                <seat-role-requirement>
+                    <seat-role ref="CS" />
+                    <count>0</count>
+                </seat-role-requirement>
+                <seat-role-requirement>
+                    <seat-role ref="FA" />
+                    <count>0</count>
+                </seat-role-requirement>
+                <seat-role-requirement>
+                    <seat-role ref="FB" />
+                    <count>0</count>
+                </seat-role-requirement>
+                <seat-role-requirement>
+                    <seat-role ref="FJ" />
+                    <count>0</count>
+                </seat-role-requirement>
+                <seat-role-requirement>
+                    <seat-role ref="FO" />
+                    <count>1</count>
+                </seat-role-requirement>
+                <seat-role-requirement>
+                    <seat-role ref="IC" />
+                    <count>0</count>
+                </seat-role-requirement>
+                <seat-role-requirement>
+                    <seat-role ref="LM" />
+                    <count>0</count>
+                </seat-role-requirement>
+                <seat-role-requirement>
+                    <seat-role ref="PM" />
+                    <count>0</count>
+                </seat-role-requirement>
+                <seat-role-requirement>
+                    <seat-role ref="SI" />
+                    <count>0</count>
+                </seat-role-requirement>
+                <seat-role-requirement>
+                    <seat-role ref="SO" />
+                    <count>0</count>
+                </seat-role-requirement>
+            </crew-composition>
+            <effective-report-time-utc>20:35</effective-report-time-utc>
+            <tafb>69h39</tafb>
+            <tafb-in-period>0h00</tafb-in-period>
+            <block-in-period>0h00</block-in-period>
+            <block-total>13h16</block-total>
+            <credit-in-period>0h00</credit-in-period>
+            <credit-total>13h16</credit-total>
+            <duty-in-period>0h00</duty-in-period>
+            <duty-total>23h06</duty-total>
+            <trip-element-list>
+                <lay>
+                    <station ref="FRA" />
+                    <rstart-utc>1 06:32</rstart-utc>
+                    <duration>35h13</duration>
+                </lay>
+                <lay>
+                    <station ref="FRA" />
+                    <rstart-utc>2 22:40</rstart-utc>
+                    <duration>11h20</duration>
+                </lay>
+                <leg>
+                    <status>A</status>
+                    <flight-number>1</flight-number>
+                    <departure-station ref="AUH" />
+                    <rstart-utc>0 23:15</rstart-utc>
+                    <arrival-station ref="FRA" />
+                    <rend-utc>1 06:02</rend-utc>
+                    <aircraft-variant>332</aircraft-variant>
+                    <flight-carrier>EY</flight-carrier>
+                    <duration>6h47</duration>
+                    <credit>6h47</credit>
+                </leg>
+                <leg>
+                    <status>G</status>
+                    <activity-type ref="ASBY" />
+                    <departure-station ref="FRA" />
+                    <rstart-utc>2 19:00</rstart-utc>
+                    <arrival-station ref="FRA" />
+                    <rend-utc>2 22:40</rend-utc>
+                    <flight-carrier>EY</flight-carrier>
+                    <duration>3h40</duration>
+                    <credit>4h00</credit>
+                </leg>
+                <leg>
+                    <status>A</status>
+                    <flight-number>8</flight-number>
+                    <departure-station ref="FRA" />
+                    <rstart-utc>3 11:15</rstart-utc>
+                    <arrival-station ref="AUH" />
+                    <rend-utc>3 17:44</rend-utc>
+                    <aircraft-variant>332</aircraft-variant>
+                    <flight-carrier>EY</flight-carrier>
+                    <duration>6h29</duration>
+                    <credit>6h29</credit>
+                </leg>
+            </trip-element-list>
+        </template>
+    </trip>
+</data>

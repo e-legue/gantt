@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data xsi:schemaLocation="http://www.ad-opt.com/2009/Altitude/data D:/RosterOpt/MAPFOR~1/RosterCarryIn.xsd" xmlns="http://www.ad-opt.com/2009/Altitude/data" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+
+
+    <!-- *************************  -->
+    <!-- Trip2                      -->
+    <!-- *************************  -->
+
+    <trip id="20140614-Trip2">
+        <start-date-utc>2014-06-14</start-date-utc>
+        <template>
+            <name>Trip2</name>
+            <base ref="AUH" />
+            <crew-composition>
+                <seat-role-requirement>
+                    <seat-role ref="CM" />
+                    <count>0</count>
+                </seat-role-requirement>
+                <seat-role-requirement>
+                    <seat-role ref="CP" />
+                    <count>1</count>
+                </seat-role-requirement>
+                <seat-role-requirement>
+                    <seat-role ref="CS" />
+                    <count>0</count>
+                </seat-role-requirement>
+                <seat-role-requirement>
+                    <seat-role ref="FA" />
+                    <count>0</count>
+                </seat-role-requirement>
+                <seat-role-requirement>
+                    <seat-role ref="FB" />
+                    <count>0</count>
+                </seat-role-requirement>
+                <seat-role-requirement>
+                    <seat-role ref="FJ" />
+                    <count>0</count>
+                </seat-role-requirement>
+                <seat-role-requirement>
+                    <seat-role ref="FO" />
+                    <count>1</count>
+                </seat-role-requirement>
+                <seat-role-requirement>
+                    <seat-role ref="IC" />
+                    <count>0</count>
+                </seat-role-requirement>
+                <seat-role-requirement>
+                    <seat-role ref="LM" />
+                    <count>0</count>
+                </seat-role-requirement>
+                <seat-role-requirement>
+                    <seat-role ref="PM" />
+                    <count>0</count>
+                </seat-role-requirement>
+                <seat-role-requirement>
+                    <seat-role ref="SI" />
+                    <count>0</count>
+                </seat-role-requirement>
+                <seat-role-requirement>
+                    <seat-role ref="SO" />
+                    <count>0</count>
+                </seat-role-requirement>
+            </crew-composition>
+            <effective-report-time-utc>03:00</effective-report-time-utc>
+            <tafb>90h30</tafb>
+            <tafb-in-period>90h30</tafb-in-period>
+            <block-in-period>14h10</block-in-period>
+            <block-total>14h10</block-total>
+            <credit-in-period>14h10</credit-in-period>
+            <credit-total>14h10</credit-total>
+            <duty-in-period>19h30</duty-in-period>
+            <duty-total>19h30</duty-total>
+            <trip-element-list>
+                <lay>
+                    <station ref="MRU" />
+                    <rstart-utc>0 12:55</rstart-utc>
+                    <duration>71h00</duration>
+                </lay>
+                <leg>
+                    <status>A</status>
+                    <flight-number>Trip2_1</flight-number>
+                    <departure-station ref="AUH" />
+                    <rstart-utc>0 04:20</rstart-utc>
+                    <arrival-station ref="SEZ" />
+                    <rend-utc>0 08:55</rend-utc>
+                    <aircraft-variant>330</aircraft-variant>
+                    <flight-carrier>EY</flight-carrier>
+                    <duration>4h35</duration>
+                    <credit>4h35</credit>
+                </leg>
+                <leg>
+                    <status>A</status>
+                    <flight-number>Trip2_2</flight-number>
+                    <departure-station ref="SEZ" />
+                    <rstart-utc>0 09:50</rstart-utc>
+                    <arrival-station ref="MRU" />
+                    <rend-utc>0 12:25</rend-utc>
+                    <aircraft-variant>330</aircraft-variant>
+                    <flight-carrier>DHD</flight-carrier>
+                    <duration>2h35</duration>
+                    <credit>2h35</credit>
+                </leg>
+                <leg>
+                    <status>A</status>
+                    <flight-number>Trip2_3</flight-number>
+                    <departure-station ref="MRU" />
+                    <rstart-utc>3 13:10</rstart-utc>
+                    <arrival-station ref="SEZ" />
+                    <rend-utc>3 15:45</rend-utc>
+                    <aircraft-variant>330</aircraft-variant>
+                    <flight-carrier>DHD</flight-carrier>
+                    <duration>2h35</duration>
+                    <credit>2h35</credit>
+                </leg>
+                <leg>
+                    <status>A</status>
+                    <flight-number>Trip2_4</flight-number>
+                    <departure-station ref="SEZ" />
+                    <rstart-utc>3 16:35</rstart-utc>
+                    <arrival-station ref="AUH" />
+                    <rend-utc>3 21:00</rend-utc>
+                    <aircraft-variant>330</aircraft-variant>
+                    <flight-carrier>EY</flight-carrier>
+                    <duration>4h25</duration>
+                    <credit>4h25</credit>
+                </leg>
+            </trip-element-list>
+        </template>
+    </trip>
+</data>

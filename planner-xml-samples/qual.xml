@@ -1,0 +1,540 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data xsi:schemaLocation="http://www.ad-opt.com/2009/Altitude/data D:/RosterOpt/MAPFOR~1/Qual.xsd" xmlns="http://www.ad-opt.com/2009/Altitude/data" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <employee id="emp_001">
+        <primary-seat-qual ref="CP" />
+        <name>Toto</name>
+        <birth-date-lbt>1966-04-16</birth-date-lbt>
+        <hire-date-lbt>2004-04-04</hire-date-lbt>
+        <seniority>17</seniority>
+        <crew-status>A</crew-status>
+        <employment-status>FT</employment-status>
+        <base ref="AUH" />
+        <rostering-start-date-lbt>2014-06-01</rostering-start-date-lbt>
+        <aircraft-qual-list>
+            <aircraft-qual>
+                <aircraft ref="330" />
+                <seat-qual ref="CP" />
+                <start-date-lbt>2009-12-01</start-date-lbt>
+                <end-date-lbt>2069-09-17</end-date-lbt>
+                <inexperienced>false</inexperienced>
+            </aircraft-qual>
+            <aircraft-qual>
+                <aircraft ref="33X" />
+                <seat-qual ref="CP" />
+                <start-date-lbt>2011-01-06</start-date-lbt>
+                <end-date-lbt>2069-09-17</end-date-lbt>
+                <inexperienced>false</inexperienced>
+            </aircraft-qual>
+            <aircraft-qual>
+                <aircraft ref="340" />
+                <seat-qual ref="CP" />
+                <start-date-lbt>2009-12-01</start-date-lbt>
+                <end-date-lbt>2069-09-17</end-date-lbt>
+                <inexperienced>false</inexperienced>
+            </aircraft-qual>
+        </aircraft-qual-list>
+        <language-list>
+            <language ref="EN" />
+            <language ref="FR" />
+        </language-list>
+        <station-restriction-list>
+        </station-restriction-list>
+        <region-recency-list>
+            <region-recency>
+                <region ref="AFR" />
+                <last-flown-date-lbt>2014-01-10</last-flown-date-lbt>
+            </region-recency>
+            <region-recency>
+                <region ref="EUR" />
+                <last-flown-date-lbt>2014-05-08</last-flown-date-lbt>
+            </region-recency>
+            <region-recency>
+                <region ref="JAK" />
+                <last-flown-date-lbt>2014-06-01</last-flown-date-lbt>
+            </region-recency>
+            <region-recency>
+                <region ref="MDE" />
+                <last-flown-date-lbt>2014-06-01</last-flown-date-lbt>
+            </region-recency>
+            <region-recency>
+                <region ref="NOA" />
+                <last-flown-date-lbt>2014-05-13</last-flown-date-lbt>
+            </region-recency>
+            <region-recency>
+                <region ref="SAS" />
+                <last-flown-date-lbt>2014-01-18</last-flown-date-lbt>
+            </region-recency>
+            <region-recency>
+                <region ref="SEA" />
+                <last-flown-date-lbt>2014-05-20</last-flown-date-lbt>
+            </region-recency>
+            <region-recency>
+                <region ref="SOA" />
+                <last-flown-date-lbt>2014-01-02</last-flown-date-lbt>
+            </region-recency>
+            <region-recency>
+                <region ref="SWP" />
+                <last-flown-date-lbt>2014-03-14</last-flown-date-lbt>
+            </region-recency>
+        </region-recency-list>
+        <extra-qualification-list>
+            <extra-qualification>
+                <extra-qual-code>CAN</extra-qual-code>
+                <start-date-lbt>2013-08-29</start-date-lbt>
+                <end-date-lbt>2023-08-29</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>USVISA</extra-qual-code>
+                <start-date-lbt>2013-08-29</start-date-lbt>
+                <end-date-lbt>2023-08-29</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>13</extra-qual-code>
+                <start-date-lbt>2004-04-04</start-date-lbt>
+                <end-date-lbt>2069-09-17</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>27</extra-qual-code>
+                <start-date-lbt>2004-04-04</start-date-lbt>
+                <end-date-lbt>2069-09-17</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>31</extra-qual-code>
+                <start-date-lbt>2004-04-04</start-date-lbt>
+                <end-date-lbt>2069-09-17</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>44</extra-qual-code>
+                <start-date-lbt>2004-04-04</start-date-lbt>
+                <end-date-lbt>2069-09-17</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>63</extra-qual-code>
+                <start-date-lbt>2004-04-04</start-date-lbt>
+                <end-date-lbt>2069-09-17</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>73</extra-qual-code>
+                <start-date-lbt>2004-04-04</start-date-lbt>
+                <end-date-lbt>2069-09-17</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>132</extra-qual-code>
+                <start-date-lbt>2014-04-13</start-date-lbt>
+                <end-date-lbt>2069-09-17</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>1121</extra-qual-code>
+                <start-date-lbt>2014-04-28</start-date-lbt>
+                <end-date-lbt>2014-07-15</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>OZ</extra-qual-code>
+                <start-date-lbt>2014-04-28</start-date-lbt>
+                <end-date-lbt>2014-07-15</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>1084</extra-qual-code>
+                <start-date-lbt>2014-04-28</start-date-lbt>
+                <end-date-lbt>2014-07-15</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>SBY</extra-qual-code>
+                <start-date-lbt>2014-04-28</start-date-lbt>
+                <end-date-lbt>2014-07-15</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>NOTOFC</extra-qual-code>
+                <start-date-lbt>2014-04-28</start-date-lbt>
+                <end-date-lbt>2014-07-15</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>HKGDHD</extra-qual-code>
+                <start-date-lbt>2014-04-28</start-date-lbt>
+                <end-date-lbt>2014-07-15</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>UKDHD</extra-qual-code>
+                <start-date-lbt>2014-04-28</start-date-lbt>
+                <end-date-lbt>2014-07-15</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>PASS180</extra-qual-code>
+                <start-date-lbt>2013-08-29</start-date-lbt>
+                <end-date-lbt>2023-02-20</end-date-lbt>
+            </extra-qualification>
+        </extra-qualification-list>
+        <take-off-landing-last-flown-list>
+            <take-off-landing-last-flown>
+                <aircraft ref="330" />
+                <take-off-date-lbt>2014-05-07</take-off-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="330" />
+                <take-off-date-lbt>2014-04-19</take-off-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="330" />
+                <take-off-date-lbt>2014-04-14</take-off-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="330" />
+                <take-off-date-lbt>2014-03-28</take-off-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="330" />
+                <take-off-date-lbt>2014-03-24</take-off-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="330" />
+                <take-off-date-lbt>2014-02-28</take-off-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="330" />
+                <landing-date-lbt>2014-05-07</landing-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="330" />
+                <landing-date-lbt>2014-04-14</landing-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="330" />
+                <landing-date-lbt>2014-03-28</landing-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="330" />
+                <landing-date-lbt>2014-03-24</landing-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="330" />
+                <landing-date-lbt>2014-02-28</landing-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="330" />
+                <landing-date-lbt>2014-01-29</landing-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="340" />
+                <take-off-date-lbt>2014-05-11</take-off-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="340" />
+                <take-off-date-lbt>2014-05-04</take-off-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="340" />
+                <take-off-date-lbt>2014-05-03</take-off-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="340" />
+                <take-off-date-lbt>2014-05-01</take-off-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="340" />
+                <take-off-date-lbt>2014-04-24</take-off-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="340" />
+                <take-off-date-lbt>2014-04-05</take-off-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="340" />
+                <landing-date-lbt>2014-05-04</landing-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="340" />
+                <landing-date-lbt>2014-05-03</landing-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="340" />
+                <landing-date-lbt>2014-05-01</landing-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="340" />
+                <landing-date-lbt>2014-04-24</landing-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="340" />
+                <landing-date-lbt>2014-04-05</landing-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="340" />
+                <landing-date-lbt>2014-04-01</landing-date-lbt>
+            </take-off-landing-last-flown>
+        </take-off-landing-last-flown-list>
+        <nationality>CAN</nationality>
+        <gender>M</gender>
+        <inexperienced>false</inexperienced>
+    </employee>    
+
+
+    <!-- *************************  -->
+    <!-- Emp_002                    -->
+    <!-- *************************  -->
+  <employee id="emp_002">
+        <primary-seat-qual ref="CP" />
+        <name>Titi</name>
+        <birth-date-lbt>1966-04-16</birth-date-lbt>
+        <hire-date-lbt>2004-04-04</hire-date-lbt>
+        <seniority>30</seniority>
+        <crew-status>A</crew-status>
+        <employment-status>FT</employment-status>
+        <base ref="AUH" />
+        <rostering-start-date-lbt>2014-06-01</rostering-start-date-lbt>
+        <aircraft-qual-list>
+            <aircraft-qual>
+                <aircraft ref="330" />
+                <seat-qual ref="CP" />
+                <start-date-lbt>2009-12-01</start-date-lbt>
+                <end-date-lbt>2069-09-17</end-date-lbt>
+                <inexperienced>false</inexperienced>
+            </aircraft-qual>
+            <aircraft-qual>
+                <aircraft ref="33X" />
+                <seat-qual ref="CP" />
+                <start-date-lbt>2011-01-06</start-date-lbt>
+                <end-date-lbt>2069-09-17</end-date-lbt>
+                <inexperienced>false</inexperienced>
+            </aircraft-qual>
+            <aircraft-qual>
+                <aircraft ref="340" />
+                <seat-qual ref="CP" />
+                <start-date-lbt>2009-12-01</start-date-lbt>
+                <end-date-lbt>2069-09-17</end-date-lbt>
+                <inexperienced>false</inexperienced>
+            </aircraft-qual>
+        </aircraft-qual-list>
+        <language-list>
+            <language ref="EN" />
+            <language ref="FR" />
+        </language-list>
+        <station-restriction-list>
+        </station-restriction-list>
+        <region-recency-list>
+            <region-recency>
+                <region ref="AFR" />
+                <last-flown-date-lbt>2014-01-10</last-flown-date-lbt>
+            </region-recency>
+            <region-recency>
+                <region ref="EUR" />
+                <last-flown-date-lbt>2014-05-08</last-flown-date-lbt>
+            </region-recency>
+            <region-recency>
+                <region ref="JAK" />
+                <last-flown-date-lbt>2014-06-01</last-flown-date-lbt>
+            </region-recency>
+            <region-recency>
+                <region ref="MDE" />
+                <last-flown-date-lbt>2014-06-01</last-flown-date-lbt>
+            </region-recency>
+            <region-recency>
+                <region ref="NOA" />
+                <last-flown-date-lbt>2014-05-13</last-flown-date-lbt>
+            </region-recency>
+            <region-recency>
+                <region ref="SAS" />
+                <last-flown-date-lbt>2014-01-18</last-flown-date-lbt>
+            </region-recency>
+            <region-recency>
+                <region ref="SEA" />
+                <last-flown-date-lbt>2014-05-20</last-flown-date-lbt>
+            </region-recency>
+            <region-recency>
+                <region ref="SOA" />
+                <last-flown-date-lbt>2014-01-02</last-flown-date-lbt>
+            </region-recency>
+            <region-recency>
+                <region ref="SWP" />
+                <last-flown-date-lbt>2014-03-14</last-flown-date-lbt>
+            </region-recency>
+        </region-recency-list>
+        <extra-qualification-list>
+            <extra-qualification>
+                <extra-qual-code>CAN</extra-qual-code>
+                <start-date-lbt>2013-08-29</start-date-lbt>
+                <end-date-lbt>2023-08-29</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>USVISA</extra-qual-code>
+                <start-date-lbt>2013-08-29</start-date-lbt>
+                <end-date-lbt>2023-08-29</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>13</extra-qual-code>
+                <start-date-lbt>2004-04-04</start-date-lbt>
+                <end-date-lbt>2069-09-17</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>27</extra-qual-code>
+                <start-date-lbt>2004-04-04</start-date-lbt>
+                <end-date-lbt>2069-09-17</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>31</extra-qual-code>
+                <start-date-lbt>2004-04-04</start-date-lbt>
+                <end-date-lbt>2069-09-17</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>44</extra-qual-code>
+                <start-date-lbt>2004-04-04</start-date-lbt>
+                <end-date-lbt>2069-09-17</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>63</extra-qual-code>
+                <start-date-lbt>2004-04-04</start-date-lbt>
+                <end-date-lbt>2069-09-17</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>73</extra-qual-code>
+                <start-date-lbt>2004-04-04</start-date-lbt>
+                <end-date-lbt>2069-09-17</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>132</extra-qual-code>
+                <start-date-lbt>2014-04-13</start-date-lbt>
+                <end-date-lbt>2069-09-17</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>1121</extra-qual-code>
+                <start-date-lbt>2014-04-28</start-date-lbt>
+                <end-date-lbt>2014-07-15</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>OZ</extra-qual-code>
+                <start-date-lbt>2014-04-28</start-date-lbt>
+                <end-date-lbt>2014-07-15</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>1084</extra-qual-code>
+                <start-date-lbt>2014-04-28</start-date-lbt>
+                <end-date-lbt>2014-07-15</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>SBY</extra-qual-code>
+                <start-date-lbt>2014-04-28</start-date-lbt>
+                <end-date-lbt>2014-07-15</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>NOTOFC</extra-qual-code>
+                <start-date-lbt>2014-04-28</start-date-lbt>
+                <end-date-lbt>2014-07-15</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>HKGDHD</extra-qual-code>
+                <start-date-lbt>2014-04-28</start-date-lbt>
+                <end-date-lbt>2014-07-15</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>UKDHD</extra-qual-code>
+                <start-date-lbt>2014-04-28</start-date-lbt>
+                <end-date-lbt>2014-07-15</end-date-lbt>
+            </extra-qualification>
+            <extra-qualification>
+                <extra-qual-code>PASS180</extra-qual-code>
+                <start-date-lbt>2013-08-29</start-date-lbt>
+                <end-date-lbt>2023-02-20</end-date-lbt>
+            </extra-qualification>
+        </extra-qualification-list>
+        <take-off-landing-last-flown-list>
+            <take-off-landing-last-flown>
+                <aircraft ref="330" />
+                <take-off-date-lbt>2014-05-07</take-off-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="330" />
+                <take-off-date-lbt>2014-04-19</take-off-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="330" />
+                <take-off-date-lbt>2014-04-14</take-off-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="330" />
+                <take-off-date-lbt>2014-03-28</take-off-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="330" />
+                <take-off-date-lbt>2014-03-24</take-off-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="330" />
+                <take-off-date-lbt>2014-02-28</take-off-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="330" />
+                <landing-date-lbt>2014-05-07</landing-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="330" />
+                <landing-date-lbt>2014-04-14</landing-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="330" />
+                <landing-date-lbt>2014-03-28</landing-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="330" />
+                <landing-date-lbt>2014-03-24</landing-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="330" />
+                <landing-date-lbt>2014-02-28</landing-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="330" />
+                <landing-date-lbt>2014-01-29</landing-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="340" />
+                <take-off-date-lbt>2014-05-11</take-off-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="340" />
+                <take-off-date-lbt>2014-05-04</take-off-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="340" />
+                <take-off-date-lbt>2014-05-03</take-off-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="340" />
+                <take-off-date-lbt>2014-05-01</take-off-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="340" />
+                <take-off-date-lbt>2014-04-24</take-off-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="340" />
+                <take-off-date-lbt>2014-04-05</take-off-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="340" />
+                <landing-date-lbt>2014-05-04</landing-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="340" />
+                <landing-date-lbt>2014-05-03</landing-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="340" />
+                <landing-date-lbt>2014-05-01</landing-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="340" />
+                <landing-date-lbt>2014-04-24</landing-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="340" />
+                <landing-date-lbt>2014-04-05</landing-date-lbt>
+            </take-off-landing-last-flown>
+            <take-off-landing-last-flown>
+                <aircraft ref="340" />
+                <landing-date-lbt>2014-04-01</landing-date-lbt>
+            </take-off-landing-last-flown>
+        </take-off-landing-last-flown-list>
+        <nationality>CAN</nationality>
+        <gender>M</gender>
+        <inexperienced>false</inexperienced>
+    </employee>    
+</data>

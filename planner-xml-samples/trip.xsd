@@ -1,0 +1,146 @@
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" targetNamespace="http://www.ad-opt.com/2009/Altitude/data" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="data">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="trip" maxOccurs="unbounded" minOccurs="0">
+          <xs:annotation>
+            <xs:documentation>toto</xs:documentation>
+          </xs:annotation>
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element type="xs:date" name="start-date-utc"/>
+              <xs:element name="template">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element type="xs:string" name="name"/>
+                    <xs:element name="base">
+                      <xs:complexType>
+                        <xs:simpleContent>
+                          <xs:extension base="xs:string">
+                            <xs:attribute type="xs:string" name="ref" use="optional"/>
+                          </xs:extension>
+                        </xs:simpleContent>
+                      </xs:complexType>
+                    </xs:element>
+                    <xs:element name="crew-composition">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="seat-role-requirement" maxOccurs="unbounded" minOccurs="0">
+                            <xs:complexType>
+                              <xs:sequence>
+                                <xs:element name="seat-role">
+                                  <xs:complexType>
+                                    <xs:simpleContent>
+                                      <xs:extension base="xs:string">
+                                        <xs:attribute type="xs:string" name="ref" use="optional"/>
+                                      </xs:extension>
+                                    </xs:simpleContent>
+                                  </xs:complexType>
+                                </xs:element>
+                                <xs:element type="xs:byte" name="count"/>
+                              </xs:sequence>
+                            </xs:complexType>
+                          </xs:element>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                    <xs:element type="xs:string" name="effective-report-time-utc"/>
+                    <xs:element type="xs:string" name="tafb"/>
+                    <xs:element type="xs:string" name="tafb-in-period"/>
+                    <xs:element type="xs:string" name="block-in-period"/>
+                    <xs:element type="xs:string" name="block-total"/>
+                    <xs:element type="xs:string" name="credit-in-period"/>
+                    <xs:element type="xs:string" name="credit-total"/>
+                    <xs:element type="xs:string" name="duty-in-period"/>
+                    <xs:element type="xs:string" name="duty-total"/>
+                    <xs:element name="trip-element-list">
+                      <xs:complexType>
+                        <xs:choice maxOccurs="unbounded" minOccurs="0">
+                          <xs:element name="lay">
+                            <xs:complexType>
+                              <xs:sequence>
+                                <xs:element name="station" minOccurs="0">
+                                  <xs:complexType>
+                                    <xs:simpleContent>
+                                      <xs:extension base="xs:string">
+                                        <xs:attribute type="xs:string" name="ref" use="optional"/>
+                                      </xs:extension>
+                                    </xs:simpleContent>
+                                  </xs:complexType>
+                                </xs:element>
+                                <xs:element type="xs:string" name="status" minOccurs="0"/>
+                                <xs:element type="xs:string" name="flight-number" minOccurs="0"/>
+                                <xs:element name="departure-station" minOccurs="0">
+                                  <xs:complexType>
+                                    <xs:simpleContent>
+                                      <xs:extension base="xs:string">
+                                        <xs:attribute type="xs:string" name="ref" use="optional"/>
+                                      </xs:extension>
+                                    </xs:simpleContent>
+                                  </xs:complexType>
+                                </xs:element>
+                                <xs:element type="xs:string" name="rstart-utc"/>
+                                <xs:element name="arrival-station" minOccurs="0">
+                                  <xs:complexType>
+                                    <xs:simpleContent>
+                                      <xs:extension base="xs:string">
+                                        <xs:attribute type="xs:string" name="ref" use="optional"/>
+                                      </xs:extension>
+                                    </xs:simpleContent>
+                                  </xs:complexType>
+                                </xs:element>
+                                <xs:element type="xs:string" name="rend-utc" minOccurs="0"/>
+                                <xs:element type="xs:short" name="aircraft-variant" minOccurs="0"/>
+                                <xs:element type="xs:string" name="flight-carrier" minOccurs="0"/>
+                                <xs:element type="xs:string" name="duration"/>
+                                <xs:element type="xs:string" name="credit" minOccurs="0"/>
+                              </xs:sequence>
+                            </xs:complexType>
+                          </xs:element>
+                          <xs:element name="leg">
+                            <xs:complexType>
+                              <xs:sequence>
+                                <xs:element type="xs:string" name="status"/>
+                                <xs:element type="xs:string" name="flight-number"/>
+                                <xs:element name="departure-station">
+                                  <xs:complexType>
+                                    <xs:simpleContent>
+                                      <xs:extension base="xs:string">
+                                        <xs:attribute type="xs:string" name="ref" use="optional"/>
+                                      </xs:extension>
+                                    </xs:simpleContent>
+                                  </xs:complexType>
+                                </xs:element>
+                                <xs:element type="xs:string" name="rstart-utc"/>
+                                <xs:element name="arrival-station">
+                                  <xs:complexType>
+                                    <xs:simpleContent>
+                                      <xs:extension base="xs:string">
+                                        <xs:attribute type="xs:string" name="ref" use="optional"/>
+                                      </xs:extension>
+                                    </xs:simpleContent>
+                                  </xs:complexType>
+                                </xs:element>
+                                <xs:element type="xs:string" name="rend-utc"/>
+                                <xs:element type="xs:short" name="aircraft-variant"/>
+                                <xs:element type="xs:string" name="flight-carrier"/>
+                                <xs:element type="xs:string" name="duration"/>
+                                <xs:element type="xs:string" name="credit"/>
+                              </xs:sequence>
+                            </xs:complexType>
+                          </xs:element>
+                        </xs:choice>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+            <xs:attribute type="xs:string" name="id" use="optional"/>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
+
