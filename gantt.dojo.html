@@ -186,8 +186,25 @@ var dojoConfig = {
   
 
   parser.parse();
-  console.log(timezone.tz.names());
 
+  // ===============================================
+  // Load timezones.
+  // ===============================================
+  var array = timezone.tz.names();
+
+  var timezoneStore = new Memory({
+    idProperty: "id"
+  });
+
+  for( i = 0; i < array.length; i++){
+    timezoneStore.addSync({
+      id: i,
+      name: array[i],
+    });
+  }
+
+  var timezoneStoreAdapter = new DstoreAdapter(timezoneStore);
+  registry.byId("CalendarTimezone").set("store", timezoneStoreAdapter);
 
 
 
@@ -546,6 +563,7 @@ var dojoConfig = {
       dstEndLst: 'string',
       utcOffset: 'string',
       regionList: 'array',
+      offset: 'numeric',
     },
     validateOnSet: false
   });
@@ -788,10 +806,14 @@ var dojoConfig = {
   // ===============================================
   function LoadStationStore(){
     var rootStationStoreChildren = svg.getElementsByTagName("station");
+    var offsetRegex = /^(-?\d{2})h(\d{2})$/;
 
     for(var i = 0; i < rootStationStoreChildren.length; i ++){
       var obj = rootStationStoreChildren[i];
 
+      var data = offsetRegex.exec(obj.getElementsByTagName('utc-offset')[0].textContent);
+      var offset = moment.duration({hours: data[1], minutes: data[2]}).asMinutes() * -1;
+      
       stationStore.addSync({
         id: obj.getAttribute('id'),
         code: obj.getElementsByTagName('code')[0].textContent,
@@ -800,14 +822,13 @@ var dojoConfig = {
         dstStartLst: obj.getElementsByTagName('dst-start-lst')[0].textContent,
         dstEndLst: obj.getElementsByTagName('dst-end-lst')[0].textContent,
         utcOffset: obj.getElementsByTagName('utc-offset')[0].textContent,
+        offset: offset,
       });
     }
   }
 
   // load data about stations.
   LoadStationStore();
-
-
 
   var stationStoreAdapter = new DstoreAdapter(stationStore);
   registry.byId("CalendarStation").set("store", stationStoreAdapter);
@@ -902,6 +923,29 @@ var dojoConfig = {
   // -----------------------------------------------
   // Calendar range set up dialog
   // -----------------------------------------------
+  registry.byId("CalendarTimezone").on("change", function(){
+    alert(this.get('value'));
+    var item = timezoneStore.getSync(this.get('value'));
+
+    console.log(item);
+    moment.tz.setDefault(item.name);
+    var zone = moment.tz.zone(item.name);
+
+    // id 259 Asia/Dubai
+    // -240
+    // -240
+
+    // id 165 America/Montreal
+    // 300
+    // 300
+
+    registry.byId("CalendarStation").set('disabled', false);
+
+    var offsetZone = zone.offset(moment().valueOf());         
+
+    registry.byId("CalendarStation").set('query', {offset: offsetZone});
+  }, true);
+
   registry.byId("CalendarStart").on("change", function(){
     registry.byId("CalendarEnd").constraints.min = date.add(this.get("value"), "day", 1);
     registry.byId("CalendarEnd").dropDownDefaultValue = this.get("value");     
@@ -918,11 +962,16 @@ var dojoConfig = {
     registry.byId("TrainingStartDate").constraints.max = maxDate;
   }, true);
 
+
+
   registry.byId("SetCalendar").on("click", function(){
     if( !registry.byId("SetCalendarForm").validate() ){
       return;
     }
     RemoveIntroMessage();
+
+    var local = registry.byId("CalendarTimezone");
+
 
     var CalStart = registry.byId("CalendarStart");
     var CalEnd   = registry.byId("CalendarEnd");
@@ -1376,7 +1425,7 @@ var dojoConfig = {
       <tr>
         <td><label for="Xcompression">Graph factor compression on axe X</label></td>
         <td>
-          <select data-dojo-type="dijit/form/Select" name="Xcompression" id="XGraphCompression">
+          <select data-dojo-type="dijit/form/Select" name="Xcompression" id="XGraphCompression" style="width: 3em;">
             <option value="1">1</option>
             <option value="2" selected="selected">2</option>
             <option value="4">4</option>
@@ -1413,8 +1462,12 @@ var dojoConfig = {
     <div data-dojo-type="dijit/form/Form" id="SetCalendarForm" data-dojo-id="SetCalendarForm" encType="multipart/form-data" action="" method="">
       <table class="dijitDialogPaneContentArea">
         <tr>
+          <td><label for="tz">Timezone</label></td>
+          <td><input data-dojo-type="dijit/form/FilteringSelect" name="tz" id="CalendarTimezone" required="true"></td>
+        </tr>
+        <tr>
           <td><label for="station">Station</label></td>
-          <td><input data-dojo-type="dijit/form/FilteringSelect" name="station" id="CalendarStation" required="true"></td>
+          <td><input data-dojo-type="dijit/form/FilteringSelect" name="station" id="CalendarStation" required="true" disabled="true"></td>
         </tr>
         <tr>
           <td><label for="start">Start date</label></td>

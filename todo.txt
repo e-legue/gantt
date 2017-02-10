@@ -1,8 +1,6 @@
 TODO:
 
 
-http://momentjs.com/timezone/docs/
-
  
 show/hide (legs)
 
@@ -11,9 +9,6 @@ done - save svg, and ask file name.
 
 ref 
 http://stackoverflow.com/questions/11219973/how-to-upload-file-using-dojo
-
-ref to extend svg tags...
-https://www.w3.org/TR/SVG/extend.html#AnExample
 
 
 datetime picker dojo...
@@ -30,7 +25,6 @@ http://download.dojotoolkit.org/release-1.9.4/dojo-release-1.9.4/dojox/widget/te
 
 https://dojotoolkit.org/reference-guide/1.10/dojox/mobile/SpinWheelDatePicker.html#examples
 
-graph compression on X.
 save stores on svg file save.
 load stores on svg file load.
 generate xslt to generate planner files.
