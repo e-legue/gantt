@@ -422,6 +422,14 @@
     // ]]>
   </script>
 
+  <script>
+    // <![CDATA[
+
+  function PopupDetailsOrDelete(activity_position){
+    alert("test activity position: " + activity_position);
+  }
+    // ]]>
+  </script>
 
   <title>SVG rule demo</title>
   <desc>an awesome graph</desc>

@@ -406,7 +406,7 @@ var dojoConfig = {
     var G = document.createElementNS(svgNS, "g");
     G.setAttributeNS(null, "transform", "translate(" + CompressX(activity.get('x')) + ",50)");
     G.setAttributeNS(null, "id", activity.get('ident'));
-    G.setAttributeNS(null, "onclick", "alert('can display details here');");
+    G.setAttributeNS(null, "onclick", "PopupDetailsOrDelete(" + activity.get('position') + ");");
     parentId.appendChild(G);
 
     var Rect = document.createElementNS(svgNS,"rect");
@@ -553,6 +553,7 @@ var dojoConfig = {
     },
   });
  
+
   var StationModel = declare(Model, {
     schema: {
       id: 'string',
@@ -924,10 +925,8 @@ var dojoConfig = {
   // Calendar range set up dialog
   // -----------------------------------------------
   registry.byId("CalendarTimezone").on("change", function(){
-    alert(this.get('value'));
     var item = timezoneStore.getSync(this.get('value'));
 
-    console.log(item);
     moment.tz.setDefault(item.name);
     var zone = moment.tz.zone(item.name);
 
@@ -943,6 +942,7 @@ var dojoConfig = {
 
     var offsetZone = zone.offset(moment().valueOf());         
 
+    registry.byId("CalendarStation").set('value', "");
     registry.byId("CalendarStation").set('query', {offset: offsetZone});
   }, true);
 
