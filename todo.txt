@@ -68,3 +68,7 @@ http://www.petercollingridge.co.uk/interactive-svg-components/tooltip
 
 analog clock
 http://thenewcode.com/943/An-SVG-Analog-Clock-In-6-Lines-of-JavaScript
+
+template dialog.
+http://jsfiddle.net/phusick/wkydY/
+

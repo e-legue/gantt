@@ -125,6 +125,8 @@ require([
   "dstore/legacy/DstoreAdapter",
   "dmodel/Model",
   "dmodel/ComputedProperty",
+  "dijit/Dialog",
+  "dijit/form/Button",
   "moment/moment",
   "moment-timezone/builds/moment-timezone-with-data",
   "dojox/xml/parser", 
@@ -138,11 +140,9 @@ require([
   "dijit/MenuBarItem",
   "dijit/DropDownMenu",
   "dijit/CheckedMenuItem",
-  "dijit/Dialog",
   "dijit/form/Form",
   "dijit/form/CheckBox",
   "dijit/form/TextBox",
-  "dijit/form/Button",
   "dijit/form/DateTextBox",
   "dijit/form/TimeTextBox",
   "dijit/form/NumberTextBox",
@@ -171,6 +171,8 @@ require([
   DstoreAdapter,
   Model,
   ComputedProperty,
+  Dialog,
+  Button,
   moment,
   timezone,
   xmlparser,
@@ -239,6 +241,20 @@ require([
   registry.byId("CalendarTimezone").set("store", timezoneStoreAdapter);
 
 
+
+  function PopupDetails(id) {
+    var myDialog = new Dialog({
+        title: "Detail activity",
+        style: "width: 300px",
+        content: "Activitiy id: " + id
+    });
+
+
+
+
+
+    myDialog.show();
+  }
 
 
   // ===============================================
@@ -419,7 +435,11 @@ require([
     var G = document.createElementNS(svgNS, "g");
     G.setAttributeNS(null, "transform", "translate(" + CompressX(activity.get('x')) + ",50)");
     G.setAttributeNS(null, "id", activity.get('ident'));
-    G.setAttributeNS(null, "onclick", "PopupDetailsOrDelete(" + activity.get('position') + ");");
+
+    on(G, "click", function(evt){
+      PopupDetails(activity.get('position'));
+    });
+       
     parentId.appendChild(G);
 
     var Rect = document.createElementNS(svgNS,"rect");
@@ -1881,6 +1901,23 @@ require([
     </div>
   </div>
 
-
+  <!-- 
+  <script type="text/template" id="activity-dialog-template">
+    <div style="width:300px;">
+      
+      <div class="dijitDialogPaneContentArea">
+        <div data-dojo-attach-point="contentNode">
+            ${message}              
+        </div>
+      </div>
+    
+      <div class="dijitDialogPaneActionBar">
+        <button data-dojo-type="dijit/form/Button" data-dojo-attach-point="closeButton" >Close</button>
+        <button data-dojo-type="dijit.form.Button" data-dojo-attach-point="cancelButton" >DELETE </button> 
+      </div>
+      
+    </div>
+  </script>
+  -->
 
 </html>
