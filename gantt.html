@@ -85,24 +85,24 @@ var dojoConfig = {
   async: true, 
   debug: true,
   packages: [{
-    name: 'dstore',
-    location: 'http://cdn.rawgit.com/SitePen/dstore/v1.0.0'
+    name: "dstore",
+    location: "http://cdn.rawgit.com/SitePen/dstore/v1.0.0"
   }, {
-    name: 'dmodel',
-    location: 'http://cdn.rawgit.com/SitePen/dmodel/master'
+    name: "dmodel",
+    location: "http://cdn.rawgit.com/SitePen/dmodel/master"
   }, {
-    name: 'moment',
-    location: 'http://cdn.rawgit.com/moment/moment/2.17.1',
-    main: 'moment'
+    name: "moment",
+    location: "http://cdn.rawgit.com/moment/moment/2.17.1",
+    main: "moment"
   }, {
-    name: 'moment-timezone',
-    location: 'http://cdn.rawgit.com/moment/moment-timezone/0.5.10',
-    main: 'timezone'
+    name: "moment-timezone",
+    location: "http://cdn.rawgit.com/moment/moment-timezone/0.5.10",
+    main: "timezone"
   }]
 };
   </script>
 
-  <script src='http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dojo/dojo.js'></script>
+  <script src="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dojo/dojo.js"></script>
 
   <script>
 
@@ -151,6 +151,8 @@ require([
   "dijit/layout/TabContainer", 
   "dijit/layout/ContentPane", 
   "dojox/layout/TableContainer",
+  "dojox/form/Uploader",
+//   "dojox/form/FileUploader",
   "dijit/form/Select"
 ], function(
   declare,
@@ -218,7 +220,7 @@ require([
   var ganttId = dom.byId("gantt"); 
   var svgDomInput = xmlparser.parse(ganttSVG);
   gantt.appendChild(svgDomInput.documentElement);
-  on.emit(window, 'resize', {bubbles: true,cancelable: true});
+  on.emit(window, "resize", {bubbles: true,cancelable: true});
 
 
   // ===============================================
@@ -272,8 +274,8 @@ require([
     datetime = datetime.add(registry.byId(prefixId + "DurationHour").get("value"), "hours");
     datetime = datetime.add(registry.byId(prefixId + "DurationMinute").get("value"), "minutes");
 
-    registry.byId(prefixId + "EndDate").set('value', datetime.format());
-    registry.byId(prefixId + "EndTime").set('value', datetime.format());
+    registry.byId(prefixId + "EndDate").set("value", datetime.format());
+    registry.byId(prefixId + "EndTime").set("value", datetime.format());
   } 
 
 
@@ -340,18 +342,18 @@ require([
     var calendarBarId = svg.getElementById("calendar_bar");
 
     var G       = document.createElementNS(svgNS, "g");
-    G.setAttributeNS(null, "id", item.get('ident'));
+    G.setAttributeNS(null, "id", item.get("ident"));
     calendarId.appendChild(G);
 
-    G.appendChild(SVG_drawText("highlight_label", item.get('x'), 60, item.get('message')));
+    G.appendChild(SVG_drawText("highlight_label", item.get("x"), 60, item.get("message")));
 
-    // a scale is used to extend the bars, that's why they are defined into
+    // a scale is used to extend the bars, that"s why they are defined into
     // a specific group.
     var Gbar     = document.createElementNS(svgNS, "g");
-    Gbar.setAttributeNS(null, "id", item.get('barident'));
+    Gbar.setAttributeNS(null, "id", item.get("barident"));
     calendarBarId.appendChild(Gbar);
 
-    Gbar.appendChild(SVG_drawRect('highlight', item.get('x'), 0, 1, 1));
+    Gbar.appendChild(SVG_drawRect("highlight", item.get("x"), 0, 1, 1));
   }
 
 
@@ -365,37 +367,37 @@ require([
     var calendarBarId = svg.getElementById("calendar_bar");
 
     var G       = document.createElementNS(svgNS, "g");
-    G.setAttributeNS(null, "transform", "translate(" + CompressX(item.get('x')) + ",0)");
-    G.setAttributeNS(null, "id", item.get('ident'));
+    G.setAttributeNS(null, "transform", "translate(" + CompressX(item.get("x")) + ",0)");
+    G.setAttributeNS(null, "id", item.get("ident"));
     calendarId.appendChild(G);
 
-    G.appendChild(SVG_drawText("day_label relative", 720, -70, "Day " + item.get('relative')));
+    G.appendChild(SVG_drawText("day_label relative", 720, -70, "Day " + item.get("relative")));
 
-    G.appendChild(SVG_drawText("day_label yyyymmdd", 720, -20, item.get('name')));
+    G.appendChild(SVG_drawText("day_label yyyymmdd", 720, -20, item.get("name")));
 
     var minutes = 120;
-    var time = moment(item.get('name'));
-    var duration = moment.duration(minutes, 'minutes');
+    var time = moment(item.get("name"));
+    var duration = moment.duration(minutes, "minutes");
 
-    for(var i = 0; i < item.get('width'); i += minutes){ 
-      G.appendChild(SVG_drawText('hour_label', i, 20, time.format("H:mm")));
+    for(var i = 0; i < item.get("width"); i += minutes){ 
+      G.appendChild(SVG_drawText("hour_label", i, 20, time.format("H:mm")));
       time.add(duration);   
     }
 
     // a scale is used to extend the bars, that's why they are defined into
     // a specific group.
     var Gbar     = document.createElementNS(svgNS, "g");
-    Gbar.setAttributeNS(null, "transform", "translate(" + CompressX(item.get('x')) + ",0)");
-    Gbar.setAttributeNS(null, "class", item.get('type'));
-    Gbar.setAttributeNS(null, "id", item.get('barident'));
+    Gbar.setAttributeNS(null, "transform", "translate(" + CompressX(item.get("x")) + ",0)");
+    Gbar.setAttributeNS(null, "class", item.get("type"));
+    Gbar.setAttributeNS(null, "id", item.get("barident"));
     calendarBarId.appendChild(Gbar);
 
-    Gbar.appendChild(SVG_drawRect('day_bar', 0, 0, item.get('width'), 1));
-    Gbar.appendChild(SVG_drawRect('line', 0, 0, 1, 1));
-    Gbar.appendChild(SVG_drawRect('line', item.get('width'), 0, 1, 1));
+    Gbar.appendChild(SVG_drawRect("day_bar", 0, 0, item.get("width"), 1));
+    Gbar.appendChild(SVG_drawRect("line", 0, 0, 1, 1));
+    Gbar.appendChild(SVG_drawRect("line", item.get("width"), 0, 1, 1));
 
-    for(var i = 60; i < item.get('width'); i += 120){ 
-      Gbar.appendChild(SVG_drawRect('hour_bar', i, 0, 60, 1));
+    for(var i = 60; i < item.get("width"); i += 120){ 
+      Gbar.appendChild(SVG_drawRect("hour_bar", i, 0, 60, 1));
     }
   }
 
@@ -408,16 +410,16 @@ require([
     var crewMemberBarId = svg.getElementById("crewmember_bar");
 
     var G = document.createElementNS(svgNS, "g");
-    G.setAttributeNS(null,"transform","translate(0, " + item.get('y') + ")");
-    G.setAttributeNS(null,"id", item.get('ident'));
+    G.setAttributeNS(null,"transform","translate(0, " + item.get("y") + ")");
+    G.setAttributeNS(null,"id", item.get("ident"));
     crewMemberId.appendChild(G);
 
-    G.appendChild(SVG_drawText('crewmember', -50, 100, item.get('name')));
+    G.appendChild(SVG_drawText("crewmember", -50, 100, item.get("name")));
 
     
     var Gbar = document.createElementNS(svgNS, "g");
-    Gbar.setAttributeNS(null,"transform","translate(0, " + item.get('y') + ")");
-    Gbar.setAttributeNS(null,"id", item.get('barident'));
+    Gbar.setAttributeNS(null,"transform","translate(0, " + item.get("y") + ")");
+    Gbar.setAttributeNS(null,"id", item.get("barident"));
     crewMemberBarId.appendChild(Gbar);
 
     Gbar.appendChild(SVG_drawRect("line", 0,   0, 1, 1));
@@ -430,47 +432,47 @@ require([
   // the rigth place in the calendar.
   function SVG_drawActivity(activity, line){
 
-    var parentId = svg.getElementById(line.get('ident'));
+    var parentId = svg.getElementById(line.get("ident"));
 
     var G = document.createElementNS(svgNS, "g");
-    G.setAttributeNS(null, "transform", "translate(" + CompressX(activity.get('x')) + ",50)");
-    G.setAttributeNS(null, "id", activity.get('ident'));
+    G.setAttributeNS(null, "transform", "translate(" + CompressX(activity.get("x")) + ",50)");
+    G.setAttributeNS(null, "id", activity.get("ident"));
 
     on(G, "click", function(evt){
-      PopupDetails(activity.get('position'));
+      PopupDetails(activity.get("position"));
     });
        
     parentId.appendChild(G);
 
     var Rect = document.createElementNS(svgNS,"rect");
-    Rect.setAttributeNS(null, "class", activity.get('type'));
+    Rect.setAttributeNS(null, "class", activity.get("type"));
     Rect.setAttributeNS(null, "x", 0);
     Rect.setAttributeNS(null, "y", 0);
     Rect.setAttributeNS(null, "rx", CompressX(20));
     Rect.setAttributeNS(null, "ry", CompressX(20));
-    Rect.setAttributeNS(null, "width", CompressX(activity.get('width')));
+    Rect.setAttributeNS(null, "width", CompressX(activity.get("width")));
     Rect.setAttributeNS(null, "height", 100);
     G.appendChild(Rect);
 
-    G.appendChild(SVG_drawText("label", 10, 50, activity.get('name')));
+    G.appendChild(SVG_drawText("label", 10, 50, activity.get("name")));
 
     // transporation time
-    if( activity.get('tp') > 0 ){
+    if( activity.get("tp") > 0 ){
       // before.
-      G.appendChild(SVG_drawRect("TP", activity.get('tp') * -1, 20, activity.get('tp'), 30));
+      G.appendChild(SVG_drawRect("TP", activity.get("tp") * -1, 20, activity.get("tp"), 30));
 
       // after.
-      G.appendChild(SVG_drawRect("TP", activity.get('width'), 50, activity.get('tp'), 30));
+      G.appendChild(SVG_drawRect("TP", activity.get("width"), 50, activity.get("tp"), 30));
     }
 
     // rest before
-    if( activity.get('restb') > 0 ){
-      G.appendChild(SVG_drawRect("REST", (activity.get('restb') + activity.get('tp') ) * -1, 20, activity.get('restb'), 30));
+    if( activity.get("restb") > 0 ){
+      G.appendChild(SVG_drawRect("REST", (activity.get("restb") + activity.get("tp") ) * -1, 20, activity.get("restb"), 30));
     }
     
     // rest after. 
-    if( activity.get('resta') > 0 ){
-      G.appendChild(SVG_drawRect("REST", activity.get('width') + activity.get('tp'), 50, activity.get('resta'), 30));
+    if( activity.get("resta") > 0 ){
+      G.appendChild(SVG_drawRect("REST", activity.get("width") + activity.get("tp"), 50, activity.get("resta"), 30));
     }
 
   }
@@ -483,37 +485,37 @@ require([
 
   var CalendarModel = declare(Model, {
     schema: {
-      name: 'string',
-      relative: 'numeric',
-      position: 'numeric',
+      name: "string",
+      relative: "numeric",
+      position: "numeric",
       type: new ComputedProperty({
-        dependsOn: ['position'],
+        dependsOn: ["position"],
         getValue: function(position){
           return position % 2 ? "uneven" : "even";
         }
       }),
       ident: new ComputedProperty({ 
-        dependsOn: ['position'],
+        dependsOn: ["position"],
         getValue: function(position){
           return "cd" + position;  // cd stands for Calendar Day.
         }
       }),
       barident: new ComputedProperty({ 
-        dependsOn: ['position'],
+        dependsOn: ["position"],
         getValue: function(position){
           return "bcd" + position;  // bcd stands for Bar Calendar Day.
         }
       }),
-      x: 'numeric',
-      width: 'numeric',
+      x: "numeric",
+      width: "numeric",
     },
     validateOnSet: false,
     DrawSVG: function(){ 
       SVG_drawCalendarDate(this); 
     },
     ClearSVG: function(){
-      var item_lbl = svg.getElementById(this.get('ident'));
-      var item_bar = svg.getElementById(this.get('barident'));
+      var item_lbl = svg.getElementById(this.get("ident"));
+      var item_bar = svg.getElementById(this.get("barident"));
       
       item_lbl.parentNode.removeChild(item_lbl);
       item_bar.parentNode.removeChild(item_bar);
@@ -524,31 +526,31 @@ require([
 
   var CrewMemberModel = declare(Model, {
     schema: {
-      name: 'string',
-      birthdate: 'string',
-      position: 'numeric',
+      name: "string",
+      birthdate: "string",
+      position: "numeric",
       ident: new ComputedProperty({ 
-        dependsOn: ['position'],
+        dependsOn: ["position"],
         getValue: function(position){
           return "cm" + position; // cm stands for CrewMember.
         }
       }),
       barident: new ComputedProperty({ 
-        dependsOn: ['position'],
+        dependsOn: ["position"],
         getValue: function(position){
           return "bcm" + position; // bcm stands for Bar CrewMember.
         }
       }),
-      y: 'numeric',
-      height: 'numeric',
+      y: "numeric",
+      height: "numeric",
     },
     validateOnSet: false,
     DrawSVG: function(){ 
       SVG_drawCrewMember(this); 
     },
     ClearSVG: function(){
-      var item_lbl = svg.getElementById(this.get('ident'));
-      var item_bar = svg.getElementById(this.get('barident'));
+      var item_lbl = svg.getElementById(this.get("ident"));
+      var item_bar = svg.getElementById(this.get("barident"));
       
       item_lbl.parentNode.removeChild(item_lbl);
       item_bar.parentNode.removeChild(item_bar);
@@ -557,17 +559,17 @@ require([
 
   var ActivityModel = declare(Model, {
     schema: {
-      name: 'string',
-      position: 'numeric',
-      x: 'numeric',
-      width: 'numeric',
-      tp: 'numeric',
-      resta: 'numeric',
-      restb: 'numeric',
-      type: 'string',
-      cmPosition: 'numeric', // foreign key to CrewMember.
+      name: "string",
+      position: "numeric",
+      x: "numeric",
+      width: "numeric",
+      tp: "numeric",
+      resta: "numeric",
+      restb: "numeric",
+      type: "string",
+      cmPosition: "numeric", // foreign key to CrewMember.
       ident: new ComputedProperty({ 
-        dependsOn: ['position', 'type'],
+        dependsOn: ["position", "type"],
         getValue: function(position, type){
           return type.toLowerCase() + position;  // DOxxx or TRPxxx or  .. 
         }
@@ -578,7 +580,7 @@ require([
       SVG_drawActivity(this, crewmember); 
     },
     ClearSVG: function(){
-      var item = svg.getElementById(this.get('ident'));
+      var item = svg.getElementById(this.get("ident"));
     
       // an activity belongs to a crewmember. If the crewmember was cleared,
       // then the activity is also cleared !  
@@ -589,32 +591,32 @@ require([
 
   var StationModel = declare(Model, {
     schema: {
-      id: 'string',
-      code: 'string',
-      name: 'string',
-      dstShift: 'string',
-      dstStartLst: 'string',
-      dstEndLst: 'string',
-      utcOffset: 'string',
-      regionList: 'array',
-      offset: 'numeric',
+      id: "string",
+      code: "string",
+      name: "string",
+      dstShift: "string",
+      dstStartLst: "string",
+      dstEndLst: "string",
+      utcOffset: "string",
+      regionList: "array",
+      offset: "numeric",
     },
     validateOnSet: false
   });
 
   var HighLightModel = declare(Model, {
     schema: {
-      message: 'string',
-      pk: 'numeric',
-      x: 'numeric',
+      message: "string",
+      pk: "numeric",
+      x: "numeric",
       ident: new ComputedProperty({ 
-        dependsOn: ['pk'],
+        dependsOn: ["pk"],
         getValue: function(pk){
           return "hl" + pk;  // hl stands for HighLight
         }
       }),
       barident: new ComputedProperty({ 
-        dependsOn: ['pk'],
+        dependsOn: ["pk"],
         getValue: function(pk){
           return "bhl" + pk;  // bhl stands for Bar HighLight
         }
@@ -625,8 +627,8 @@ require([
       SVG_drawHighlight(this); 
     },
     ClearSVG: function(){
-      var item_lbl = svg.getElementById(this.get('ident'));
-      var item_bar = svg.getElementById(this.get('barident'));
+      var item_lbl = svg.getElementById(this.get("ident"));
+      var item_bar = svg.getElementById(this.get("barident"));
       
       // a hightligh  belongs to a calendar day. If a day was cleared,
       // then the hightlight is also cleared !  
@@ -648,16 +650,16 @@ require([
     idProperty: "position",
   });
 
-  calendarStore.on('add', function(event){
+  calendarStore.on("add", function(event){
     event.target.DrawSVG();
   });
 
-  calendarStore.on('update', function(event){
+  calendarStore.on("update", function(event){
     event.target.ClearSVG();
     event.target.DrawSVG();
   });
 
-  calendarStore.on('delete', function(event){
+  calendarStore.on("delete", function(event){
     event.target.ClearSVG();
   });
 
@@ -678,16 +680,16 @@ require([
     idProperty: "position",
   });
 
-  crewMemberStore.on('add', function(event){
+  crewMemberStore.on("add", function(event){
     event.target.DrawSVG();
   });
   
-  crewMemberStore.on('update', function(event){
+  crewMemberStore.on("update", function(event){
     event.target.ClearSVG();
     event.target.DrawSVG();
   });
 
-  crewMemberStore.on('delete', function(event){
+  crewMemberStore.on("delete", function(event){
     event.target.ClearSVG();
   });
 
@@ -704,16 +706,16 @@ require([
     idProperty: "position",
   });
 
-  activityStore.on('add', function(event){
-    event.target.DrawSVG(crewMemberStore.getSync(event.target.get('cmPosition')));
+  activityStore.on("add", function(event){
+    event.target.DrawSVG(crewMemberStore.getSync(event.target.get("cmPosition")));
   });
 
-  activityStore.on('update', function(event){
+  activityStore.on("update", function(event){
     event.target.ClearSVG();
-    event.target.DrawSVG(crewMemberStore.getSync(event.target.get('cmPosition')));
+    event.target.DrawSVG(crewMemberStore.getSync(event.target.get("cmPosition")));
   });
 
-  activityStore.on('delete', function(event){
+  activityStore.on("delete", function(event){
     event.target.ClearSVG();
   });
 
@@ -725,8 +727,8 @@ require([
     var isOverlap = false;
     
     activityStore.filter({cmPosition: crewmember}).forEach(function(object){
-      if(   IsValueInRange(x, object.get('x'), object.get('width'))
-          || IsValueInRange(x + width -1, object.get('x'), object.get('width'))){
+      if(   IsValueInRange(x, object.get("x"), object.get("width"))
+          || IsValueInRange(x + width -1, object.get("x"), object.get("width"))){
         isOverlap = true;
       }
     });
@@ -750,16 +752,16 @@ require([
     idProperty: "pk",
   });
 
-  highLightStore.on('add', function(event){
+  highLightStore.on("add", function(event){
     event.target.DrawSVG();
   });
   
-  highLightStore.on('update', function(event){
+  highLightStore.on("update", function(event){
     event.target.ClearSVG();
     event.target.DrawSVG();
   });
 
-  highLightStore.on('delete', function(event){
+  highLightStore.on("delete", function(event){
     event.target.ClearSVG();
   });
 
@@ -769,7 +771,7 @@ require([
   // Redraw SVG
   // ===============================================
   function RemoveIntroMessage(){
-    var intro = svg.getElementById('intro');
+    var intro = svg.getElementById("intro");
     if(intro){
       intro.parentNode.removeChild(intro);
     } 
@@ -788,7 +790,7 @@ require([
       // on.emit(item, "update", { bubbles: true, cancelable: true });
       item.ClearSVG();
       item.DrawSVG();
-      x = Math.max(x, item.get('x') + item.get('width')); 
+      x = Math.max(x, item.get("x") + item.get("width")); 
     });
     AdjustCrewmemberBarScaleX(x);
 
@@ -802,7 +804,7 @@ require([
     });
     activityStore.forEach(function(item){
       item.ClearSVG();
-      item.DrawSVG(crewMemberStore.getSync(item.get('cmPosition')));
+      item.DrawSVG(crewMemberStore.getSync(item.get("cmPosition")));
     });
   }
 
@@ -828,10 +830,10 @@ require([
 
 
   function SaveStores(){
-    SaveStore(calendarStore, "CalendarStore", "calendar", ['name', 'relative', 'position', 'type', 'x', 'width']);
-    SaveStore(crewMemberStore, "CrewMemberStore", "crew", ['name', 'birthdate', 'position', 'y', 'height']);
-    SaveStore(activityStore, "ActivityStore", "activity", ['name', 'position', 'x', 'width', 'tp', 'resta', 'restb', 'type', 'cmPosition']);
-    SaveStore(highLightStore, "HighLightStore", "highligth", ['message', 'pk', 'x']);
+    SaveStore(calendarStore, "CalendarStore", "calendar", ["name", "relative", "position", "type", "x", "width"]);
+    SaveStore(crewMemberStore, "CrewMemberStore", "crew", ["name", "birthdate", "position", "y", "height"]);
+    SaveStore(activityStore, "ActivityStore", "activity", ["name", "position", "x", "width", "tp", "resta", "restb", "type", "cmPosition"]);
+    SaveStore(highLightStore, "HighLightStore", "highligth", ["message", "pk", "x"]);
   }
 
 
@@ -847,17 +849,17 @@ require([
     for(var i = 0; i < rootStationStoreChildren.length; i ++){
       var obj = rootStationStoreChildren[i];
 
-      var data = offsetRegex.exec(obj.getElementsByTagName('utc-offset')[0].textContent);
+      var data = offsetRegex.exec(obj.getElementsByTagName("utc-offset")[0].textContent);
       var offset = moment.duration({hours: data[1], minutes: data[2]}).asMinutes() * -1;
       
       stationStore.addSync({
-        id: obj.getAttribute('id'),
-        code: obj.getElementsByTagName('code')[0].textContent,
-        name: obj.getElementsByTagName('name')[0].textContent,
-        dstShift: obj.getElementsByTagName('dst-shift')[0].textContent,
-        dstStartLst: obj.getElementsByTagName('dst-start-lst')[0].textContent,
-        dstEndLst: obj.getElementsByTagName('dst-end-lst')[0].textContent,
-        utcOffset: obj.getElementsByTagName('utc-offset')[0].textContent,
+        id: obj.getAttribute("id"),
+        code: obj.getElementsByTagName("code")[0].textContent,
+        name: obj.getElementsByTagName("name")[0].textContent,
+        dstShift: obj.getElementsByTagName("dst-shift")[0].textContent,
+        dstStartLst: obj.getElementsByTagName("dst-start-lst")[0].textContent,
+        dstEndLst: obj.getElementsByTagName("dst-end-lst")[0].textContent,
+        utcOffset: obj.getElementsByTagName("utc-offset")[0].textContent,
         offset: offset,
       });
     }
@@ -882,7 +884,7 @@ require([
   }, true);
   
   registry.byId("SHCalendarHours").on("change", function(isChecked){
-    var divs = svg.getElementsByClassName('hour_label');
+    var divs = svg.getElementsByClassName("hour_label");
 
     for (var i = 0; i < divs.length; i++) {
       divs[i].setAttribute("display", isChecked ? "block" : "none");
@@ -890,7 +892,7 @@ require([
   }, true);
   
   registry.byId("SHCalendarDayX").on("change", function(isChecked){
-    var divs = svg.getElementsByClassName('relative');
+    var divs = svg.getElementsByClassName("relative");
 
     for (var i = 0; i < divs.length; i++) {
       divs[i].setAttribute("display", isChecked ? "block" : "none");
@@ -898,7 +900,7 @@ require([
   }, true);
   
   registry.byId("SHCalendarDayYYYYMMDD").on("change", function(isChecked){
-    var divs = svg.getElementsByClassName('yyyymmdd');
+    var divs = svg.getElementsByClassName("yyyymmdd");
 
     for (var i = 0; i < divs.length; i++) {
       divs[i].setAttribute("display", isChecked ? "block" : "none");
@@ -906,7 +908,7 @@ require([
   }, true);
 
   registry.byId("SHCalendarDayBars").on("change", function(isChecked){
-    var divs = svg.getElementsByClassName('day_bar');
+    var divs = svg.getElementsByClassName("day_bar");
 
     for (var i = 0; i < divs.length; i++) {
       divs[i].setAttribute("display", isChecked ? "block" : "none");
@@ -914,7 +916,7 @@ require([
   }, true);
 
   registry.byId("SHCalendarHourBars").on("change", function(isChecked){
-    var divs = svg.getElementsByClassName('hour_bar');
+    var divs = svg.getElementsByClassName("hour_bar");
 
     for (var i = 0; i < divs.length; i++) {
       divs[i].setAttribute("display", isChecked ? "block" : "none");
@@ -927,6 +929,34 @@ require([
   }, true);
 
 
+  // -----------------------------------------------
+  // Load XML file dialog
+  // -----------------------------------------------
+  registry.byId("LoadStation").on("click", function(){
+    var toto = registry.byId("uploader");
+
+    console.log("je passe la 1");
+    console.log(toto);
+    var f = toto._files[0];
+    console.log(f);
+
+    var reader = new FileReader();
+
+    // Closure to capture the file information.
+    reader.onload = (function(theFile) {
+      return function(e) {
+        console.log("c'est ici que ca se passe");
+        console.log(e.target.result);
+      };
+    })(f);
+
+    // Read in the file as a text.
+    reader.readAsText(f);
+
+    LoadStationDialog.hide();
+
+  });
+
 
 
   // -----------------------------------------------
@@ -937,8 +967,8 @@ require([
     SaveStores();
 
 
-    var a           = document.createElement('a');
-    var contentType = 'data:application/octet-stream,';
+    var a           = document.createElement("a");
+    var contentType = "data:application/octet-stream,";
 
     //get svg source.
     var serializer = new XMLSerializer();
@@ -946,8 +976,8 @@ require([
 
     var uriContent  = contentType + encodeURIComponent(source);
 
-    a.setAttribute('href', uriContent);
-    a.setAttribute('download', registry.byId("filename").value);
+    a.setAttribute("href", uriContent);
+    a.setAttribute("download", registry.byId("filename").value);
 
     document.body.appendChild(a);
     a.click();
@@ -960,7 +990,7 @@ require([
   // Calendar range set up dialog
   // -----------------------------------------------
   registry.byId("CalendarTimezone").on("change", function(){
-    var item = timezoneStore.getSync(this.get('value'));
+    var item = timezoneStore.getSync(this.get("value"));
 
     moment.tz.setDefault(item.name);
     var zone = moment.tz.zone(item.name);
@@ -973,12 +1003,12 @@ require([
     // 300
     // 300
 
-    registry.byId("CalendarStation").set('disabled', false);
+    registry.byId("CalendarStation").set("disabled", false);
 
     var offsetZone = zone.offset(moment().valueOf());         
 
-    registry.byId("CalendarStation").set('value', "");
-    registry.byId("CalendarStation").set('query', {offset: offsetZone});
+    registry.byId("CalendarStation").set("value", "");
+    registry.byId("CalendarStation").set("query", {offset: offsetZone});
   }, true);
 
   registry.byId("CalendarStart").on("change", function(){
@@ -1014,7 +1044,7 @@ require([
     var start = moment(CalStart.get("value"));
     Xorig = start.unix();
     var end   = moment(CalEnd.get("value")); 
-    var range = end.diff(start, 'days');
+    var range = end.diff(start, "days");
 
     calendarStore.fetch().then(function (days){
       for (var i = days.length - 1; i >= 0; i--) {
@@ -1029,8 +1059,8 @@ require([
 
     for(i = 0; i < range; i++) {
       
-      var nextDay = moment(start).add(1, 'days');   
-      width = nextDay.diff(start, 'hours') * 60;
+      var nextDay = moment(start).add(1, "days");   
+      width = nextDay.diff(start, "hours") * 60;
 
       calendarStore.addSync({
         name: start.format().substring(0, 10),
@@ -1045,7 +1075,7 @@ require([
         var InitialState =  start.isDST();
 
         while( start.isDST() == InitialState ){
-          start.add(1, 'minutes');
+          start.add(1, "minutes");
         }
 
         var pos = 0;
@@ -1069,11 +1099,11 @@ require([
     AdjustCrewmemberBarScaleX(x);
 
     // enabled some menu items.
-    registry.byId("FileSaveMenu").set('disabled', false);
-    registry.byId("CalendarSetStartPeriodsMenu").set('disabled', false);
-    registry.byId("BusinessObjectMenu").set('disabled', false);
-    registry.byId("GraphOptionMenu").set('disabled', false);
-    registry.byId("HighlightsMenu").set('disabled', false);
+    registry.byId("FileSaveMenu").set("disabled", false);
+    registry.byId("CalendarSetStartPeriodsMenu").set("disabled", false);
+    registry.byId("BusinessObjectMenu").set("disabled", false);
+    registry.byId("GraphOptionMenu").set("disabled", false);
+    registry.byId("HighlightsMenu").set("disabled", false);
     
     SetCalendarDialog.hide();
   });
@@ -1084,7 +1114,7 @@ require([
 
     if(newStarts.length > 0 ){
       calendarStore.forEach(function(item){
-        item.set('relative', item.get('position') - newStarts[0]);
+        item.set("relative", item.get("position") - newStarts[0]);
         calendarStore.put(item);
       });
     }
@@ -1092,8 +1122,8 @@ require([
     newStarts.forEach(function(position){
       var item = calendarStore.getSync(position);
 
-      var day = svg.getElementById(item.get('barident'));
-      day.setAttribute('class', 'start_period');
+      var day = svg.getElementById(item.get("barident"));
+      day.setAttribute("class", "start_period");
     }); 
     
     SetStartPeriodsDialog.hide();
@@ -1108,15 +1138,15 @@ require([
 
     // Compute the position and Y coordinate of the new crewmember based on 
     // existing data.
-    crewMemberStore.sort('position').forEach(function(item){
+    crewMemberStore.sort("position").forEach(function(item){
       pos += 1;
-      coordY += item.get('height');
+      coordY += item.get("height");
     }); 
 
     // Add the new crew in the store. Event will trigger the drawing.
     crewMemberStore.addSync({
-      name: registry.byId("CrewMemberName").get('value'),
-      birthdate: registry.byId("CrewMemberBirthDate").get('value').toISOString().substring(0, 10),
+      name: registry.byId("CrewMemberName").get("value"),
+      birthdate: registry.byId("CrewMemberBirthDate").get("value").toISOString().substring(0, 10),
       position: pos,
       y:coordY,
       height:200,
@@ -1158,8 +1188,8 @@ require([
     days.forEach(function(day){
       var calendarDay = calendarStore.getSync(day); 
 
-      var x          = calendarDay.get('x');
-      var width      = calendarDay.get('width');
+      var x          = calendarDay.get("x");
+      var width      = calendarDay.get("width");
 
       if( IsActivityOverlap(crewmemberId, x, width) ){
         alert("Cannot create activity starting " + calendarDay.get("name") + " because of an overlap with another activity."); 
@@ -1170,8 +1200,8 @@ require([
           type: "DO",
           position: pos,
           cmPosition: crewmemberId,
-          x: calendarDay.get('x'),
-          width: calendarDay.get('width'),
+          x: calendarDay.get("x"),
+          width: calendarDay.get("width"),
           tp: 0,
           resta: 0,
           restb: 0,
@@ -1238,9 +1268,9 @@ require([
     startTraining.hour(startTimeTraining.getHours());
     startTraining.minute(startTimeTraining.getMinutes());
 
-    var crewmemberId = registry.byId("TrainingCrewMemberSelect").get('value');
+    var crewmemberId = registry.byId("TrainingCrewMemberSelect").get("value");
     var x     = getPositionX(startTraining);
-    var width = registry.byId("TrainingDurationHour").get('value') * 60 + registry.byId("TrainingDurationMinute").get('value');
+    var width = registry.byId("TrainingDurationHour").get("value") * 60 + registry.byId("TrainingDurationMinute").get("value");
 
     if( IsActivityOverlap(crewmemberId, x, width) ){
       alert("Cannot create training because of an overlap with another activity."); 
@@ -1250,12 +1280,12 @@ require([
         name: registry.byId("TrainingName").get("value"),
         type: "TRN",
         position: pos,
-        cmPosition: registry.byId("TrainingCrewMemberSelect").get('value'),
+        cmPosition: registry.byId("TrainingCrewMemberSelect").get("value"),
         x: x,
         width: width,
-        tp: registry.byId("TrainingTransportationTime").checked ? registry.byId("TransportationTimeDuration").get('value') : 0,
-        resta: registry.byId("TrainingRestAfterH").get('value') * 60 + registry.byId("TrainingRestAfterM").get('value'),
-        restb: registry.byId("TrainingRestBeforeH").get('value') * 60 + registry.byId("TrainingRestBeforeM").get('value'),
+        tp: registry.byId("TrainingTransportationTime").checked ? registry.byId("TransportationTimeDuration").get("value") : 0,
+        resta: registry.byId("TrainingRestAfterH").get("value") * 60 + registry.byId("TrainingRestAfterM").get("value"),
+        restb: registry.byId("TrainingRestBeforeH").get("value") * 60 + registry.byId("TrainingRestBeforeM").get("value"),
       });
     }
   });
@@ -1288,14 +1318,14 @@ require([
  
     if( days.length == 0 ){
       calendarStore.forEach(function(item){
-        days.push(item.get('position'));
+        days.push(item.get("position"));
       }); 
     }
 
     for(i = 0; i < days.length; i++){
       var calDay = calendarStore.getSync(days[i]);
       
-      var when = moment(calDay.get('name'));
+      var when = moment(calDay.get("name"));
       when.hour(time.getHours());
       when.minute(time.getMinutes());
 
@@ -1309,8 +1339,6 @@ require([
       }
     }
   });  
-
-
 
     /** 
      *  SVGPan library 1.2.1
@@ -1391,7 +1419,7 @@ require([
     console.log("root");
     console.log(root);
 
-    var state = 'none', svgRoot, stateTarget, stateOrigin, stateTf;
+    var state = "none", svgRoot, stateTarget, stateOrigin, stateTf;
 
     /**
      * Retrieves the root element for SVG manipulation. The element is then cached into the svgRoot global variable.
@@ -1403,7 +1431,7 @@ require([
         g = dom.byId("viewport");
 
         if(g == null)
-          alert('Unable to obtain SVG root element');
+          alert("Unable to obtain SVG root element");
 
         setCTM(g, g.getCTM());
 
@@ -1517,12 +1545,12 @@ require([
       coordinateX.firstChild.nodeValue = "X: " + Math.floor(pt.x);
       coordinateY.firstChild.nodeValue = "Y: " + Math.floor(pt.y);
 
-      if(state == 'pan' && enablePan) {
+      if(state == "pan" && enablePan) {
         // Pan mode
         var p = getEventPoint(evt).matrixTransform(stateTf);
 
         setCTM(g, stateTf.inverse().translate(p.x - stateOrigin.x, p.y - stateOrigin.y));
-      } else if(state == 'drag' && enableDrag) {
+      } else if(state == "drag" && enableDrag) {
         // Drag mode
         var p = getEventPoint(evt).matrixTransform(g.getCTM().inverse());
 
@@ -1551,14 +1579,14 @@ require([
           || !enableDrag // Pan anyway when drag is disabled and the user clicked on an element 
         ) {
         // Pan mode
-        state = 'pan';
+        state = "pan";
 
         stateTf = g.getCTM().inverse();
 
         stateOrigin = getEventPoint(evt).matrixTransform(stateTf);
       } else {
         // Drag mode
-        state = 'drag';
+        state = "drag";
 
         stateTarget = evt.target;
 
@@ -1580,16 +1608,35 @@ require([
 
       var svgDoc = evt.target.ownerDocument;
 
-      if( state == 'pan' || state == 'drag' ){
+      if( state == "pan" || state == "drag" ){
         // Quit pan mode
-        state = '';
+        state = "";
       }
     });
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 });
-
-
-
 
 
 
@@ -1604,6 +1651,7 @@ require([
       <span>File</span>
       <div data-dojo-type="dijit/DropDownMenu" id="fileMenu">
         <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true, onClick:function(){alert('not yet available');}">Load SVG file</div>
+        <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){LoadStationDialog.show();}">Load XML station file</div>
         <div id="FileSaveMenu" data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true, onClick:function(){SaveFileDialog.show();}">Save SVG file</div>
       </div>
     </div>
@@ -1758,6 +1806,30 @@ require([
 
     <div class="dijitDialogPaneActionBar">
       <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){ShowHideDialog.hide();}">Close</button>
+    </div>
+  </div>
+
+
+  <div data-dojo-type="dijit/Dialog" data-dojo-id="LoadStationDialog" title="Load XML station file" style="display: none; width: 300px;">
+    <div data-dojo-type="dijit/form/Form" id="LoadStationForm" data-dojo-id="LoadStationForm" encType="multipart/form-data" action="" method="">
+      <table class="dijitDialogPaneContentArea">
+        <tr>
+          <td>
+            <input type="file" id="files" name="files"  />
+            <input name="uploadedfile" multiple="false" type="file" id="uploader" data-dojo-type="dojox/form/Uploader" data-dojo-props="label: 'Select an XML File'"/> 
+            <!-- <input name="uploadedfile" multiple="false" type="file" id="uploader" data-dojo-type="dojox/form/Uploader" data-dojo-props="label: 'Select an XML File', uploadOnSelect: true"/> -->
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <!--            <div id="files" data-dojo-type="dojox/form/uploader/FileList" data-dojo-props="uploaderId: 'uploader'"></div> -->
+          </td>
+        </tr>
+      </table>
+
+      <div class="dijitDialogPaneActionBar">
+        <button data-dojo-type="dijit/form/Button" type="button" id="LoadStation">Load file</button>
+      </div>
     </div>
   </div>
 
