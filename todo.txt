@@ -1,9 +1,11 @@
 TODO:
-there is a problem with the svg, which is a independant document from the html page. Then, the svg cannot
-access script from the html page, so it is impossible to click on an activity to be able to delete it or 
-display details.
 
-I need to change the way the svg is embedded into the document.
+
+
+
+RESOLVED there is a problem with the svg, which is a independant document from the html page. Then, the svg cannot
+access script from the html page, so it is impossible to click on an activity to be able to delete it or 
+display details. I need to change the way the svg is embedded into the document.
 
 
  

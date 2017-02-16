@@ -70,15 +70,18 @@
   width: 3.25em;
 }
 
-
+/*
 .durationHour::after { 
       content: "h";
 }
 .durationMinute::after { 
       content: "m";
 }
+*/
 
   </style>
+
+
 
   <script>
 var dojoConfig = {
@@ -130,7 +133,7 @@ require([
   "moment/moment",
   "moment-timezone/builds/moment-timezone-with-data",
   "dojox/xml/parser", 
-  "dojo/text!./gantt.svg",
+//  "dojo/text!./gantt.svg",
   "dojo/domReady!",
 
   "dijit/MenuBar",
@@ -152,7 +155,6 @@ require([
   "dijit/layout/ContentPane", 
   "dojox/layout/TableContainer",
   "dojox/form/Uploader",
-//   "dojox/form/FileUploader",
   "dijit/form/Select"
 ], function(
   declare,
@@ -177,8 +179,8 @@ require([
   Button,
   moment,
   timezone,
-  xmlparser,
-  ganttSVG
+  xmlparser
+//  ganttSVG
   ){
 
   // ===============================================
@@ -217,9 +219,11 @@ require([
   // ===============================================
   // Install gantt svg data at the right place.
   // ===============================================
+  /*
   var ganttId = dom.byId("gantt"); 
   var svgDomInput = xmlparser.parse(ganttSVG);
   gantt.appendChild(svgDomInput.documentElement);
+  */
   on.emit(window, "resize", {bubbles: true,cancelable: true});
 
 
@@ -600,6 +604,15 @@ require([
       utcOffset: "string",
       regionList: "array",
       offset: "numeric",
+      /* do not work with query !!!
+      offset: new ComputedProperty({ 
+        dependsOn: ["utcOffet"],
+        getValue: function(utcOffset){
+          var data = offsetRegex.exec(utcOffset);
+
+          return moment.duration({hours: data[1], minutes: data[2]}).asMinutes() * -1;
+        }
+      }),*/
     },
     validateOnSet: false
   });
@@ -834,15 +847,16 @@ require([
     SaveStore(crewMemberStore, "CrewMemberStore", "crew", ["name", "birthdate", "position", "y", "height"]);
     SaveStore(activityStore, "ActivityStore", "activity", ["name", "position", "x", "width", "tp", "resta", "restb", "type", "cmPosition"]);
     SaveStore(highLightStore, "HighLightStore", "highligth", ["message", "pk", "x"]);
+    SaveStore(stationStore, "StationStore" , "station", ["id", "code", "name", "dstShift", "dstStartLst", "dstEndLst", "utcOffset", "regionList", "offset"]); 
   }
 
 
   // ===============================================
   // LOADING STORES FROM SVG
   // ===============================================
-  function LoadStationStore(){
+  function LoadStationStore(parentNode){
     console.log("LoadStationStore");
-    var rootStationStoreChildren = svg.getElementsByTagName("station");
+    var rootStationStoreChildren = parentNode.getElementsByTagName("station");
     var offsetRegex = /^(-?\d{2})h(\d{2})$/;
 
     console.log(rootStationStoreChildren);
@@ -851,9 +865,14 @@ require([
 
       var data = offsetRegex.exec(obj.getElementsByTagName("utc-offset")[0].textContent);
       var offset = moment.duration({hours: data[1], minutes: data[2]}).asMinutes() * -1;
+
+      var id = obj.getAttribute("id");
+      if( id === undefined ){
+        id = obj.getElementsByTagName("id")[0].textContent;
+      }
       
       stationStore.addSync({
-        id: obj.getAttribute("id"),
+        id: id,
         code: obj.getElementsByTagName("code")[0].textContent,
         name: obj.getElementsByTagName("name")[0].textContent,
         dstShift: obj.getElementsByTagName("dst-shift")[0].textContent,
@@ -866,7 +885,7 @@ require([
   }
 
   // load data about stations.
-  LoadStationStore();
+  // LoadStationStore();
 
   var stationStoreAdapter = new DstoreAdapter(stationStore);
   registry.byId("CalendarStation").set("store", stationStoreAdapter);
@@ -930,23 +949,28 @@ require([
 
 
   // -----------------------------------------------
-  // Load XML file dialog
+  // Load XML station file dialog
   // -----------------------------------------------
   registry.byId("LoadStation").on("click", function(){
-    var toto = registry.byId("uploader");
+    var upload = registry.byId("uploader");
 
-    console.log("je passe la 1");
-    console.log(toto);
-    var f = toto._files[0];
+    var f = upload._files[0];
+          
     console.log(f);
+    if( f.type != "text/xml" ){
+      alert("Please provide an xml file");
+      return;
+    }          
 
     var reader = new FileReader();
 
-    // Closure to capture the file information.
+    // Closure to capture the file information and save it in the store.
     reader.onload = (function(theFile) {
       return function(e) {
-        console.log("c'est ici que ca se passe");
         console.log(e.target.result);
+        xmlDom = xmlparser.parse(e.target.result);
+          
+        LoadStationStore(xmlDom);
       };
     })(f);
 
@@ -954,6 +978,8 @@ require([
     reader.readAsText(f);
 
     LoadStationDialog.hide();
+    
+    registry.byId("CalendarMenu").set("disabled", false);
 
   });
 
@@ -1655,7 +1681,7 @@ require([
         <div id="FileSaveMenu" data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true, onClick:function(){SaveFileDialog.show();}">Save SVG file</div>
       </div>
     </div>
-    <div data-dojo-type="dijit/PopupMenuBarItem">
+    <div id="CalendarMenu" data-dojo-type="dijit/PopupMenuBarItem" data-dojo-props="disabled:true">
       <span>Calendar</span>
       <div data-dojo-type="dijit/DropDownMenu" id="calendarMenu">
         <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){SetCalendarDialog.show();}">Set [Start, End[</div>
@@ -1699,6 +1725,153 @@ require([
 
   <!-- SVG code -->
   <div id="gantt">
+    <svg id="graph" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" height="100%" width="100%">
+      <style>
+.day_bar {
+  fill-opacity: 0.2;
+}
+
+.line {
+  fill: gray;
+  fill-opacity: 0.5;
+}
+
+.start_period {
+  fill: green;
+}
+
+.hour_bar {
+  fill-opacity: 0.1;
+}
+
+.even {
+  fill: yellow;
+}
+.uneven {
+  fill: blue;
+}
+
+.day_label {
+  text-anchor: middle; 
+  font-size: 40px;
+  fill: gray;
+}
+
+.hour_label {
+  fill: gray;
+}
+
+.crewmember {
+  text-anchor: end; 
+  font-size: 40px;
+  fill: black;
+}
+
+.highlight {
+  fill: red;
+}
+
+.highlight_label {
+  fill: red;
+  font-weight: bold;
+}
+
+
+
+/* text inside a box */
+.label {
+  text-anchor: start; 
+  font-size: 50px;
+  fill: black;
+}
+
+.DO {
+  fill: orange;
+}
+
+.TRN {
+  fill: green;
+}
+
+.SBY {
+  fill: cyan;
+}
+
+.TRP {
+  fill: blue;
+}
+
+.LEG {
+  fill: magenta;
+}
+.LAYOVER {
+  fill: yellow;
+}
+.DEADHEAD {
+  fill: white;
+}
+.TP {
+  fill: pink;
+}
+.REST {
+  fill: purple;
+}
+      </style>
+      <title>SVG rule demo</title>
+      <desc>an awesome graph</desc>
+
+      <g id="viewport">
+        <!--
+        ====================================================================================
+        CALENDAR
+        ====================================================================================
+        -->
+        <g id="calendar">
+          <text id="intro" x="100" y="50" style="fill:black;font-size:40p">To start, please use File menu to load an XML station file or an existing graph.</text>
+          <g id="calendar_bar" transform="scale(1,100)"></g>
+        </g>
+
+        <!--
+        ====================================================================================
+        CREWMEMBERS
+        ====================================================================================
+        -->
+        <g id="crewmembers">
+          <g id="crewmember_bar" transform="scale(1,1)"></g>
+        </g>
+
+        <!--
+        ====================================================================================
+        ACTIVITIES
+        ====================================================================================
+        -->
+        <g id="activities"></g>
+      </g>
+
+      <!--
+      ====================================================================================
+      COORDINATES
+      ====================================================================================
+      -->
+      <g id="coordinate">
+        <text x="10" y="20" id="coordinateX" style="position:fixed;"> </text> <!-- the white space is mandatatory. -->
+        <text x="10" y="40" id="coordinateY" style="position:fixed;"> </text>
+      </g>
+
+      <!--
+      ====================================================================================
+      DSTORE
+      ====================================================================================
+      -->
+       <!-- Those stores are managed automatically by the graph editor. -->
+       <g id="ConfigurationData"></g>
+       <g id="CalendarStore"></g>
+       <g id="CrewMemberStore"></g>
+       <g id="ActivityStore"></g>
+       <g id="HighLightStore"></g>
+       <g id="StationStore"></g>
+      </g>
+    </svg>
   </div>
   
   <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateTrainingDialog" title="Create training" style="display: none;" data-dojo-props="onHide: function(){CreateTrainingForm.reset();}" >
@@ -1815,14 +1988,7 @@ require([
       <table class="dijitDialogPaneContentArea">
         <tr>
           <td>
-            <input type="file" id="files" name="files"  />
             <input name="uploadedfile" multiple="false" type="file" id="uploader" data-dojo-type="dojox/form/Uploader" data-dojo-props="label: 'Select an XML File'"/> 
-            <!-- <input name="uploadedfile" multiple="false" type="file" id="uploader" data-dojo-type="dojox/form/Uploader" data-dojo-props="label: 'Select an XML File', uploadOnSelect: true"/> -->
-          </td>
-        </tr>
-        <tr>
-          <td>
-            <!--            <div id="files" data-dojo-type="dojox/form/uploader/FileList" data-dojo-props="uploaderId: 'uploader'"></div> -->
           </td>
         </tr>
       </table>
