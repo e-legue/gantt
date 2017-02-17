@@ -9,35 +9,47 @@
 # $3: 0 = Exclude "+" attributes
 #     1 = Include "+" attributes
 
-VERBOSE=0
+VERBOSE=false
+xsl_verbose=""
+sflag=false
+DEST_DIR=`date +%Y%m%d%H%M`
 
 # read the options
-TEMP=`getopt -o x:s:v --long xml:,svg:,verbose' -- "$@"`
+TEMP=`getopt -o s:d:v --long source:,verbose,dest_dir: -- "$@"`
 eval set -- "$TEMP"
 
 # extract options and their arguments into variables.
 while true ; do
-    case "$1" in
-        -x|--xml)
-            XML_FILE=$2 ; shift 2 ;;
-        -s|--svg)
-            SVG_FILE=$2 ; shift 2 ;;
-        -v|--verbose)
-            VERBOSE=1; shift;;
-        --) shift ; break ;;
-        *) echo "Internal error!" ; exit 1 ;;
-    esac
+  case "$1" in
+    -s|--source)
+      SOURCE_FILE=$2; sflag=true; shift 2;;
+    -v|--verbose)
+      VERBOSE=true; xsl_verbose="-v"; shift;;
+    -d|--dest_dir)
+      DEST_DIR=$2; shift 2;;
+    --) shift ; break ;;
+      *) echo "Internal error!"; exit 1;;
+  esac
 done
 
-if [! -e XML_FILE ] then
-  echo "Bad argument -x or --xml. File $XML_FILE does not exist.";
-  exit -1;
-fi
-if [! -e SVG_FILE ] then
-  echo "Bad argumetn -s or --svg. File $SVG_FILE does not exist.";
-  exit -1;
+if ! $sflag
+then 
+  echo "Argument -s or --source source_file is mandatary."
+  exit -1
+
+fi  
+
+if [ ! -e $SOURCE_FILE ]
+then
+  echo "Bad argument value -s or --source. File $SOURCE_FILE does not exist."
+  exit -1
 fi
 
-
-xsltproc -o station.gantt.xml Station2Gantt.xsl station.xml
+if $VERBOSE
+then
+  echo "==============================================="
+  echo "Generation of station.xml file"
+  echo "==============================================="
+fi
+xsltproc $xsl_verbose -o station.xml Gantt2Station.xsl $SOURCE_FILE
 
