@@ -1,5 +1,8 @@
 TODO:
 
+https://dojotoolkit.org/reference-guide/1.10/dojox/data/XmlStore-examples.html#dojox-data-xmlstore-examples
+example of xmlstringstore. That's what i need.
+
 
 
 

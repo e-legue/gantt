@@ -841,6 +841,8 @@ require([
     });
   }
 
+  function LoadStore(){
+  }
 
   function SaveStores(){
     SaveStore(calendarStore, "CalendarStore", "calendar", ["name", "relative", "position", "type", "x", "width"]);
@@ -848,6 +850,11 @@ require([
     SaveStore(activityStore, "ActivityStore", "activity", ["name", "position", "x", "width", "tp", "resta", "restb", "type", "cmPosition"]);
     SaveStore(highLightStore, "HighLightStore", "highligth", ["message", "pk", "x"]);
     SaveStore(stationStore, "StationStore" , "station", ["id", "code", "name", "dstShift", "dstStartLst", "dstEndLst", "utcOffset", "regionList", "offset"]); 
+  }
+
+  function LoadSvgStores(svgNode){
+
+    LoadStationStore(svgNode.getElementbyId("StationStore"));
   }
 
 
@@ -870,6 +877,7 @@ require([
       if( id === undefined ){
         id = obj.getElementsByTagName("id")[0].textContent;
       }
+      console.log("loading station id: " + id);
       
       stationStore.addSync({
         id: id,
@@ -981,6 +989,39 @@ require([
     
     registry.byId("CalendarMenu").set("disabled", false);
 
+  });
+
+  // -----------------------------------------------
+  // Load SVG file dialog
+  // -----------------------------------------------
+  registry.byId("LoadSvg").on("click", function(){
+    var upload = registry.byId("uploader2");
+
+    var f = upload._files[0];
+          
+    if( f.type != "image/svg+xml" ){
+      alert("Please provide an svg file");
+      return;
+    }          
+
+    var reader = new FileReader();
+
+    // Closure to capture the file information and save it in the store.
+    reader.onload = (function(theFile) {
+      return function(e) {
+        console.log(e.target.result);
+        xmlDom = xmlparser.parse(e.target.result);
+          
+        LoadSvgStore(xmlDom);
+      };
+    })(f);
+
+    // Read in the file as a text.
+    reader.readAsText(f);
+
+    LoadSvgDialog.hide();
+    
+    registry.byId("CalendarMenu").set("disabled", false);
   });
 
 
@@ -1676,7 +1717,7 @@ require([
     <div data-dojo-type="dijit/PopupMenuBarItem">
       <span>File</span>
       <div data-dojo-type="dijit/DropDownMenu" id="fileMenu">
-        <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true, onClick:function(){alert('not yet available');}">Load SVG file</div>
+        <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){LoadSvgDialog.show();}">Load SVG file</div>
         <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){LoadStationDialog.show();}">Load XML station file</div>
         <div id="FileSaveMenu" data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true, onClick:function(){SaveFileDialog.show();}">Save SVG file</div>
       </div>
@@ -1979,6 +2020,24 @@ require([
 
     <div class="dijitDialogPaneActionBar">
       <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){ShowHideDialog.hide();}">Close</button>
+    </div>
+  </div>
+
+
+  <!-- TODO: create a tpl, since LoadSvgDialog and LoadStationDialog look the same -->
+  <div data-dojo-type="dijit/Dialog" data-dojo-id="LoadSvgDialog" title="Load SVG file" style="display: none; width: 300px;">
+    <div data-dojo-type="dijit/form/Form" id="LoadSvgForm" data-dojo-id="LoadSvgForm" encType="multipart/form-data" action="" method="">
+      <table class="dijitDialogPaneContentArea">
+        <tr>
+          <td>
+            <input name="uploadedfile" multiple="false" type="file" id="uploader2" data-dojo-type="dojox/form/Uploader" data-dojo-props="label: 'Select an SVG File'"/> 
+          </td>
+        </tr>
+      </table>
+
+      <div class="dijitDialogPaneActionBar">
+        <button data-dojo-type="dijit/form/Button" type="button" id="LoadSvg">Load file</button>
+      </div>
     </div>
   </div>
 
