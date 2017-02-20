@@ -212,7 +212,8 @@ require([
       return this.value.length > 0 ? true : false; 
     },
   });
-  
+
+ 
 
   parser.parse();
 
@@ -831,11 +832,25 @@ require([
       var objNode = document.createElementNS("", obj_name);
 
       InsertionPointId.appendChild(objNode);
-
-      for(i =0; i < obj_def.length; i++) {
+      for(var i = 0; i < obj_def.length; i++) {
         var node = document.createElementNS("", obj_def[i]);
-        t = document.createTextNode(item.get(obj_def[i])); 
-        node.appendChild(t);
+        var data = item.get(obj_def[i]);
+
+        if( data instanceof Array ){
+
+          data = item.get(obj_def[i]).slice();
+
+          for(var j = 0; j < data.length; j++) {
+            var item = document.createElementNS("", "item");
+            var t = document.createTextNode(data[j]); 
+            item.appendChild(t);
+            node.appendChild(item);
+          }
+        }
+        else {
+          var t = document.createTextNode(data); // item.get(obj_def[i])); 
+          node.appendChild(t);
+        }
         objNode.appendChild(node);
       }
     });
@@ -849,7 +864,7 @@ require([
     SaveStore(crewMemberStore, "CrewMemberStore", "crew", ["name", "birthdate", "position", "y", "height"]);
     SaveStore(activityStore, "ActivityStore", "activity", ["name", "position", "x", "width", "tp", "resta", "restb", "type", "cmPosition"]);
     SaveStore(highLightStore, "HighLightStore", "highligth", ["message", "pk", "x"]);
-    SaveStore(stationStore, "StationStore" , "station", ["id", "code", "name", "dstShift", "dstStartLst", "dstEndLst", "utcOffset", "regionList", "offset"]); 
+    SaveStore(stationStore, "StationStore" , "station", ["id", "code", "name", "dstShift", "dstStartLst", "dstEndLst", "utcOffset", "offset", "regionList"]); 
   }
 
   function LoadSvgStores(svgNode){
@@ -878,6 +893,14 @@ require([
         id = obj.getElementsByTagName("id")[0].textContent;
       }
       console.log("loading station id: " + id);
+
+      var regionList = obj.getElementsByTagName("region");
+
+      var regions = [];
+      for(var j =0; j < regionList.length; j++ ){
+        console.log("region: " + regionList[j].textContent);
+        regions.push(regionList[j].textContent);
+      }
       
       stationStore.addSync({
         id: id,
@@ -888,6 +911,7 @@ require([
         dstEndLst: obj.getElementsByTagName("dst-end-lst")[0].textContent,
         utcOffset: obj.getElementsByTagName("utc-offset")[0].textContent,
         offset: offset,
+        regionList: regions,
       });
     }
   }
@@ -2006,8 +2030,8 @@ require([
         <td><label for="Xcompression">Graph factor compression on axe X</label></td>
         <td>
           <select data-dojo-type="dijit/form/Select" name="Xcompression" id="XGraphCompression" style="width: 3em;">
-            <option value="1">1</option>
-            <option value="2" selected="selected">2</option>
+            <option value="1" selected="selected">1</option>
+            <option value="2">2</option>
             <option value="4">4</option>
             <option value="5">5</option>
             <option value="6">6</option>

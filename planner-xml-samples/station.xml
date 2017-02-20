@@ -1373,6 +1373,7 @@
 		<utc-offset>-05h00</utc-offset>
 		<region-list>
 			<region>NOA</region>
+			<region>EUR</region>
 		</region-list>
 	</station>
 </data>
