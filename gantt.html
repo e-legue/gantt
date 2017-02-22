@@ -5,6 +5,7 @@
   
   <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dijit/themes/claro/claro.css" />
   <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dojox/form/resources/CheckedMultiSelect.css" />
+  <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dojox/form/resources/UploaderFileList.css" />
 
   <style type="text/css">
 .datetime {
@@ -133,7 +134,6 @@ require([
   "moment/moment",
   "moment-timezone/builds/moment-timezone-with-data",
   "dojox/xml/parser", 
-//  "dojo/text!./gantt.svg",
   "dojo/domReady!",
 
   "dijit/MenuBar",
@@ -155,6 +155,7 @@ require([
   "dijit/layout/ContentPane", 
   "dojox/layout/TableContainer",
   "dojox/form/Uploader",
+  "dojox/form/uploader/FileList",
   "dijit/form/Select"
 ], function(
   declare,
@@ -856,7 +857,42 @@ require([
     });
   }
 
-  function LoadStore(){
+  function xmlToJson(xml) {
+    var attr,
+        child,
+        attrs = xml.attributes,
+        children = xml.childNodes,
+        key = xml.nodeType,
+        obj = {},
+        i = -1;
+
+    if (key == 1 && attrs.length) {
+      obj[key = '@attributes'] = {};
+      while (attr = attrs.item(++i)) {
+        obj[key][attr.nodeName] = attr.nodeValue;
+      }
+      i = -1;
+    } else if (key == 3) {
+      obj = xml.nodeValue;
+    }
+    while (child = children.item(++i)) {
+      key = child.nodeName;
+      if (obj.hasOwnProperty(key)) {
+        if (obj.toString.call(obj[key]) != '[object Array]') {
+          obj[key] = [obj[key]];
+        }
+        obj[key].push(xmlToJson(child));
+      }
+      else {
+        obj[key] = xmlToJson(child);
+      }
+    }
+    return obj;
+  }
+
+  function LoadStore(store, svgNode){
+    var jsonText = JSON.stringify(xmlToJson(svgNode));
+    console.log(jsonText);
   }
 
   function SaveStores(){
@@ -868,14 +904,50 @@ require([
   }
 
   function LoadSvgStores(svgNode){
-
-    LoadStationStore(svgNode.getElementbyId("StationStore"));
+    console.log(svgNode);
+    console.log("calendar store");
+    console.log(svgNode.getElementById("CalendarStore"));
+    LoadStore(calendarStore, svgNode.getElementById("CalendarStore"));
+//    , "calendar", ["name", "relative", "position", "type", "x", "width"]);
+    console.log("crewmember store");
+    LoadStore(crewMemberStore, svgNode.getElementById("CrewMemberStore"));
+// , "crew", ["name", "birthdate", "position", "y", "height"]);
+    console.log("activity store");
+    LoadStore(activityStore, svgNode.getElementById("ActivityStore"));
+//    , "activity", ["name", "position", "x", "width", "tp", "resta", "restb", "type", "cmPosition"]);
+    LoadStationStore(svgNode.getElementById("StationStore"));
   }
 
 
   // ===============================================
   // LOADING STORES FROM SVG
   // ===============================================
+
+  function getFirstValue(obj, v) {
+    var data = obj.getElementsByTagName(v);
+    if( data.length  == 0 ) return undefined;
+    
+    return data[0].textContent;
+  }          
+
+  function getPolymorphe(obj, v1, v2) {
+    var data = v1.charAt(0) == '@' ? obj.getAttribute(v1.substr(1)) : getFirstValue(obj, v1);
+
+    if( data === undefined ) { 
+      data = v2.charAt(0) == '@' ? obj.getAttribute(v2.substr(1)) : getFirstValue(obj, v2);
+    }    
+    return data;      
+  }
+
+  function getPolymorpheArray(obj, v1, v2) {
+    var data = obj.getElementsByTagName(v1);
+    if( data === undefined ) { 
+      data = obj.getElementsByTagName(v2);
+    }    
+    return data;      
+  }
+
+
   function LoadStationStore(parentNode){
     console.log("LoadStationStore");
     var rootStationStoreChildren = parentNode.getElementsByTagName("station");
@@ -885,19 +957,19 @@ require([
     for(var i = 0; i < rootStationStoreChildren.length; i ++){
       var obj = rootStationStoreChildren[i];
 
-      var data = offsetRegex.exec(obj.getElementsByTagName("utc-offset")[0].textContent);
+      var data = offsetRegex.exec(getPolymorphe(obj, "utc-offset", "utcOffset"));
       var offset = moment.duration({hours: data[1], minutes: data[2]}).asMinutes() * -1;
 
-      var id = obj.getAttribute("id");
-      if( id === undefined ){
-        id = obj.getElementsByTagName("id")[0].textContent;
-      }
-      console.log("loading station id: " + id);
+      var id = getPolymorphe(obj, "@id", "id");
 
-      var regionList = obj.getElementsByTagName("region");
+      console.log("loading station id: " + id);
+      console.log(obj);
+
+      var regionList = getPolymorpheArray(obj, "region", "item");
+      console.log(regionList);
 
       var regions = [];
-      for(var j =0; j < regionList.length; j++ ){
+      for(var j = 0; j < regionList.length; j++){
         console.log("region: " + regionList[j].textContent);
         regions.push(regionList[j].textContent);
       }
@@ -906,10 +978,10 @@ require([
         id: id,
         code: obj.getElementsByTagName("code")[0].textContent,
         name: obj.getElementsByTagName("name")[0].textContent,
-        dstShift: obj.getElementsByTagName("dst-shift")[0].textContent,
-        dstStartLst: obj.getElementsByTagName("dst-start-lst")[0].textContent,
-        dstEndLst: obj.getElementsByTagName("dst-end-lst")[0].textContent,
-        utcOffset: obj.getElementsByTagName("utc-offset")[0].textContent,
+        dstShift: getPolymorphe(obj, "dst-shift", "dstShift"), 
+        dstStartLst: getPolymorphe(obj, "dst-start-lst", "dstStartLst"),
+        dstEndLst: getPolymorphe(obj, "dst-end-lst", "dstEndLst"),
+        utcOffset: getPolymorphe(obj, "utc-offset", "utcOffset"),
         offset: offset,
         regionList: regions,
       });
@@ -1036,7 +1108,7 @@ require([
         console.log(e.target.result);
         xmlDom = xmlparser.parse(e.target.result);
           
-        LoadSvgStore(xmlDom);
+        LoadSvgStores(xmlDom);
       };
     })(f);
 
@@ -2057,6 +2129,11 @@ require([
             <input name="uploadedfile" multiple="false" type="file" id="uploader2" data-dojo-type="dojox/form/Uploader" data-dojo-props="label: 'Select an SVG File'"/> 
           </td>
         </tr>
+        <tr>
+          <td>
+            <div id="files2" data-dojo-type="dojox/form/uploader/FileList" uploaderId="uploader2"></div>
+          </td>
+        </tr>
       </table>
 
       <div class="dijitDialogPaneActionBar">
@@ -2072,6 +2149,11 @@ require([
         <tr>
           <td>
             <input name="uploadedfile" multiple="false" type="file" id="uploader" data-dojo-type="dojox/form/Uploader" data-dojo-props="label: 'Select an XML File'"/> 
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div id="files" data-dojo-type="dojox/form/uploader/FileList" uploaderId="uploader"></div>
           </td>
         </tr>
       </table>
