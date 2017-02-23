@@ -892,7 +892,6 @@ require([
 
   function LoadStore(store, svgNode){
     var jsonText = JSON.stringify(xmlToJson(svgNode));
-    console.log(jsonText);
   }
 
   function SaveStores(){
@@ -915,7 +914,9 @@ require([
     console.log("activity store");
     LoadStore(activityStore, svgNode.getElementById("ActivityStore"));
 //    , "activity", ["name", "position", "x", "width", "tp", "resta", "restb", "type", "cmPosition"]);
-    LoadStationStore(svgNode.getElementById("StationStore"));
+    LoadStationStore(svgNode.getElementById("StationStore"), MODE_SVG);
+    console.log(stationStore);
+    console.log(StationModel);          
   }
 
 
@@ -923,73 +924,61 @@ require([
   // LOADING STORES FROM SVG
   // ===============================================
 
-  function getFirstValue(obj, v) {
-    var data = obj.getElementsByTagName(v);
-    if( data.length  == 0 ) return undefined;
-    
-    return data[0].textContent;
-  }          
+  mappingStationSvgXml = { 
+    "id": "id",
+    "code": "code",
+    "name": "name",
+    "dstShift": "dst-shift",
+    "dstStartLst": "dst-start-lst",
+    "dstEndLst": "dst-end-lst",
+    "utcOffset": "utc-offset",
+    "regionList": "region-list", 
+    "item": "region"
+  };
 
-  function getPolymorphe(obj, v1, v2) {
-    var data = v1.charAt(0) == '@' ? obj.getAttribute(v1.substr(1)) : getFirstValue(obj, v1);
-
-    if( data === undefined ) { 
-      data = v2.charAt(0) == '@' ? obj.getAttribute(v2.substr(1)) : getFirstValue(obj, v2);
-    }    
-    return data;      
+  MODE_SVG = 0;
+  MODE_XML = 1;
+  
+  // Some tags are not exactly the same in svg def and xml def of a station.
+  // The xml introduce some dash character in word which is not compliant with 
+  // variable name.
+  function convertionSvgXml(key, mode) {
+    return mode == MODE_SVG ? key : mappingStationSvgXml[key];
   }
 
-  function getPolymorpheArray(obj, v1, v2) {
-    var data = obj.getElementsByTagName(v1);
-    if( data === undefined ) { 
-      data = obj.getElementsByTagName(v2);
-    }    
-    return data;      
-  }
-
-
-  function LoadStationStore(parentNode){
-    console.log("LoadStationStore");
+  function LoadStationStore(parentNode, mode){
     var rootStationStoreChildren = parentNode.getElementsByTagName("station");
     var offsetRegex = /^(-?\d{2})h(\d{2})$/;
-
-    console.log(rootStationStoreChildren);
+ 
     for(var i = 0; i < rootStationStoreChildren.length; i ++){
       var obj = rootStationStoreChildren[i];
 
-      var data = offsetRegex.exec(getPolymorphe(obj, "utc-offset", "utcOffset"));
+      var data = offsetRegex.exec(obj.getElementsByTagName(convertionSvgXml("utcOffset", mode))[0].textContent);
       var offset = moment.duration({hours: data[1], minutes: data[2]}).asMinutes() * -1;
+  
+      var id = mode == MODE_SVG ? obj.getElementsByTagName("id")[0].textContent : obj.getAttribute("id"); 
 
-      var id = getPolymorphe(obj, "@id", "id");
-
-      console.log("loading station id: " + id);
-      console.log(obj);
-
-      var regionList = getPolymorpheArray(obj, "region", "item");
-      console.log(regionList);
+      var regionList = obj.getElementsByTagName(convertionSvgXml("item", mode)); 
 
       var regions = [];
       for(var j = 0; j < regionList.length; j++){
-        console.log("region: " + regionList[j].textContent);
         regions.push(regionList[j].textContent);
       }
       
       stationStore.addSync({
         id: id,
-        code: obj.getElementsByTagName("code")[0].textContent,
-        name: obj.getElementsByTagName("name")[0].textContent,
-        dstShift: getPolymorphe(obj, "dst-shift", "dstShift"), 
-        dstStartLst: getPolymorphe(obj, "dst-start-lst", "dstStartLst"),
-        dstEndLst: getPolymorphe(obj, "dst-end-lst", "dstEndLst"),
-        utcOffset: getPolymorphe(obj, "utc-offset", "utcOffset"),
-        offset: offset,
+        code: obj.getElementsByTagName(convertionSvgXml("code", mode))[0].textContent,
+        name: obj.getElementsByTagName(convertionSvgXml("name", mode))[0].textContent,
+        dstShift: obj.getElementsByTagName(convertionSvgXml("dstShift", mode))[0].textContent, 
+        dstStartLst: obj.getElementsByTagName(convertionSvgXml("dstStartLst", mode))[0].textContent,
+        dstEndLst: obj.getElementsByTagName(convertionSvgXml("dstEndLst", mode))[0].textContent,
+        utcOffset: obj.getElementsByTagName(convertionSvgXml("utcOffset", mode))[0].textContent,
         regionList: regions,
+        offset: offset,
       });
     }
   }
 
-  // load data about stations.
-  // LoadStationStore();
 
   var stationStoreAdapter = new DstoreAdapter(stationStore);
   registry.byId("CalendarStation").set("store", stationStoreAdapter);
@@ -1074,7 +1063,7 @@ require([
         console.log(e.target.result);
         xmlDom = xmlparser.parse(e.target.result);
           
-        LoadStationStore(xmlDom);
+        LoadStationStore(xmlDom, MODE_XML);
       };
     })(f);
 
