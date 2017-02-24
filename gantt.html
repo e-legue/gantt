@@ -891,7 +891,14 @@ require([
   }
 
   function LoadStore(store, svgNode){
-    var jsonText = JSON.stringify(xmlToJson(svgNode));
+    var obj = store.Model().schema;
+
+    for(var property in obj) {
+      if( obj.hasOwnProperty(property) ) {
+        // do stuff
+        console.log(property);  
+      }
+    }
   }
 
   function SaveStores(){
@@ -903,20 +910,17 @@ require([
   }
 
   function LoadSvgStores(svgNode){
-    console.log(svgNode);
     console.log("calendar store");
     console.log(svgNode.getElementById("CalendarStore"));
     LoadStore(calendarStore, svgNode.getElementById("CalendarStore"));
-//    , "calendar", ["name", "relative", "position", "type", "x", "width"]);
     console.log("crewmember store");
     LoadStore(crewMemberStore, svgNode.getElementById("CrewMemberStore"));
-// , "crew", ["name", "birthdate", "position", "y", "height"]);
     console.log("activity store");
     LoadStore(activityStore, svgNode.getElementById("ActivityStore"));
-//    , "activity", ["name", "position", "x", "width", "tp", "resta", "restb", "type", "cmPosition"]);
+    console.log("highlight store");
+    LoadStore(highLightStore, svgNode.getElementById("HighLightStore"));
+    console.log("station store");
     LoadStationStore(svgNode.getElementById("StationStore"), MODE_SVG);
-    console.log(stationStore);
-    console.log(StationModel);          
   }
 
 
