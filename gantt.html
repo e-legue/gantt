@@ -604,8 +604,8 @@ require([
       dstStartLst: "string",
       dstEndLst: "string",
       utcOffset: "string",
-      regionList: "array",
       offset: "numeric",
+      regionList: "array",
       /* do not work with query !!!
       offset: new ComputedProperty({ 
         dependsOn: ["utcOffet"],
@@ -826,34 +826,41 @@ require([
   // ===============================================
   // SAVING STORES TO SVG
   // ===============================================
-  function SaveStore(store, id, obj_name, obj_def){
-    var InsertionPointId    = svg.getElementById(id);
+  function SaveStore(store, id, obj_name){
+    var InsertionPointId = svg.getElementById(id);
+    var schema           = store.Model().schema;
 
     store.forEach(function(item){
       var objNode = document.createElementNS("", obj_name);
 
       InsertionPointId.appendChild(objNode);
-      for(var i = 0; i < obj_def.length; i++) {
-        var node = document.createElementNS("", obj_def[i]);
-        var data = item.get(obj_def[i]);
 
-        if( data instanceof Array ){
+      for(var property in schema) {
+        if( schema.hasOwnProperty(property) ) {
+          console.log(property);
+          
+          console.log(item.get(property));
+          var node = document.createElementNS("", property);
+          var data = item.get(property);
 
-          data = item.get(obj_def[i]).slice();
+          if( data instanceof Array ){
 
-          for(var j = 0; j < data.length; j++) {
-            var item = document.createElementNS("", "item");
-            var t = document.createTextNode(data[j]); 
-            item.appendChild(t);
-            node.appendChild(item);
+            data = item.get(property).slice();
+
+            for(var j = 0; j < data.length; j++) {
+              var item = document.createElementNS("", "item");
+              var t = document.createTextNode(data[j]); 
+              item.appendChild(t);
+              node.appendChild(item);
+            }
           }
+          else {
+            var t = document.createTextNode(data);
+            node.appendChild(t);
+          }
+          objNode.appendChild(node);
         }
-        else {
-          var t = document.createTextNode(data); // item.get(obj_def[i])); 
-          node.appendChild(t);
-        }
-        objNode.appendChild(node);
-      }
+      }    
     });
   }
 
@@ -890,35 +897,51 @@ require([
     return obj;
   }
 
-  function LoadStore(store, svgNode){
-    var obj = store.Model().schema;
+  function LoadStore(store, svgNode, nodeName){
+    var childrenNodes = svgNode.childNodes; // getElementsByTagName(nodeName);
+    var schema = store.Model().schema;
 
-    for(var property in obj) {
-      if( obj.hasOwnProperty(property) ) {
-        // do stuff
-        console.log(property);  
+    for(var i = 0; i < childrenNodes.length; i ++){
+      var data = childrenNodes[i];
+      var def = {};
+
+      for(var property in schema) {
+        if( schema.hasOwnProperty(property) ) {
+          // do stuff
+          console.log(property);
+          console.log(data.getElementsByTagName(property)[0].textContent);
+          
+          def[property] = data.getElementsByTagName(property)[0].textContent;
+        }
       }
+      store.addSync(def);
     }
   }
 
   function SaveStores(){
-    SaveStore(calendarStore, "CalendarStore", "calendar", ["name", "relative", "position", "type", "x", "width"]);
-    SaveStore(crewMemberStore, "CrewMemberStore", "crew", ["name", "birthdate", "position", "y", "height"]);
-    SaveStore(activityStore, "ActivityStore", "activity", ["name", "position", "x", "width", "tp", "resta", "restb", "type", "cmPosition"]);
-    SaveStore(highLightStore, "HighLightStore", "highligth", ["message", "pk", "x"]);
-    SaveStore(stationStore, "StationStore" , "station", ["id", "code", "name", "dstShift", "dstStartLst", "dstEndLst", "utcOffset", "offset", "regionList"]); 
+    
+    console.log("calendar store");
+    SaveStore(calendarStore, "CalendarStore", "calendar");
+    console.log("crewmember store");
+    SaveStore(crewMemberStore, "CrewMemberStore", "crew");
+    console.log("activity store");
+    SaveStore(activityStore, "ActivityStore", "activity");
+    console.log("highlight store");
+    SaveStore(highLightStore, "HighLightStore", "highligth");
+    console.log("station store");
+    SaveStore(stationStore, "StationStore" , "station"); 
   }
 
   function LoadSvgStores(svgNode){
     console.log("calendar store");
     console.log(svgNode.getElementById("CalendarStore"));
-    LoadStore(calendarStore, svgNode.getElementById("CalendarStore"));
+    LoadStore(calendarStore, svgNode.getElementById("CalendarStore"),"calendar");
     console.log("crewmember store");
-    LoadStore(crewMemberStore, svgNode.getElementById("CrewMemberStore"));
+    LoadStore(crewMemberStore, svgNode.getElementById("CrewMemberStore"), "crew");
     console.log("activity store");
-    LoadStore(activityStore, svgNode.getElementById("ActivityStore"));
+    LoadStore(activityStore, svgNode.getElementById("ActivityStore"), "activity");
     console.log("highlight store");
-    LoadStore(highLightStore, svgNode.getElementById("HighLightStore"));
+    LoadStore(highLightStore, svgNode.getElementById("HighLightStore"), "highligth");
     console.log("station store");
     LoadStationStore(svgNode.getElementById("StationStore"), MODE_SVG);
   }
@@ -977,8 +1000,8 @@ require([
         dstStartLst: obj.getElementsByTagName(convertionSvgXml("dstStartLst", mode))[0].textContent,
         dstEndLst: obj.getElementsByTagName(convertionSvgXml("dstEndLst", mode))[0].textContent,
         utcOffset: obj.getElementsByTagName(convertionSvgXml("utcOffset", mode))[0].textContent,
-        regionList: regions,
         offset: offset,
+        regionList: regions,
       });
     }
   }
@@ -1122,7 +1145,7 @@ require([
 
     SaveStores();
 
-
+          
     var a           = document.createElement("a");
     var contentType = "data:application/octet-stream,";
 
