@@ -430,6 +430,12 @@ require([
 
     Gbar.appendChild(SVG_drawRect("line", 0,   0, 1, 1));
     Gbar.appendChild(SVG_drawRect("line", 0, 200, 1, 1));
+
+
+    // scale vertically the calendar to fit the number of crewmember.
+    var bar = svg.getElementById("calendar_bar");
+    var y = Number(item.get("y")) + Number(item.get("height"));
+    bar.setAttribute("transform", "scale(1," + y + ")");
   }
 
   // Draw an activity. As the others, the drawing is embedded into a g node 
@@ -864,39 +870,6 @@ require([
     });
   }
 
-  function xmlToJson(xml) {
-    var attr,
-        child,
-        attrs = xml.attributes,
-        children = xml.childNodes,
-        key = xml.nodeType,
-        obj = {},
-        i = -1;
-
-    if (key == 1 && attrs.length) {
-      obj[key = '@attributes'] = {};
-      while (attr = attrs.item(++i)) {
-        obj[key][attr.nodeName] = attr.nodeValue;
-      }
-      i = -1;
-    } else if (key == 3) {
-      obj = xml.nodeValue;
-    }
-    while (child = children.item(++i)) {
-      key = child.nodeName;
-      if (obj.hasOwnProperty(key)) {
-        if (obj.toString.call(obj[key]) != '[object Array]') {
-          obj[key] = [obj[key]];
-        }
-        obj[key].push(xmlToJson(child));
-      }
-      else {
-        obj[key] = xmlToJson(child);
-      }
-    }
-    return obj;
-  }
-
   function LoadStore(store, svgNode, nodeName){
     var childrenNodes = svgNode.childNodes; // getElementsByTagName(nodeName);
     var schema = store.Model().schema;
@@ -907,10 +880,6 @@ require([
 
       for(var property in schema) {
         if( schema.hasOwnProperty(property) ) {
-          // do stuff
-          console.log(property);
-          console.log(data.getElementsByTagName(property)[0].textContent);
-          
           def[property] = data.getElementsByTagName(property)[0].textContent;
         }
       }
@@ -933,6 +902,8 @@ require([
   }
 
   function LoadSvgStores(svgNode){
+    RemoveIntroMessage();
+
     console.log("calendar store");
     console.log(svgNode.getElementById("CalendarStore"));
     LoadStore(calendarStore, svgNode.getElementById("CalendarStore"),"calendar");
@@ -1330,10 +1301,6 @@ require([
       y:coordY,
       height:200,
     });
-
-    coordY += 200;
-    var bar = svg.getElementById("calendar_bar");
-    bar.setAttribute("transform", "scale(1," + coordY + ")");
 
     CreateCrewMemberDialog.hide();
   });
