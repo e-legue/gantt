@@ -250,16 +250,15 @@ require([
 
 
 
-  function PopupDetails(id) {
+  // ===============================================
+  // Display "details" of an activity.
+  // ===============================================
+  function PopupDetails(activityId) {
     var myDialog = new Dialog({
         title: "Detail activity",
         style: "width: 300px",
-        content: "Activitiy id: " + id
+        content: "Activitiy id: " + activityId
     });
-
-
-
-
 
     myDialog.show();
   }
@@ -495,6 +494,42 @@ require([
 
   var TrackableMemory = declare([Memory, Trackable]);
 
+  var ConfigurationModel = declare(Model, {
+    schema: {
+      periodStart: "string",
+      periodEnd: "string",
+      transportationTime: "numeric",
+      timezone: "",
+      station: "",
+      calendarStart: "string",
+      calendarEnd: "string",
+      File: "boolean",
+      File_LoadSVGFile: "boolean",
+      File_LoadXMLStationFile: "boolean",
+      File_SaveSVGFile: "boolean",
+      Calendar: "boolean",
+      Calendar_SetStartEnd: "boolean",
+      Calendar_SetStartPeriods: "boolean",
+      BusinessObject: "boolean",
+      BusinessObject_ShowConstants: "boolean",
+      BusinessObject_CreateCrewMember: "boolean",
+      BusinessObject_CreateActivity: "boolean",
+      BusinessObject_CreateActivity_DayOff: "boolean",
+      BusinessObject_CreateActivity_Trip: "boolean",
+      BusinessObject_CreateActivity_Training: "boolean",
+      BusinessObject_CreateActivity_OtherActivity: "boolean",
+      GraphOption: "boolean",
+      GraphOption_CalendarDateHour: "boolean",
+      GraphOption_Activities: "boolean",
+      HighLights: "boolean",
+      HighLights_SpecificDateTime: "boolean",
+      HighLights_Distance: "boolean",
+      HighLights_Window: "boolean",
+    },
+    validateOnSet: false,
+  });
+
+
   var CalendarModel = declare(Model, {
     schema: {
       name: "string",
@@ -662,6 +697,14 @@ require([
   // ===============================================
   // Data STOREs and events.
   // ===============================================
+
+  
+  // -----------------------------------------------
+  // configurationStore
+  // -----------------------------------------------
+  var configurationStore = new Memory({
+    Model: ConfigurationModel,
+  });
 
   // -----------------------------------------------
   // calendarStore
@@ -1760,32 +1803,7 @@ require([
       }
     });
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 });
-
-
-
 
   </script>
 
