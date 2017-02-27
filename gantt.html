@@ -496,35 +496,36 @@ require([
 
   var ConfigurationModel = declare(Model, {
     schema: {
+      id: { type: "numeric", default: 0 },
       periodStart: "string",
       periodEnd: "string",
       transportationTime: "numeric",
-      timezone: "",
-      station: "",
+      timezone: "string",
+      station: "string",
       calendarStart: "string",
       calendarEnd: "string",
-      File: "boolean",
-      File_LoadSVGFile: "boolean",
-      File_LoadXMLStationFile: "boolean",
-      File_SaveSVGFile: "boolean",
-      Calendar: "boolean",
-      Calendar_SetStartEnd: "boolean",
-      Calendar_SetStartPeriods: "boolean",
-      BusinessObject: "boolean",
-      BusinessObject_ShowConstants: "boolean",
-      BusinessObject_CreateCrewMember: "boolean",
-      BusinessObject_CreateActivity: "boolean",
-      BusinessObject_CreateActivity_DayOff: "boolean",
-      BusinessObject_CreateActivity_Trip: "boolean",
-      BusinessObject_CreateActivity_Training: "boolean",
-      BusinessObject_CreateActivity_OtherActivity: "boolean",
-      GraphOption: "boolean",
-      GraphOption_CalendarDateHour: "boolean",
-      GraphOption_Activities: "boolean",
-      HighLights: "boolean",
-      HighLights_SpecificDateTime: "boolean",
-      HighLights_Distance: "boolean",
-      HighLights_Window: "boolean",
+      MenuFile: { type: "boolean", default: false, },
+      MenuFileLoadSVGFile: { type: "boolean", default: false, },
+      MenuFileLoadXMLStationFile: { type: "boolean", default: false, },
+      MenuFileSaveSVGFile: { type: "boolean", default: true, },
+      MenuCalendar: { type: "boolean", default: true, },
+      MenuCalendarSetStartEnd: { type: "boolean", default: true, },
+      MenuCalendarSetStartPeriods: { type: "boolean", default: true, },
+      MenuBusinessObject: { type: "boolean", default: true, },
+      MenuBusinessObjectShowConstants: { type: "boolean", default: true, },
+      MenuBusinessObjectCreateCrewMember: { type: "boolean", default: true, },
+      MenuBusinessObjectCreateActivity: { type: "boolean", default: true, },
+      MenuBusinessObjectCreateActivityDayOff: { type: "boolean", default: true, },
+      MenuBusinessObjectCreateActivityTrip: { type: "boolean", default: true, },
+      MenuBusinessObjectCreateActivityTraining: { type: "boolean", default: true, },
+      MenuBusinessObjectCreateActivityOtherActivity: { type: "boolean", default: true, },
+      MenuGraphOption: { type: "boolean", default: true, },
+      MenuGraphOptionCalendarDateHour: { type: "boolean", default: true, },
+      MenuGraphOptionActivities: { type: "boolean", default: true, },
+      MenuHighLights: { type: "boolean", default: true, },
+      MenuHighLightsSpecificDateTime: { type: "boolean", default: true, },
+      MenuHighLightsDistance: { type: "boolean", default: true, },
+      MenuHighLightsWindow: { type: "boolean", default: true, },
     },
     validateOnSet: false,
   });
@@ -704,7 +705,38 @@ require([
   // -----------------------------------------------
   var configurationStore = new Memory({
     Model: ConfigurationModel,
+    idProperty: "id",
+
   });
+
+  function MenuAccess(object){
+    var patt = new RegExp("^Menu");
+
+    for(var property in object) {
+      console.log(property);
+      if( patt.test(property) ) {
+        console.log(object.get(property));
+        registry.byId(property).set("disabled", object.get(property));
+      }
+    }
+  }
+
+  var config = configurationStore.Model();
+
+  configurationStore.addSync(config);
+
+  console.log("configurationStore");
+  console.log(configurationStore);
+
+//  var config = configurationStore.getSync(0);
+
+  console.log("config");
+  console.log(config);
+
+//  console.log(configurationStore.Model());
+
+  MenuAccess(config);
+
 
   // -----------------------------------------------
   // calendarStore
@@ -931,7 +963,9 @@ require([
   }
 
   function SaveStores(){
-    
+   
+    console.log("configuration store");
+    SaveStore(configurationStore, "ConfigurationStore", "configuration");
     console.log("calendar store");
     SaveStore(calendarStore, "CalendarStore", "calendar");
     console.log("crewmember store");
@@ -947,6 +981,8 @@ require([
   function LoadSvgStores(svgNode){
     RemoveIntroMessage();
 
+    console.log("configuration store");
+    console.log(svgNode.getElementById("ConfigurationStore"));
     console.log("calendar store");
     console.log(svgNode.getElementById("CalendarStore"));
     LoadStore(calendarStore, svgNode.getElementById("CalendarStore"),"calendar");
@@ -1811,50 +1847,50 @@ require([
 <body class="claro">
   
   <div data-dojo-type="dijit/MenuBar" id="navMenu" style="margin-bottom: 8px;">
-    <div data-dojo-type="dijit/PopupMenuBarItem">
+    <div id="MenuFile" data-dojo-type="dijit/PopupMenuBarItem">
       <span>File</span>
-      <div data-dojo-type="dijit/DropDownMenu" id="fileMenu">
-        <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){LoadSvgDialog.show();}">Load SVG file</div>
-        <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){LoadStationDialog.show();}">Load XML station file</div>
-        <div id="FileSaveMenu" data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true, onClick:function(){SaveFileDialog.show();}">Save SVG file</div>
+      <div data-dojo-type="dijit/DropDownMenu">
+        <div id="MenuFileLoadSVGFile"        data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){LoadSvgDialog.show();}">Load SVG file</div>
+        <div id="MenuFileLoadXMLStationFile" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){LoadStationDialog.show();}">Load XML station file</div>
+        <div id="MenuFileSaveSVGFile"        data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){SaveFileDialog.show();}">Save SVG file</div>
       </div>
     </div>
-    <div id="CalendarMenu" data-dojo-type="dijit/PopupMenuBarItem" data-dojo-props="disabled:true">
+    <div id="MenuCalendar" data-dojo-type="dijit/PopupMenuBarItem">
       <span>Calendar</span>
-      <div data-dojo-type="dijit/DropDownMenu" id="calendarMenu">
-        <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){SetCalendarDialog.show();}">Set [Start, End[</div>
-        <div id="CalendarSetStartPeriodsMenu" data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true, onClick:function(){SetStartPeriodsDialog.show();}">Set start period(s)</div>
+      <div data-dojo-type="dijit/DropDownMenu">
+        <div id="MenuCalendarSetStartEnd"     data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){SetCalendarDialog.show();}">Set [Start, End[</div>
+        <div id="MenuCalendarSetStartPeriods" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){SetStartPeriodsDialog.show();}">Set start period(s)</div>
       </div>
     </div>
-    <div id="BusinessObjectMenu" data-dojo-type="dijit/PopupMenuBarItem" data-dojo-props="disabled:true">
+    <div id="MenuBusinessObject" data-dojo-type="dijit/PopupMenuBarItem">
       <span>Business objects</span>
-      <div data-dojo-type="dijit/DropDownMenu" id="businessObjectMenu">
-        <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){ShowConstantsDialog.show();}">Show constants</div>
-        <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateCrewMemberDialog.show();}">Create crewmember</div>
+      <div data-dojo-type="dijit/DropDownMenu">
+        <div id="MenuBusinessObjectShowConstants"    data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){ShowConstantsDialog.show();}">Show constants</div>
+        <div id="MenuBusinessObjectCreateCrewMember" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateCrewMemberDialog.show();}">Create crewmember</div>
         <div data-dojo-type="dijit/PopupMenuItem">
           <span>Create activity</span>
-          <div data-dojo-type="dijit/DropDownMenu" id="submenu2">
-            <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateDayOffDialog.show();}">Day off</div>
-            <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true, onClick:function(){alert('not yet available');}">Trip</div>
-            <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateTrainingDialog.show();}">Training</div>
-            <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true, onClick:function(){alert('not yet available');}">Other activity</div>
+          <div id="MenuBusinessObjectCreateActivity" data-dojo-type="dijit/DropDownMenu">
+            <div id="MenuBusinessObjectCreateActivityDayOff"        data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateDayOffDialog.show();}">Day off</div>
+            <div id="MenuBusinessObjectCreateActivityTrip"          data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){alert('not yet available');}">Trip</div>
+            <div id="MenuBusinessObjectCreateActivityTraining"      data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateTrainingDialog.show();}">Training</div>
+            <div id="MenuBusinessObjectCreateActivityOtherActivity" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){alert('not yet available');}">Other activity</div>
           </div>
         </div>
       </div>
     </div>
-    <div id="GraphOptionMenu" data-dojo-type="dijit/PopupMenuBarItem" data-dojo-props="disabled:true">
+    <div id="MenuGraphOption" data-dojo-type="dijit/PopupMenuBarItem">
       <span>Graph options</span>
-      <div data-dojo-type="dijit/DropDownMenu" id="graphOptionMenu">
-        <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){ShowHideDialog.show();}">Calendar Date/Hours</div>
-        <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true, onClick:function(){alert('not yet available');}">Activities</div>
+      <div data-dojo-type="dijit/DropDownMenu">
+        <div id="MenuGraphOptionCalendarDateHour" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){ShowHideDialog.show();}">Calendar Date/Hours</div>
+        <div id="MenuGraphOptionActivities"       data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){alert('not yet available');}">Activities</div>
       </div>
     </div>
-    <div id="HighlightsMenu" data-dojo-type="dijit/PopupMenuBarItem" data-dojo-props="disabled:true">
+    <div id="MenuHighLights" data-dojo-type="dijit/PopupMenuBarItem">
       <span>Highlights</span>
-      <div data-dojo-type="dijit/DropDownMenu" id="highlightsMenu">
-        <div data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateHighlightDialog.show();}">Specific datetime(s)</div>
-        <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true, onClick:function(){alert('not yet available');}">Distance</div>
-        <div data-dojo-type="dijit/MenuItem" data-dojo-props="disabled:true, onClick:function(){alert('not yet available');}">Window</div>
+      <div data-dojo-type="dijit/DropDownMenu">
+        <div id="MenuHighLightsSpecificDateTime" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateHighlightDialog.show();}">Specific datetime(s)</div>
+        <div id="MenuHighLightsDistance"         data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){alert('not yet available');}">Distance</div>
+        <div id="MenuHighLightsWindow"           data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){alert('not yet available');}">Window</div>
       </div>
     </div>
 
@@ -2002,7 +2038,7 @@ require([
       ====================================================================================
       -->
        <!-- Those stores are managed automatically by the graph editor. -->
-       <g id="ConfigurationData"></g>
+       <g id="ConfigurationStore"></g>
        <g id="CalendarStore"></g>
        <g id="CrewMemberStore"></g>
        <g id="ActivityStore"></g>
