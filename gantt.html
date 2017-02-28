@@ -221,11 +221,6 @@ require([
   // ===============================================
   // Install gantt svg data at the right place.
   // ===============================================
-  /*
-  var ganttId = dom.byId("gantt"); 
-  var svgDomInput = xmlparser.parse(ganttSVG);
-  gantt.appendChild(svgDomInput.documentElement);
-  */
   on.emit(window, "resize", {bubbles: true,cancelable: true});
 
 
@@ -492,14 +487,14 @@ require([
   // Data MODELs
   // ===============================================
 
-  var TrackableMemory = declare([Memory, Trackable]);
 
   var ConfigurationModel = declare(Model, {
     schema: {
       id: { type: "numeric", default: 0 },
       periodStart: "string",
       periodEnd: "string",
-      transportationTime: "numeric",
+      transportationTime: { type: "numeric", default: 0},
+      midnightOffset: { type: "numeric", default: 0},
       timezone: "string",
       station: "string",
       calendarStart: "string",
@@ -512,18 +507,18 @@ require([
       MenuCalendarSetStartEnd: { type: "boolean", default: true, },
       MenuCalendarSetStartPeriods: { type: "boolean", default: true, },
       MenuBusinessObject: { type: "boolean", default: true, },
-      MenuBusinessObjectShowConstants: { type: "boolean", default: true, },
-      MenuBusinessObjectCreateCrewMember: { type: "boolean", default: true, },
-      MenuBusinessObjectCreateActivity: { type: "boolean", default: true, },
-      MenuBusinessObjectCreateActivityDayOff: { type: "boolean", default: true, },
+      MenuBusinessObjectShowConstants: { type: "boolean", default: false, },
+      MenuBusinessObjectCreateCrewMember: { type: "boolean", default: false, },
+      MenuBusinessObjectCreateActivity: { type: "boolean", default: false, },
+      MenuBusinessObjectCreateActivityDayOff: { type: "boolean", default: false, },
       MenuBusinessObjectCreateActivityTrip: { type: "boolean", default: true, },
-      MenuBusinessObjectCreateActivityTraining: { type: "boolean", default: true, },
+      MenuBusinessObjectCreateActivityTraining: { type: "boolean", default: false, },
       MenuBusinessObjectCreateActivityOtherActivity: { type: "boolean", default: true, },
       MenuGraphOption: { type: "boolean", default: true, },
-      MenuGraphOptionCalendarDateHour: { type: "boolean", default: true, },
+      MenuGraphOptionCalendarDateHour: { type: "boolean", default: false, },
       MenuGraphOptionActivities: { type: "boolean", default: true, },
       MenuHighLights: { type: "boolean", default: true, },
-      MenuHighLightsSpecificDateTime: { type: "boolean", default: true, },
+      MenuHighLightsSpecificDateTime: { type: "boolean", default: false, },
       MenuHighLightsDistance: { type: "boolean", default: true, },
       MenuHighLightsWindow: { type: "boolean", default: true, },
     },
@@ -709,38 +704,27 @@ require([
 
   });
 
-  function MenuAccess(object){
-    var patt = new RegExp("^Menu");
+  configurationStore.on("add, update", function(event){
+    var cfg     = event.target;
+    var pattern = new RegExp("^Menu");
 
-    for(var property in object) {
-      console.log(property);
-      if( patt.test(property) ) {
-        console.log(object.get(property));
-        registry.byId(property).set("disabled", object.get(property));
+    for(var property in cfg) {
+      if( pattern.test(property) ) {
+        registry.byId(property).set("disabled", cfg.get(property));
       }
     }
-  }
+  });
 
   var config = configurationStore.Model();
 
   configurationStore.addSync(config);
 
-  console.log("configurationStore");
-  console.log(configurationStore);
-
-//  var config = configurationStore.getSync(0);
-
-  console.log("config");
-  console.log(config);
-
-//  console.log(configurationStore.Model());
-
-  MenuAccess(config);
-
-
   // -----------------------------------------------
   // calendarStore
   // -----------------------------------------------
+  var TrackableMemory = declare([Memory, Trackable]);
+
+
   var calendarStore = new TrackableMemory({
     Model: CalendarModel,
     idProperty: "position",
@@ -918,9 +902,7 @@ require([
 
       for(var property in schema) {
         if( schema.hasOwnProperty(property) ) {
-          console.log(property);
           
-          console.log(item.get(property));
           var node = document.createElementNS("", property);
           var data = item.get(property);
 
@@ -955,44 +937,35 @@ require([
 
       for(var property in schema) {
         if( schema.hasOwnProperty(property) ) {
-          def[property] = data.getElementsByTagName(property)[0].textContent;
+          var type = typeof(schema[property]) == "object" ? schema[property].type : schema[property];
+          
+          if( type == "numeric" ) def[property] = Number(data.getElementsByTagName(property)[0].textContent);
+          else if( type == "boolean") def[property] = data.getElementsByTagName(property)[0].textContent == 'true'
+          else def[property] = data.getElementsByTagName(property)[0].textContent;
         }
       }
-      store.addSync(def);
+      store.putSync(def);
     }
   }
 
   function SaveStores(){
    
-    console.log("configuration store");
     SaveStore(configurationStore, "ConfigurationStore", "configuration");
-    console.log("calendar store");
     SaveStore(calendarStore, "CalendarStore", "calendar");
-    console.log("crewmember store");
     SaveStore(crewMemberStore, "CrewMemberStore", "crew");
-    console.log("activity store");
     SaveStore(activityStore, "ActivityStore", "activity");
-    console.log("highlight store");
     SaveStore(highLightStore, "HighLightStore", "highligth");
-    console.log("station store");
     SaveStore(stationStore, "StationStore" , "station"); 
   }
 
   function LoadSvgStores(svgNode){
     RemoveIntroMessage();
 
-    console.log("configuration store");
-    console.log(svgNode.getElementById("ConfigurationStore"));
-    console.log("calendar store");
-    console.log(svgNode.getElementById("CalendarStore"));
+    LoadStore(configurationStore, svgNode.getElementById("ConfigurationStore"),"configuration");
     LoadStore(calendarStore, svgNode.getElementById("CalendarStore"),"calendar");
-    console.log("crewmember store");
     LoadStore(crewMemberStore, svgNode.getElementById("CrewMemberStore"), "crew");
-    console.log("activity store");
     LoadStore(activityStore, svgNode.getElementById("ActivityStore"), "activity");
-    console.log("highlight store");
     LoadStore(highLightStore, svgNode.getElementById("HighLightStore"), "highligth");
-    console.log("station store");
     LoadStationStore(svgNode.getElementById("StationStore"), MODE_SVG);
   }
 
@@ -1126,7 +1099,6 @@ require([
 
     var f = upload._files[0];
           
-    console.log(f);
     if( f.type != "text/xml" ){
       alert("Please provide an xml file");
       return;
@@ -1137,7 +1109,6 @@ require([
     // Closure to capture the file information and save it in the store.
     reader.onload = (function(theFile) {
       return function(e) {
-        console.log(e.target.result);
         xmlDom = xmlparser.parse(e.target.result);
           
         LoadStationStore(xmlDom, MODE_XML);
@@ -1149,7 +1120,10 @@ require([
 
     LoadStationDialog.hide();
     
-    registry.byId("CalendarMenu").set("disabled", false);
+    config.MenuCalendar = false;
+    config.MenuCalendarSetStartEnd = false;
+
+    configurationStore.putSync(config);
 
   });
 
@@ -1171,7 +1145,6 @@ require([
     // Closure to capture the file information and save it in the store.
     reader.onload = (function(theFile) {
       return function(e) {
-        console.log(e.target.result);
         xmlDom = xmlparser.parse(e.target.result);
           
         LoadSvgStores(xmlDom);
@@ -1182,8 +1155,6 @@ require([
     reader.readAsText(f);
 
     LoadSvgDialog.hide();
-    
-    registry.byId("CalendarMenu").set("disabled", false);
   });
 
 
@@ -1328,12 +1299,14 @@ require([
     AdjustCrewmemberBarScaleX(x);
 
     // enabled some menu items.
-    registry.byId("FileSaveMenu").set("disabled", false);
-    registry.byId("CalendarSetStartPeriodsMenu").set("disabled", false);
-    registry.byId("BusinessObjectMenu").set("disabled", false);
-    registry.byId("GraphOptionMenu").set("disabled", false);
-    registry.byId("HighlightsMenu").set("disabled", false);
-    
+    config.MenuCalendarSetStartPeriods = false;
+    config.MenuBusinessObject = false;
+    config.MenuGraphOption = false;
+    config.MenuHighLights = false;
+    config.MenuFileSaveSVGFile = false;
+
+    configurationStore.putSync(config);
+
     SetCalendarDialog.hide();
   });
   
@@ -1508,7 +1481,7 @@ require([
         cmPosition: registry.byId("TrainingCrewMemberSelect").get("value"),
         x: x,
         width: width,
-        tp: registry.byId("TrainingTransportationTime").checked ? registry.byId("TransportationTimeDuration").get("value") : 0,
+        tp: registry.byId("TrainingTransportationTime").checked ? config.transportationTime : 0,  // registry.byId("TransportationTimeDuration").get("value") : 0,
         resta: registry.byId("TrainingRestAfterH").get("value") * 60 + registry.byId("TrainingRestAfterM").get("value"),
         restb: registry.byId("TrainingRestBeforeH").get("value") * 60 + registry.byId("TrainingRestBeforeM").get("value"),
       });
@@ -1641,9 +1614,6 @@ require([
 
     var root = dom.byId("graph");
 
-    console.log("root");
-    console.log(root);
-
     var state = "none", svgRoot, stateTarget, stateOrigin, stateTf;
 
     /**
@@ -1663,9 +1633,6 @@ require([
         g.removeAttribute("viewBox");
 
         svgRoot = g;
-
-        console.log("svgRoot");
-        console.log(svgRoot);
       }
 
       return svgRoot;
@@ -2001,7 +1968,11 @@ require([
         ====================================================================================
         -->
         <g id="calendar">
-          <text id="intro" x="100" y="50" style="fill:black;font-size:40p">To start, please use File menu to load an XML station file or an existing graph.</text>
+          <g id="intro">
+            <text x="100" y="50"  style="fill:black;font-size:40p">To start, please do one of: </text>
+            <text x="120" y="80"  style="fill:black;font-size:40p">- Use File menu to load an XML station file and then Calendar menu to set a period or</text>
+            <text x="120" y="110" style="fill:black;font-size:40p">- Use File menu to load a SVG file.</text>
+          </g>
           <g id="calendar_bar" transform="scale(1,100)"></g>
         </g>
 
@@ -2306,7 +2277,11 @@ require([
     <table class="dijitDialogPaneContentArea">
       <tr>
         <td><label for="transportationtime">Transportation time duration (in minutes)</label></td>
-        <td><input data-dojo-type="dijit/form/NumberTextBox" name="transportationtime" id="TransportationTimeDuration" value="0" data-dojo-props="constraints:{min:0, places:0}" required="true" style="width: 5em;"></td>
+        <td><input data-dojo-type="dijit/form/NumberTextBox" name="transportationtime" id="transportationTime" value="0" data-dojo-props="constraints:{min:0, places:0}" required="true" style="width: 5em;"></td>
+      </tr>
+      <tr>
+        <td><label for="midnightoffset">Midnight offset (in minutes)</label></td>
+        <td><input data-dojo-type="dijit/form/NumberTextBox" name="midnightoffset" id="midnightOffset" value="0" data-dojo-props="constraints:{min:0, max: 1438, places:0}" required="true" style="width: 5em;"></td>
       </tr>
     </table>
 
