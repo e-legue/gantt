@@ -134,6 +134,8 @@ require([
   "moment/moment",
   "moment-timezone/builds/moment-timezone-with-data",
   "dojox/xml/parser", 
+  "dojo/Stateful", 
+  "dojo/query", 
   "dojo/domReady!",
 
   "dijit/MenuBar",
@@ -180,7 +182,9 @@ require([
   Button,
   moment,
   timezone,
-  xmlparser
+  xmlparser,
+  Stateful,
+  query
 //  ganttSVG
   ){
 
@@ -493,8 +497,8 @@ require([
       id: { type: "numeric", default: 0 },
       periodStart: "string",
       periodEnd: "string",
-      transportationTime: { type: "numeric", default: 0},
-      midnightOffset: { type: "numeric", default: 0},
+      transportationTime: { type: "numeric", default: 42},
+      midnightOffset: { type: "numeric", default: 43},
       timezone: "string",
       station: "string",
       calendarStart: "string",
@@ -962,6 +966,8 @@ require([
     RemoveIntroMessage();
 
     LoadStore(configurationStore, svgNode.getElementById("ConfigurationStore"),"configuration");
+    // load single object (id 0) in config.
+    config = configurationStore.getSync(0);
     LoadStore(calendarStore, svgNode.getElementById("CalendarStore"),"calendar");
     LoadStore(crewMemberStore, svgNode.getElementById("CrewMemberStore"), "crew");
     LoadStore(activityStore, svgNode.getElementById("ActivityStore"), "activity");
@@ -1157,7 +1163,16 @@ require([
     LoadSvgDialog.hide();
   });
 
+   
+  // -----------------------------------------------
+  // Constants dialog
+  // -----------------------------------------------
+  console.log(registry.byId("ShowConstantsDialog"));
 
+  registry.byId("ShowConstantsDialog").on("show", function(){
+    console.log(dom.byId("ShowConstantsForm"));
+    viewInForm(config, dom.byId("ShowConstantsForm"));
+  }, true);
 
   // -----------------------------------------------
   // Save file dialog
@@ -1537,6 +1552,26 @@ require([
       }
     }
   });  
+
+
+  function viewInForm(object, form){
+          console.log(form);
+    // copy initial values into form inputs
+    for(var i in object){
+      updateInput(i, object.get(i));
+    }
+    // watch for any future changes in the object
+
+//     object.watch(updateInput);
+    function updateInput(name, value){
+       var input = query("input[name=" + name + "]", form)[0];
+      if(input){
+        input.parentNode.childNodes[0].value = value;
+      }
+    }
+  }
+
+
 
     /** 
      *  SVGPan library 1.2.1
@@ -2211,7 +2246,7 @@ require([
       <div class="dijitDialogPaneActionBar">
         <button data-dojo-type="dijit/form/Button" type="button" id="SetCalendar">Set</button>
       </div>
-
+    </div>
   </div>
 
 
@@ -2273,20 +2308,22 @@ require([
   </div>
 
 
-  <div data-dojo-type="dijit/Dialog" data-dojo-id="ShowConstantsDialog" title="Set constants" style="display: none;">
-    <table class="dijitDialogPaneContentArea">
-      <tr>
-        <td><label for="transportationtime">Transportation time duration (in minutes)</label></td>
-        <td><input data-dojo-type="dijit/form/NumberTextBox" name="transportationtime" id="transportationTime" value="0" data-dojo-props="constraints:{min:0, places:0}" required="true" style="width: 5em;"></td>
-      </tr>
-      <tr>
-        <td><label for="midnightoffset">Midnight offset (in minutes)</label></td>
-        <td><input data-dojo-type="dijit/form/NumberTextBox" name="midnightoffset" id="midnightOffset" value="0" data-dojo-props="constraints:{min:0, max: 1438, places:0}" required="true" style="width: 5em;"></td>
-      </tr>
-    </table>
+  <div data-dojo-type="dijit/Dialog" id="ShowConstantsDialog" data-dojo-id="ShowConstantsDialog" title="Set constants" style="display: none;">
+    <div data-dojo-type="dijit/form/Form" id="ShowConstantsForm" encType="multipart/form-data" action="" method="">
+      <table class="dijitDialogPaneContentArea">
+        <tr>
+          <td><label for="transportationTime">Transportation time duration (in minutes)</label></td>
+          <td><input data-dojo-type="dijit/form/NumberTextBox" name="transportationTime" data-dojo-id="transportationTime" value="10" data-dojo-props="constraints:{min:0, places:0}" required="true" style="width: 5em;"></td>
+        </tr>
+        <tr>
+          <td><label for="midnightOffset">Midnight offset (in minutes)</label></td>
+          <td><input data-dojo-type="dijit/form/NumberTextBox" name="midnightOffset" data-dojo-id="midnightOffset" value="11" data-dojo-props="constraints:{min:0, max: 1438, places:0}" required="true" style="width: 5em;"></td>
+        </tr>
+      </table>
 
-    <div class="dijitDialogPaneActionBar">
-      <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){ShowConstantsDialog.hide();}">Close</button>
+      <div class="dijitDialogPaneActionBar">
+        <button data-dojo-type="dijit/form/Button" type="button" id="SetShowConstants">Set</button>
+      </div>
     </div>
   </div>
 
