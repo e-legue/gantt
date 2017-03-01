@@ -1167,12 +1167,22 @@ require([
   // -----------------------------------------------
   // Constants dialog
   // -----------------------------------------------
-  console.log(registry.byId("ShowConstantsDialog"));
 
   registry.byId("ShowConstantsDialog").on("show", function(){
-    console.log(dom.byId("ShowConstantsForm"));
     viewInForm(config, dom.byId("ShowConstantsForm"));
   }, true);
+
+  registry.byId("SaveConstants").on("click", function(){
+    if( !registry.byId("ShowConstantsForm").validate() ){
+      return;
+    }
+
+    ShowConstantsDialog.hide();
+
+    setFromForm(config, dom.byId("ShowConstantsForm"));
+
+    configurationStore.putSync(config);
+  });
 
   // -----------------------------------------------
   // Save file dialog
@@ -1555,18 +1565,34 @@ require([
 
 
   function viewInForm(object, form){
-          console.log(form);
     // copy initial values into form inputs
     for(var i in object){
       updateInput(i, object.get(i));
     }
-    // watch for any future changes in the object
 
-//     object.watch(updateInput);
     function updateInput(name, value){
-       var input = query("input[name=" + name + "]", form)[0];
+      var input = query("input[name=" + name + "]", form)[0];
       if(input){
+        // here is a little hack. dijit dialog create an hidden input with the right name.
+        // but the one used to display is the sibling before. So I reference the parent and
+        // pick the first child node.
         input.parentNode.childNodes[0].value = value;
+      }
+    }
+  }
+          
+ function setFromForm(object, form){
+    for(var i in object){
+      updateObject(i);
+    }
+
+    function updateObject(name){
+      var input = query("input[name=" + name + "]", form)[0];
+      if(input){
+        // here is a little hack. dijit dialog create an hidden input with the right name.
+        // but the one used to display is the sibling before. So I reference the parent and
+        // pick the first child node.
+        object[name] = input.parentNode.childNodes[0].value;
       }
     }
   }
@@ -2322,7 +2348,7 @@ require([
       </table>
 
       <div class="dijitDialogPaneActionBar">
-        <button data-dojo-type="dijit/form/Button" type="button" id="SetShowConstants">Set</button>
+        <button data-dojo-type="dijit/form/Button" type="button" id="SaveConstants">Save</button>
       </div>
     </div>
   </div>
