@@ -499,10 +499,10 @@ require([
       periodEnd: "string",
       transportationTime: { type: "numeric", default: 42},
       midnightOffset: { type: "numeric", default: 43},
-      timezone: "string",
-      station: "string",
-      calendarStart: "string",
-      calendarEnd: "string",
+      timezone: { type: "string", default: ""},
+      station: { type: "string", default: ""},
+      calendarStart: { type: "string", default: ""},
+      calendarEnd: { type: "string", default: ""},
       MenuFile: { type: "boolean", default: false, },
       MenuFileLoadSVGFile: { type: "boolean", default: false, },
       MenuFileLoadXMLStationFile: { type: "boolean", default: false, },
@@ -701,6 +701,7 @@ require([
   
   // -----------------------------------------------
   // configurationStore
+
   // -----------------------------------------------
   var configurationStore = new Memory({
     Model: ConfigurationModel,
@@ -942,10 +943,14 @@ require([
       for(var property in schema) {
         if( schema.hasOwnProperty(property) ) {
           var type = typeof(schema[property]) == "object" ? schema[property].type : schema[property];
-          
-          if( type == "numeric" ) def[property] = Number(data.getElementsByTagName(property)[0].textContent);
-          else if( type == "boolean") def[property] = data.getElementsByTagName(property)[0].textContent == 'true'
-          else def[property] = data.getElementsByTagName(property)[0].textContent;
+          var elements = data.getElementsByTagName(property); // [0].textContent;
+          console.log(elements);
+
+          if( elements.length > 0 ){ 
+            if( type == "numeric" ) def[property] = Number(elements[0].textContent);
+            else if( type == "boolean") def[property] = elements[0].textContent == 'true'
+            else def[property] = elements[0].textContent;
+          }
         }
       }
       store.putSync(def);
@@ -968,11 +973,25 @@ require([
     LoadStore(configurationStore, svgNode.getElementById("ConfigurationStore"),"configuration");
     // load single object (id 0) in config.
     config = configurationStore.getSync(0);
+    console.log(config);          
+
+    timezoneStore.filter({name: config.timezone}).fetchRange({start: 0, end: 1}).then(function(results){
+      if( results.length > 0 ) {
+        registry.byId("CalendarTimezone").set("value", results[0].id);
+      }
+    });
+
     LoadStore(calendarStore, svgNode.getElementById("CalendarStore"),"calendar");
     LoadStore(crewMemberStore, svgNode.getElementById("CrewMemberStore"), "crew");
     LoadStore(activityStore, svgNode.getElementById("ActivityStore"), "activity");
     LoadStore(highLightStore, svgNode.getElementById("HighLightStore"), "highligth");
     LoadStationStore(svgNode.getElementById("StationStore"), MODE_SVG);
+
+    stationStore.filter({name: config.station}).fetchRange({start: 0, end: 1}).then(function(results){
+      if( results.length > 0 ) {
+        registry.byId("CalendarStation").set("value", results2[0].id);
+      }
+    });
   }
 
 
@@ -1214,27 +1233,38 @@ require([
   // -----------------------------------------------
   // Calendar range set up dialog
   // -----------------------------------------------
+  registry.byId("CalendarTimezone").on("focus", function(){
+    if( this.get("value") ) {
+      registry.byId("CalendarStation").set("disabled", false);
+    }          
+  }, true);
+
   registry.byId("CalendarTimezone").on("change", function(){
     var item = timezoneStore.getSync(this.get("value"));
 
-    moment.tz.setDefault(item.name);
-    var zone = moment.tz.zone(item.name);
+    if( item ) {          
+      registry.byId("CalendarStation").set("disabled", false);
 
-    // id 259 Asia/Dubai
-    // -240
-    // -240
+      if( !registry.byId("CalendarStation").get("value") ) {
+        moment.tz.setDefault(item.name);
+        var zone = moment.tz.zone(item.name);
 
-    // id 165 America/Montreal
-    // 300
-    // 300
+        // id 259 Asia/Dubai
+        // -240
+        // -240
 
-    registry.byId("CalendarStation").set("disabled", false);
+        // id 165 America/Montreal
+        // 300
+        // 300
 
-    var offsetZone = zone.offset(moment().valueOf());         
+        var offsetZone = zone.offset(moment().valueOf());         
 
-    registry.byId("CalendarStation").set("value", "");
-    registry.byId("CalendarStation").set("query", {offset: offsetZone});
+        registry.byId("CalendarStation").set("value", "");
+        registry.byId("CalendarStation").set("query", {offset: offsetZone});
+      }
+    }
   }, true);
+
 
   registry.byId("CalendarStart").on("change", function(){
     registry.byId("CalendarEnd").constraints.min = date.add(this.get("value"), "day", 1);
@@ -1252,7 +1282,9 @@ require([
     registry.byId("TrainingStartDate").constraints.max = maxDate;
   }, true);
 
-
+  registry.byId("SetCalendarDialog").on("show", function(){
+    viewInForm(config, dom.byId("SetCalendarForm"));
+  }, true);
 
   registry.byId("SetCalendar").on("click", function(){
     if( !registry.byId("SetCalendarForm").validate() ){
@@ -1260,15 +1292,11 @@ require([
     }
     RemoveIntroMessage();
 
-    var local = registry.byId("CalendarTimezone");
+    setFromForm(config, dom.byId("SetCalendarForm"));
 
-
-    var CalStart = registry.byId("CalendarStart");
-    var CalEnd   = registry.byId("CalendarEnd");
-
-    var start = moment(CalStart.get("value"));
+    var start = moment(config.calendarStart);
     Xorig = start.unix();
-    var end   = moment(CalEnd.get("value")); 
+    var end   = moment(config.calendarEnd); 
     var range = end.diff(start, "days");
 
     calendarStore.fetch().then(function (days){
@@ -1573,10 +1601,17 @@ require([
     function updateInput(name, value){
       var input = query("input[name=" + name + "]", form)[0];
       if(input){
+        console.log(name + "---" + value);
         // here is a little hack. dijit dialog create an hidden input with the right name.
         // but the one used to display is the sibling before. So I reference the parent and
-        // pick the first child node.
-        input.parentNode.childNodes[0].value = value;
+        // pick the first child with the right class.
+        var dijitInputInner  = query(".dijitInputInner", input.parentNode)[0];
+        var dijitPlaceHolder = query(".dijitPlaceHolder", input.parentNode)[0];
+
+        console.log(dijitInputInner);
+
+        if( dijitInputInner ) dijitInputInner.value = value;
+        if( dijitPlaceHolder ) dijitPlaceHolder.style.display = "none";  
       }
     }
   }
@@ -2248,24 +2283,24 @@ require([
   </div>
 
 
-  <div data-dojo-type="dijit/Dialog" data-dojo-id="SetCalendarDialog" title="Set calendar" style="display: none;">
+  <div data-dojo-type="dijit/Dialog" id="SetCalendarDialog" data-dojo-id="SetCalendarDialog" title="Set calendar" style="display: none;">
     <div data-dojo-type="dijit/form/Form" id="SetCalendarForm" data-dojo-id="SetCalendarForm" encType="multipart/form-data" action="" method="">
       <table class="dijitDialogPaneContentArea">
         <tr>
-          <td><label for="tz">Timezone</label></td>
-          <td><input data-dojo-type="dijit/form/FilteringSelect" name="tz" id="CalendarTimezone" required="true"></td>
+          <td><label for="timezone">Timezone</label></td>
+          <td><input data-dojo-type="dijit/form/FilteringSelect" name="timezone" id="CalendarTimezone" required="true"></td>
         </tr>
         <tr>
           <td><label for="station">Station</label></td>
           <td><input data-dojo-type="dijit/form/FilteringSelect" name="station" id="CalendarStation" required="true" disabled="true"></td>
         </tr>
         <tr>
-          <td><label for="start">Start date</label></td>
-          <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="start" id="CalendarStart" required="true" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"></td>
+          <td><label for="calendarStart">Start date</label></td>
+          <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="calendarStart" id="CalendarStart" required="true" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"></td>
         </tr>
         <tr>
-          <td><label for="end">End date (excluded)</label></td>
-          <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="end" id="CalendarEnd" required="true" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"></td>
+          <td><label for="calendarEnd">End date (excluded)</label></td>
+          <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="calendarEnd" id="CalendarEnd" required="true" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"></td>
         </tr>
       </table>
 
