@@ -80,9 +80,11 @@
 }
 */
 
+#CalendarStartPeriods {
+  height: 14em; /* DOES NOT WORK */
+}
+
   </style>
-
-
 
   <script>
 var dojoConfig = {
@@ -392,7 +394,7 @@ require([
     // a specific group.
     var Gbar     = document.createElementNS(svgNS, "g");
     Gbar.setAttributeNS(null, "transform", "translate(" + CompressX(item.get("x")) + ",0)");
-    Gbar.setAttributeNS(null, "class", item.get("type"));
+    Gbar.setAttributeNS(null, "class", item.get("startperiod") ? "start_period" : item.get("type"));
     Gbar.setAttributeNS(null, "id", item.get("barident"));
     calendarBarId.appendChild(Gbar);
 
@@ -495,8 +497,6 @@ require([
   var ConfigurationModel = declare(Model, {
     schema: {
       id: { type: "numeric", default: 0 },
-      periodStart: "string",
-      periodEnd: "string",
       transportationTime: { type: "numeric", default: 42},
       midnightOffset: { type: "numeric", default: 43},
       timezone: { type: "string", default: ""},
@@ -535,6 +535,7 @@ require([
       name: "string",
       relative: "numeric",
       position: "numeric",
+      startperiod: { type: "boolean", default: false},
       type: new ComputedProperty({
         dependsOn: ["position"],
         getValue: function(position){
@@ -750,7 +751,7 @@ require([
 
   var calendarStoreAdapter = new DstoreAdapter(calendarStore);
   registry.byId("CalendarStartPeriods").set("labelAttr", "name");
-  registry.byId("CalendarStartPeriods").setStore(calendarStoreAdapter);
+
   registry.byId("DayOffDatesSelect").set("labelAttr", "name");
   registry.byId("DayOffDatesSelect").setStore(calendarStoreAdapter);
   registry.byId("HighlightDatesSelect").set("labelAttr", "name");
@@ -944,7 +945,6 @@ require([
         if( schema.hasOwnProperty(property) ) {
           var type = typeof(schema[property]) == "object" ? schema[property].type : schema[property];
           var elements = data.getElementsByTagName(property); // [0].textContent;
-          console.log(elements);
 
           if( elements.length > 0 ){ 
             if( type == "numeric" ) def[property] = Number(elements[0].textContent);
@@ -989,7 +989,7 @@ require([
 
     stationStore.filter({name: config.station}).fetchRange({start: 0, end: 1}).then(function(results){
       if( results.length > 0 ) {
-        registry.byId("CalendarStation").set("value", results2[0].id);
+        registry.byId("CalendarStation").set("value", results[0].id);
       }
     });
   }
@@ -1318,7 +1318,7 @@ require([
       calendarStore.addSync({
         name: start.format().substring(0, 10),
         relative: i,
-        position: i,
+        position: i+1, // for unknown reason, checkedmultiselect does not work with 0. 
         x: x, 
         width: width, 
       });
@@ -1363,24 +1363,45 @@ require([
     SetCalendarDialog.hide();
   });
   
+
+  // -----------------------------------------------
+  // Manage Set Start Periods dialog
+  // -----------------------------------------------
+  registry.byId("SetStartPeriodsDialog").on("show", function(){
+    var arrChecked = [];
+    calendarStore.forEach(function(item){
+      if( item.startperiod ) {
+        arrChecked.push(item.position);
+      }
+    });
+    arrChecked.push(0);          
+    console.log(arrChecked);
+    registry.byId("CalendarStartPeriods").setStore(calendarStoreAdapter, arrChecked);
+  }, true);
+
   // Redraw start periods
   registry.byId("SetStartPeriods").on("click", function(){
+
+
     var newStarts = registry.byId("CalendarStartPeriods").value;
+    console.log("newStarts ");
+    console.log( newStarts);          
+    var ref =  newStarts.length > 0 ? newStarts[0] : 0; 
 
-    if(newStarts.length > 0 ){
-      calendarStore.forEach(function(item){
-        item.set("relative", item.get("position") - newStarts[0]);
-        calendarStore.put(item);
-      });
-    }
+    var i = 0; 
 
-    newStarts.forEach(function(position){
-      var item = calendarStore.getSync(position);
+    calendarStore.forEach(function(item){
+      item.set("relative", item.get("position") - ref);
+      if( i < newStarts.length && newStarts[i] == item.position ) {
+        item.set("startperiod", true);
+        i+=1;
+      }
+      else {
+        item.set("startperiod", false);
+      }
+      calendarStore.put(item);
+    });
 
-      var day = svg.getElementById(item.get("barident"));
-      day.setAttribute("class", "start_period");
-    }); 
-    
     SetStartPeriodsDialog.hide();
   });
 
@@ -2312,16 +2333,18 @@ require([
 
 
 
-  <div data-dojo-type="dijit/Dialog" data-dojo-id="SetStartPeriodsDialog" title="Set start period(s)" style="display: none;">
-    <table class="dijitDialogPaneContentArea">
-      <tr>
-        <td><label for="start">Start period date(s)</label></td>
-        <td><input multiple="true" data-dojo-type="dojox/form/CheckedMultiSelect" name="start" id="CalendarStartPeriods"></td>
-      </tr>
-    </table>
+  <div data-dojo-type="dijit/Dialog" id="SetStartPeriodsDialog" data-dojo-id="SetStartPeriodsDialog" title="Set start period(s)" style="display: none;">
+    <div data-dojo-type="dijit/form/Form" id="SetStartPeriodsForm" data-dojo-id="SetStartPeriodsForm" encType="multipart/form-data" action="" method="">
+      <table class="dijitDialogPaneContentArea">
+        <tr>
+          <td><label for="start">Start period date(s)</label></td>
+          <td><input multiple="true" data-dojo-type="dojox/form/CheckedMultiSelect" name="start" id="CalendarStartPeriods" size="14"></td>
+        </tr>
+      </table>
 
-    <div class="dijitDialogPaneActionBar">
-      <button data-dojo-type="dijit/form/Button" type="button" id="SetStartPeriods">Set</button>
+      <div class="dijitDialogPaneActionBar">
+        <button data-dojo-type="dijit/form/Button" type="button" id="SetStartPeriods">Set</button>
+      </div>
     </div>
   </div>
 
