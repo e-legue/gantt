@@ -52,4 +52,5 @@ then
   echo "==============================================="
 fi
 xsltproc $xsl_verbose -o station.xml Gantt2Station.xsl $SOURCE_FILE
+xsltproc $xsl_verbose -o qual.xml    Gantt2Qual.xsl    $SOURCE_FILE
 
