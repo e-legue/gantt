@@ -497,8 +497,8 @@ require([
   var ConfigurationModel = declare(Model, {
     schema: {
       id: { type: "numeric", default: 0 },
-      transportationTime: { type: "numeric", default: 42},
-      midnightOffset: { type: "numeric", default: 43},
+      transportationTime: { type: "numeric", default: 0},
+      midnightOffset: { type: "numeric", default: 0},
       timezone: { type: "string", default: ""},
       station: { type: "string", default: ""},
       calendarStart: { type: "string", default: ""},
@@ -1041,6 +1041,10 @@ require([
       for(var j = 0; j < regionList.length; j++){
         regions.push(regionList[j].textContent);
       }
+
+      console.log("station code:   " + obj.getElementsByTagName(convertionSvgXml("code", mode))[0].textContent ); 
+      console.log("station name:   " + obj.getElementsByTagName(convertionSvgXml("name", mode))[0].textContent );          
+      console.log("station offset: " + offset );          
       
       stationStore.addSync({
         id: id,
@@ -1244,6 +1248,8 @@ require([
   registry.byId("CalendarTimezone").on("change", function(){
     var item = timezoneStore.getSync(this.get("value"));
 
+    console.log("timezone :" + item); 
+
     if( item ) {          
       registry.byId("CalendarStation").set("disabled", false);
 
@@ -1251,15 +1257,14 @@ require([
         moment.tz.setDefault(item.name);
         var zone = moment.tz.zone(item.name);
 
-        // id 259 Asia/Dubai
-        // -240
-        // -240
+        var dateOutsideDST = moment();
 
-        // id 165 America/Montreal
-        // 300
-        // 300
+        while( dateOutsideDST.isDST() ) {
+          dateOutsideDST.subtract(1, 'months');
+        }
 
-        var offsetZone = zone.offset(moment().valueOf());         
+        var offsetZone = zone.offset(dateOutsideDST.valueOf());         
+        console.log("offsetZone: " + offsetZone);
 
         registry.byId("CalendarStation").set("value", "");
         registry.byId("CalendarStation").set("query", {offset: offsetZone});
