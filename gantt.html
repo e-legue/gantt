@@ -479,12 +479,12 @@ require([
 
     // rest before
     if( activity.get("restb") > 0 ){
-      G.appendChild(SVG_drawRect("REST", (activity.get("restb") + activity.get("tp") ) * -1, 20, activity.get("restb"), 30));
+      G.appendChild(SVG_drawRect("REST", (Number(activity.get("restb")) + activity.get("tp") ) * -1, 20, activity.get("restb"), 30));
     }
     
     // rest after. 
     if( activity.get("resta") > 0 ){
-      G.appendChild(SVG_drawRect("REST", activity.get("width") + activity.get("tp"), 50, activity.get("resta"), 30));
+      G.appendChild(SVG_drawRect("REST", Number(activity.get("width")) + activity.get("tp"), 50, activity.get("resta"), 30));
     }
 
   }
@@ -615,6 +615,8 @@ require([
       resta: "numeric",
       restb: "numeric",
       type: "string",
+      utcStart: "string",
+      utcEnd: "string",
       cmPosition: "numeric", // foreign key to CrewMember.
       ident: new ComputedProperty({ 
         dependsOn: ["position", "type"],
@@ -1473,6 +1475,8 @@ require([
           position: pos,
           cmPosition: crewmemberId,
           x: calendarDay.get("x"),
+          utcStart: moment(calendarDay.get("name")).utc().format("YYYY-MM-DD HH:mm"), 
+          utcEnd: moment(calendarDay.get("name")).add(width, 'm').utc().format("YYYY-MM-DD HH:mm"), 
           width: calendarDay.get("width"),
           tp: 0,
           resta: 0,
@@ -1554,6 +1558,8 @@ require([
         position: pos,
         cmPosition: registry.byId("TrainingCrewMemberSelect").get("value"),
         x: x,
+        utcStart: startTraining.utc().format("YYYY-MM-DD HH:mm"),
+        utcEnd: startTraining.add(width, 'm').utc().format("YYYY-MM-DD HH:mm"), 
         width: width,
         tp: registry.byId("TrainingTransportationTime").checked ? config.transportationTime : 0,  // registry.byId("TransportationTimeDuration").get("value") : 0,
         resta: registry.byId("TrainingRestAfterH").get("value") * 60 + registry.byId("TrainingRestAfterM").get("value"),
