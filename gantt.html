@@ -270,15 +270,30 @@ require([
   // End Date Time (readonly).
   // ===============================================
   function UpdateEndDateTime(prefixId){
-  
+    console.log("test 123");
     var mytime = registry.byId(prefixId + "StartTime").get("value");
 
-    var datetime = moment(registry.byId(prefixId + "StartDate").get("value"));
+    console.log(mytime);
+
+    console.log(registry.byId(prefixId + "StartDate").get("value"));
+    var d = dojo.date.locale.format(registry.byId(prefixId + "StartDate").get("value"), {datePattern: "yyyy-MM-dd", selector: "date"});
+    var t = dojo.date.locale.format(registry.byId(prefixId + "StartTime").get("value"), {timePattern: "HH:mm:ss", selector: "time"});
+    console.log(d);
+    console.log(t);
+
+    /*
+    var datetime = moment.tz(registry.byId(prefixId + "StartDate").get("value"), config.timezone);
+    console.log(datetime);
+    console.log(mytime.getHours());
+    console.log(mytime.getMinutes());
     datetime.hour(mytime.getHours());
     datetime.minute(mytime.getMinutes());
 
     datetime = datetime.add(registry.byId(prefixId + "DurationHour").get("value"), "hours");
     datetime = datetime.add(registry.byId(prefixId + "DurationMinute").get("value"), "minutes");
+    */
+
+    var datetime = moment.tz( d + " " + t, config.timezone);
 
     registry.byId(prefixId + "EndDate").set("value", datetime.format());
     registry.byId(prefixId + "EndTime").set("value", datetime.format());
@@ -1257,6 +1272,10 @@ require([
         moment.tz.setDefault(item.name);
         var zone = moment.tz.zone(item.name);
 
+        console.log("zone: ");  
+        console.log(zone);  
+
+
         var dateOutsideDST = moment();
 
         while( dateOutsideDST.isDST() ) {
@@ -1495,8 +1514,7 @@ require([
   // -----------------------------------------------
   // Create Training dialog
   // -----------------------------------------------
-
-  registry.byId("TrainingStartDate").on("click,change", function(){
+  function TryEnableDuration() {
     if(   registry.byId("TrainingStartTime").get("value") != null 
        && registry.byId("TrainingStartDate").get("value") != null ){
       registry.byId("TrainingDurationHour").readOnly = false;
@@ -1506,18 +1524,22 @@ require([
 
       UpdateEndDateTime("Training");
     }
+  }
+
+  registry.byId("TrainingStartDate").on("click,mousedown", function(){
+    TryEnableDuration();          
   });
 
-  registry.byId("TrainingStartTime").on("click,change", function(){
-    if(   registry.byId("TrainingStartTime").get("value") != null 
-       && registry.byId("TrainingStartDate").get("value") != null ){
-      registry.byId("TrainingDurationHour").readOnly = false;
-      registry.byId("TrainingDurationHour").set("value", 0);
-      registry.byId("TrainingDurationMinute").readOnly = false;
-      registry.byId("TrainingDurationMinute").set("value", 0);
-      
-      UpdateEndDateTime("Training");
-    }
+  registry.byId("TrainingStartDate").on("change", function(value){
+    TryEnableDuration();          
+  });
+
+  registry.byId("TrainingStartTime").on("click,mousedown", function(){
+    TryEnableDuration();          
+  });
+
+  registry.byId("TrainingStartTime").on("change", function(value){
+    TryEnableDuration();          
   });
 
   registry.byId("TrainingDurationHour").on("click,change", function(){
