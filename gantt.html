@@ -268,35 +268,23 @@ require([
   // ===============================================
   // Start Date Time + duration Hour Minute => 
   // End Date Time (readonly).
+  // Here, dojo/date is used, as only local dates
+  // are handled. 
   // ===============================================
   function UpdateEndDateTime(prefixId){
-    console.log("test 123");
+    var mydate = registry.byId(prefixId + "StartDate").get("value");
     var mytime = registry.byId(prefixId + "StartTime").get("value");
 
-    console.log(mytime);
+    // rebuild the start date from StartDate and StartTime field values, 
+    var endDate = new Date( mydate.getFullYear(), mydate.getMonth(), mydate.getDate(), mytime.getHours(), mytime.getMinutes(), 0);
 
-    console.log(registry.byId(prefixId + "StartDate").get("value"));
-    var d = dojo.date.locale.format(registry.byId(prefixId + "StartDate").get("value"), {datePattern: "yyyy-MM-dd", selector: "date"});
-    var t = dojo.date.locale.format(registry.byId(prefixId + "StartTime").get("value"), {timePattern: "HH:mm:ss", selector: "time"});
-    console.log(d);
-    console.log(t);
+    // add duration to determine end datetime of the activity..
+    endDate = date.add(endDate, "hour", registry.byId(prefixId + "DurationHour").get("value"));
+    endDate = date.add(endDate, "minute", registry.byId(prefixId + "DurationMinute").get("value"));
 
-    /*
-    var datetime = moment.tz(registry.byId(prefixId + "StartDate").get("value"), config.timezone);
-    console.log(datetime);
-    console.log(mytime.getHours());
-    console.log(mytime.getMinutes());
-    datetime.hour(mytime.getHours());
-    datetime.minute(mytime.getMinutes());
-
-    datetime = datetime.add(registry.byId(prefixId + "DurationHour").get("value"), "hours");
-    datetime = datetime.add(registry.byId(prefixId + "DurationMinute").get("value"), "minutes");
-    */
-
-    var datetime = moment.tz( d + " " + t, config.timezone);
-
-    registry.byId(prefixId + "EndDate").set("value", datetime.format());
-    registry.byId(prefixId + "EndTime").set("value", datetime.format());
+    // update end date and time fields.
+    registry.byId(prefixId + "EndDate").set("value", endDate);
+    registry.byId(prefixId + "EndTime").set("value", endDate);
   } 
 
 
@@ -366,7 +354,7 @@ require([
     G.setAttributeNS(null, "id", item.get("ident"));
     calendarId.appendChild(G);
 
-    G.appendChild(SVG_drawText("highlight_label", item.get("x"), 60, item.get("message")));
+    G.appendChild(SVG_drawText("highlight_label", item.x, 60, item.get("message")));
 
     // a scale is used to extend the bars, that"s why they are defined into
     // a specific group.
@@ -374,7 +362,7 @@ require([
     Gbar.setAttributeNS(null, "id", item.get("barident"));
     calendarBarId.appendChild(Gbar);
 
-    Gbar.appendChild(SVG_drawRect("highlight", item.get("x"), 0, 1, 1));
+    Gbar.appendChild(SVG_drawRect("highlight", item.x, 0, 1, 1));
   }
 
 
@@ -388,7 +376,7 @@ require([
     var calendarBarId = svg.getElementById("calendar_bar");
 
     var G       = document.createElementNS(svgNS, "g");
-    G.setAttributeNS(null, "transform", "translate(" + CompressX(item.get("x")) + ",0)");
+    G.setAttributeNS(null, "transform", "translate(" + CompressX(item.x) + ",0)");
     G.setAttributeNS(null, "id", item.get("ident"));
     calendarId.appendChild(G);
 
@@ -400,7 +388,7 @@ require([
     var time = moment(item.get("name"));
     var duration = moment.duration(minutes, "minutes");
 
-    for(var i = 0; i < item.get("width"); i += minutes){ 
+    for(var i = 0; i < item.width; i += minutes){ 
       G.appendChild(SVG_drawText("hour_label", i, 20, time.format("H:mm")));
       time.add(duration);   
     }
@@ -408,16 +396,16 @@ require([
     // a scale is used to extend the bars, that's why they are defined into
     // a specific group.
     var Gbar     = document.createElementNS(svgNS, "g");
-    Gbar.setAttributeNS(null, "transform", "translate(" + CompressX(item.get("x")) + ",0)");
+    Gbar.setAttributeNS(null, "transform", "translate(" + CompressX(item.x) + ",0)");
     Gbar.setAttributeNS(null, "class", item.get("startperiod") ? "start_period" : item.get("type"));
     Gbar.setAttributeNS(null, "id", item.get("barident"));
     calendarBarId.appendChild(Gbar);
 
-    Gbar.appendChild(SVG_drawRect("day_bar", 0, 0, item.get("width"), 1));
+    Gbar.appendChild(SVG_drawRect("day_bar", 0, 0, item.width, 1));
     Gbar.appendChild(SVG_drawRect("line", 0, 0, 1, 1));
-    Gbar.appendChild(SVG_drawRect("line", item.get("width"), 0, 1, 1));
+    Gbar.appendChild(SVG_drawRect("line", item.width, 0, 1, 1));
 
-    for(var i = 60; i < item.get("width"); i += 120){ 
+    for(var i = 60; i < item.width; i += 120){ 
       Gbar.appendChild(SVG_drawRect("hour_bar", i, 0, 60, 1));
     }
   }
@@ -431,7 +419,7 @@ require([
     var crewMemberBarId = svg.getElementById("crewmember_bar");
 
     var G = document.createElementNS(svgNS, "g");
-    G.setAttributeNS(null,"transform","translate(0, " + item.get("y") + ")");
+    G.setAttributeNS(null,"transform","translate(0, " + item.y + ")");
     G.setAttributeNS(null,"id", item.get("ident"));
     crewMemberId.appendChild(G);
 
@@ -439,7 +427,7 @@ require([
 
     
     var Gbar = document.createElementNS(svgNS, "g");
-    Gbar.setAttributeNS(null,"transform","translate(0, " + item.get("y") + ")");
+    Gbar.setAttributeNS(null,"transform","translate(0, " + item.y + ")");
     Gbar.setAttributeNS(null,"id", item.get("barident"));
     crewMemberBarId.appendChild(Gbar);
 
@@ -449,7 +437,7 @@ require([
 
     // scale vertically the calendar to fit the number of crewmember.
     var bar = svg.getElementById("calendar_bar");
-    var y = Number(item.get("y")) + Number(item.get("height"));
+    var y = item.y + item.height;
     bar.setAttribute("transform", "scale(1," + y + ")");
   }
 
@@ -462,11 +450,11 @@ require([
     var parentId = svg.getElementById(line.get("ident"));
 
     var G = document.createElementNS(svgNS, "g");
-    G.setAttributeNS(null, "transform", "translate(" + CompressX(activity.get("x")) + ",50)");
+    G.setAttributeNS(null, "transform", "translate(" + CompressX(activity.x) + ",50)");
     G.setAttributeNS(null, "id", activity.get("ident"));
 
     on(G, "click", function(evt){
-      PopupDetails(activity.get("position"));
+      PopupDetails(activity.pk);
     });
        
     parentId.appendChild(G);
@@ -477,29 +465,29 @@ require([
     Rect.setAttributeNS(null, "y", 0);
     Rect.setAttributeNS(null, "rx", CompressX(20));
     Rect.setAttributeNS(null, "ry", CompressX(20));
-    Rect.setAttributeNS(null, "width", CompressX(activity.get("width")));
+    Rect.setAttributeNS(null, "width", CompressX(activity.width));
     Rect.setAttributeNS(null, "height", 100);
     G.appendChild(Rect);
 
     G.appendChild(SVG_drawText("label", 10, 50, activity.get("name")));
 
     // transporation time
-    if( activity.get("tp") > 0 ){
+    if( activity.tp > 0 ){
       // before.
-      G.appendChild(SVG_drawRect("TP", activity.get("tp") * -1, 20, activity.get("tp"), 30));
+      G.appendChild(SVG_drawRect("TP", activity.tp * -1, 20, activity.tp, 30));
 
       // after.
-      G.appendChild(SVG_drawRect("TP", activity.get("width"), 50, activity.get("tp"), 30));
+      G.appendChild(SVG_drawRect("TP", activity.width, 50, activity.tp, 30));
     }
 
     // rest before
-    if( activity.get("restb") > 0 ){
-      G.appendChild(SVG_drawRect("REST", (Number(activity.get("restb")) + activity.get("tp") ) * -1, 20, activity.get("restb"), 30));
+    if( activity.restb > 0 ){
+      G.appendChild(SVG_drawRect("REST", ( activity.restb + activity.tp ) * -1, 20, activity.restb, 30));
     }
     
     // rest after. 
-    if( activity.get("resta") > 0 ){
-      G.appendChild(SVG_drawRect("REST", Number(activity.get("width")) + activity.get("tp"), 50, activity.get("resta"), 30));
+    if( activity.resta > 0 ){
+      G.appendChild(SVG_drawRect("REST", activity.width + activity.tp, 50, activity.resta, 30));
     }
 
   }
@@ -549,24 +537,24 @@ require([
     schema: {
       name: "string",
       relative: "numeric",
-      position: "numeric",
+      pk: "numeric",
       startperiod: { type: "boolean", default: false},
       type: new ComputedProperty({
-        dependsOn: ["position"],
-        getValue: function(position){
-          return position % 2 ? "uneven" : "even";
+        dependsOn: ["pk"],
+        getValue: function(pk){
+          return pk % 2 ? "uneven" : "even";
         }
       }),
       ident: new ComputedProperty({ 
-        dependsOn: ["position"],
-        getValue: function(position){
-          return "cd" + position;  // cd stands for Calendar Day.
+        dependsOn: ["pk"],
+        getValue: function(pk){
+          return "cd" + pk;  // cd stands for Calendar Day.
         }
       }),
       barident: new ComputedProperty({ 
-        dependsOn: ["position"],
-        getValue: function(position){
-          return "bcd" + position;  // bcd stands for Bar Calendar Day.
+        dependsOn: ["pk"],
+        getValue: function(pk){
+          return "bcd" + pk;  // bcd stands for Bar Calendar Day.
         }
       }),
       x: "numeric",
@@ -591,17 +579,17 @@ require([
     schema: {
       name: "string",
       birthdate: "string",
-      position: "numeric",
+      pk: "numeric",
       ident: new ComputedProperty({ 
-        dependsOn: ["position"],
-        getValue: function(position){
-          return "cm" + position; // cm stands for CrewMember.
+        dependsOn: ["pk"],
+        getValue: function(pk){
+          return "cm" + pk; // cm stands for CrewMember.
         }
       }),
       barident: new ComputedProperty({ 
-        dependsOn: ["position"],
-        getValue: function(position){
-          return "bcm" + position; // bcm stands for Bar CrewMember.
+        dependsOn: ["pk"],
+        getValue: function(pk){
+          return "bcm" + pk; // bcm stands for Bar CrewMember.
         }
       }),
       y: "numeric",
@@ -623,7 +611,7 @@ require([
   var ActivityModel = declare(Model, {
     schema: {
       name: "string",
-      position: "numeric",
+      pk: "numeric",
       x: "numeric",
       width: "numeric",
       tp: "numeric",
@@ -632,11 +620,11 @@ require([
       type: "string",
       utcStart: "string",
       utcEnd: "string",
-      cmPosition: "numeric", // foreign key to CrewMember.
+      fk_cm: "numeric", // foreign key to CrewMember.
       ident: new ComputedProperty({ 
-        dependsOn: ["position", "type"],
-        getValue: function(position, type){
-          return type.toLowerCase() + position;  // DOxxx or TRPxxx or  .. 
+        dependsOn: ["pk", "type"],
+        getValue: function(pk, type){
+          return type.toLowerCase() + pk;  // DOxxx or TRPxxx or  .. 
         }
       }),
     },
@@ -750,7 +738,7 @@ require([
 
   var calendarStore = new TrackableMemory({
     Model: CalendarModel,
-    idProperty: "position",
+    idProperty: "pk",
   });
 
   calendarStore.on("add", function(event){
@@ -780,7 +768,7 @@ require([
   // -----------------------------------------------
   var crewMemberStore = new TrackableMemory({
     Model: CrewMemberModel,
-    idProperty: "position",
+    idProperty: "pk",
   });
 
   crewMemberStore.on("add", function(event){
@@ -806,16 +794,16 @@ require([
   // -----------------------------------------------
   var activityStore = new TrackableMemory({
     Model: ActivityModel,
-    idProperty: "position",
+    idProperty: "pk",
   });
 
   activityStore.on("add", function(event){
-    event.target.DrawSVG(crewMemberStore.getSync(event.target.get("cmPosition")));
+    event.target.DrawSVG(crewMemberStore.getSync(event.target.fk_cm));
   });
 
   activityStore.on("update", function(event){
     event.target.ClearSVG();
-    event.target.DrawSVG(crewMemberStore.getSync(event.target.get("cmPosition")));
+    event.target.DrawSVG(crewMemberStore.getSync(event.target.fk_cm));
   });
 
   activityStore.on("delete", function(event){
@@ -829,7 +817,7 @@ require([
   function IsActivityOverlap(crewmember, x , width){
     var isOverlap = false;
     
-    activityStore.filter({cmPosition: crewmember}).forEach(function(object){
+    activityStore.filter({fk_cm: crewmember}).forEach(function(object){
       if(   IsValueInRange(x, object.get("x"), object.get("width"))
           || IsValueInRange(x + width -1, object.get("x"), object.get("width"))){
         isOverlap = true;
@@ -907,7 +895,7 @@ require([
     });
     activityStore.forEach(function(item){
       item.ClearSVG();
-      item.DrawSVG(crewMemberStore.getSync(item.get("cmPosition")));
+      item.DrawSVG(crewMemberStore.getSync(item.fk_cm));
     });
   }
 
@@ -1269,7 +1257,7 @@ require([
       registry.byId("CalendarStation").set("disabled", false);
 
       if( !registry.byId("CalendarStation").get("value") ) {
-        moment.tz.setDefault(item.name);
+//        moment.tz.setDefault(item.name);
         var zone = moment.tz.zone(item.name);
 
         console.log("zone: ");  
@@ -1327,7 +1315,7 @@ require([
 
     calendarStore.fetch().then(function (days){
       for (var i = days.length - 1; i >= 0; i--) {
-        calendarStore.remove(days[i].position);
+        calendarStore.remove(days[i].pk);
       }
     });        
 
@@ -1344,7 +1332,7 @@ require([
       calendarStore.addSync({
         name: start.format().substring(0, 10),
         relative: i,
-        position: i+1, // for unknown reason, checkedmultiselect does not work with 0. 
+        pk: i+1, // for unknown reason, checkedmultiselect does not work with 0. 
         x: x, 
         width: width, 
       });
@@ -1397,7 +1385,7 @@ require([
     var arrChecked = [];
     calendarStore.forEach(function(item){
       if( item.startperiod ) {
-        arrChecked.push(item.position);
+        arrChecked.push(item.pk);
       }
     });
     arrChecked.push(0);          
@@ -1417,8 +1405,8 @@ require([
     var i = 0; 
 
     calendarStore.forEach(function(item){
-      item.set("relative", item.get("position") - ref);
-      if( i < newStarts.length && newStarts[i] == item.position ) {
+      item.set("relative", item.pk - ref);
+      if( i < newStarts.length && newStarts[i] == item.pk ) {
         item.set("startperiod", true);
         i+=1;
       }
@@ -1440,7 +1428,7 @@ require([
 
     // Compute the position and Y coordinate of the new crewmember based on 
     // existing data.
-    crewMemberStore.sort("position").forEach(function(item){
+    crewMemberStore.sort("pk").forEach(function(item){
       pos += 1;
       coordY += item.get("height");
     }); 
@@ -1449,7 +1437,7 @@ require([
     crewMemberStore.addSync({
       name: registry.byId("CrewMemberName").get("value"),
       birthdate: registry.byId("CrewMemberBirthDate").get("value").toISOString().substring(0, 10),
-      position: pos,
+      pk: pos,
       y:coordY,
       height:200,
     });
@@ -1496,8 +1484,8 @@ require([
         activityStore.addSync({
           name: "DO",
           type: "DO",
-          position: pos,
-          cmPosition: crewmemberId,
+          pk: pos,
+          fk_cm: crewmemberId,
           x: calendarDay.get("x"),
           utcStart: moment(calendarDay.get("name")).utc().format("YYYY-MM-DD HH:mm"), 
           utcEnd: moment(calendarDay.get("name")).add(width, 'm').utc().format("YYYY-MM-DD HH:mm"), 
@@ -1565,15 +1553,24 @@ require([
       pos += 1;
     }); 
 
-    var startTimeTraining = registry.byId("TrainingStartTime").get("value");
+    var lbtStartTraining = registry.byId("TrainingStartDate").get("value");
+    console.log(lbtStartTraining);
+    console.log(moment(lbtStartTraining));
 
-    var startTraining = moment(registry.byId("TrainingStartDate").get("value"));
-    startTraining.hour(startTimeTraining.getHours());
-    startTraining.minute(startTimeTraining.getMinutes());
+    var mydate = registry.byId("TrainingStartDate").get("value");
+    var mytime = registry.byId("TrainingStartTime").get("value");
+
+    // rebuild the start date from StartDate and StartTime field values, 
+    var localStartTraining = moment([mydate.getFullYear(), mydate.getMonth(), mydate.getDate(), mytime.getHours(), mytime.getMinutes(), 0]);
+    var x                = getPositionX(localStartTraining);
+    var startTraining    = moment.tz([mydate.getFullYear(), mydate.getMonth(), mydate.getDate(), mytime.getHours(), mytime.getMinutes(), 0], config.timezone);
+    console.log("utc start training");
+    console.log(startTraining.utc().format("YYYY-MM-DD HH:mm"));
 
     var crewmemberId = registry.byId("TrainingCrewMemberSelect").get("value");
-    var x     = getPositionX(startTraining);
     var width = registry.byId("TrainingDurationHour").get("value") * 60 + registry.byId("TrainingDurationMinute").get("value");
+
+    var endTraining = startTraining.clone().add(width, 'm');
 
     if( IsActivityOverlap(crewmemberId, x, width) ){
       alert("Cannot create training because of an overlap with another activity."); 
@@ -1582,13 +1579,13 @@ require([
       activityStore.addSync({
         name: registry.byId("TrainingName").get("value"),
         type: "TRN",
-        position: pos,
-        cmPosition: registry.byId("TrainingCrewMemberSelect").get("value"),
+        pk: pos,
+        fk_cm: registry.byId("TrainingCrewMemberSelect").get("value"),
         x: x,
         utcStart: startTraining.utc().format("YYYY-MM-DD HH:mm"),
-        utcEnd: startTraining.add(width, 'm').utc().format("YYYY-MM-DD HH:mm"), 
+        utcEnd: endTraining.utc().format("YYYY-MM-DD HH:mm"), 
         width: width,
-        tp: registry.byId("TrainingTransportationTime").checked ? config.transportationTime : 0,  // registry.byId("TransportationTimeDuration").get("value") : 0,
+        tp: registry.byId("TrainingTransportationTime").checked ? Number(config.transportationTime) : 0,  // registry.byId("TransportationTimeDuration").get("value") : 0,
         resta: registry.byId("TrainingRestAfterH").get("value") * 60 + registry.byId("TrainingRestAfterM").get("value"),
         restb: registry.byId("TrainingRestBeforeH").get("value") * 60 + registry.byId("TrainingRestBeforeM").get("value"),
       });
@@ -1623,7 +1620,7 @@ require([
  
     if( days.length == 0 ){
       calendarStore.forEach(function(item){
-        days.push(item.get("position"));
+        days.push(item.pk);
       }); 
     }
 
