@@ -51,7 +51,9 @@ then
   echo "Generation of station.xml file"
   echo "==============================================="
 fi
-xsltproc $xsl_verbose -o station.xml Gantt2Station.xsl $SOURCE_FILE
-xsltproc $xsl_verbose -o qual.xml    Gantt2Qual.xsl    $SOURCE_FILE
-xsltproc $xsl_verbose -o acts.xml    Gantt2Acts.xsl    $SOURCE_FILE
+xsltproc $xsl_verbose -o station.xml  Gantt2Station.xsl  $SOURCE_FILE
+xsltproc $xsl_verbose -o qual.xml     Gantt2Qual.xsl     $SOURCE_FILE
+xsltproc $xsl_verbose -o acts.xml     Gantt2Acts.xsl     $SOURCE_FILE
+xsltproc $xsl_verbose -o trip.xml     Gantt2Trip.xsl     $SOURCE_FILE
+xsltproc $xsl_verbose -o trip_sup.xml Gantt2Trip_sup.xsl $SOURCE_FILE
 
