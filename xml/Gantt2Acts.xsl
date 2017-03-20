@@ -14,11 +14,11 @@ extension-element-prefixes="date">
 
   <xsl:template match="crew">
     <xsl:element name="employee">
-      <xsl:attribute name="ref">emp_<xsl:value-of select="position"/></xsl:attribute>
-      <xsl:variable name="varCurrentPosition" select="position"/>
+      <xsl:attribute name="ref">emp_<xsl:value-of select="pk"/></xsl:attribute>
+      <xsl:variable name="varPK" select="pk"/>
 
       <xsl:element name="preassigned-task-list">
-        <xsl:apply-templates select="//activity[cmPosition=$varCurrentPosition]"/>
+        <xsl:apply-templates select="//activity[fk_cm=$varPK]"/>
       </xsl:element>
 
     </xsl:element>

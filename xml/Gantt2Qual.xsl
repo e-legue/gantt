@@ -7,10 +7,10 @@
 
       <xsl:for-each select="//crew">
         <xsl:element name="employee">
-          <xsl:attribute name="id">emp_<xsl:value-of select="position"/></xsl:attribute>
+          <xsl:attribute name="id">emp_<xsl:value-of select="pk"/></xsl:attribute>
           <xsl:element name="name"><xsl:value-of select="name"/></xsl:element>
           <xsl:element name="birth-date-lbt"><xsl:value-of select="birthdate"/></xsl:element>
-          <xsl:element name="seniority"><xsl:value-of select="position"/></xsl:element>
+          <xsl:element name="seniority"><xsl:value-of select="pk"/></xsl:element>
           <xsl:element name="base">
             <xsl:attribute name="ref"><xsl:value-of select="//station[name=//configuration/station]/code"/></xsl:attribute>
           </xsl:element>
