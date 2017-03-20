@@ -471,23 +471,39 @@ require([
 
     G.appendChild(SVG_drawText("label", 10, 50, activity.get("name")));
 
+    var startActivity = moment(activity.get("lbtStart"));
+    var endActivity   = startActivity.clone();
+    endActivity.add(activity.width, "m");
+    console.log(startActivity);
+    
+    G.appendChild(SVG_drawText("start_hour", 0 , 0, startActivity.format("HH:mm")));
+    G.appendChild(SVG_drawText("end_hour", activity.width , 110, endActivity.format("HH:mm")));
+
     // transporation time
     if( activity.tp > 0 ){
       // before.
       G.appendChild(SVG_drawRect("TP", activity.tp * -1, 20, activity.tp, 30));
+      startActivity.subtract(activity.tp, "m");
+      G.appendChild(SVG_drawText("start_hour", activity.tp * -1, 20, startActivity.format("HH:mm")));
 
       // after.
       G.appendChild(SVG_drawRect("TP", activity.width, 50, activity.tp, 30));
+      endActivity.add(activity.tp, "m");
+      G.appendChild(SVG_drawText("end_hour", activity.width + activity.tp , 90, endActivity.format("HH:mm")));
     }
 
     // rest before
     if( activity.restb > 0 ){
       G.appendChild(SVG_drawRect("REST", ( activity.restb + activity.tp ) * -1, 20, activity.restb, 30));
+      startActivity.subtract(activity.restb, "m");
+      G.appendChild(SVG_drawText("start_hour", ( activity.restb + activity.tp ) * -1 , 20, startActivity.format("HH:mm")));
     }
     
     // rest after. 
     if( activity.resta > 0 ){
       G.appendChild(SVG_drawRect("REST", activity.width + activity.tp, 50, activity.resta, 30));
+      endActivity.add(activity.resta, "m");
+      G.appendChild(SVG_drawText("end_hour", activity.width + activity.tp + activity.resta, 90, endActivity.format("HH:mm")));
     }
 
   }
@@ -618,6 +634,7 @@ require([
       resta: "numeric",
       restb: "numeric",
       type: "string",
+      lbtStart: "string", 
       utcStart: "string",
       utcEnd: "string",
       fk_cm: "numeric", // foreign key to CrewMember.
@@ -1334,7 +1351,7 @@ require([
         relative: i,
         pk: i+1, // for unknown reason, checkedmultiselect does not work with 0. 
         x: x, 
-        width: width, 
+        width: width - 1, 
       });
 
       // look for DST
@@ -1487,6 +1504,7 @@ require([
           pk: pos,
           fk_cm: crewmemberId,
           x: calendarDay.get("x"),
+          lbtStart: moment(calendarDay.get("name")).format("YYYY-MM-DD HH:mm"), 
           utcStart: moment(calendarDay.get("name")).utc().format("YYYY-MM-DD HH:mm"), 
           utcEnd: moment(calendarDay.get("name")).add(width, 'm').utc().format("YYYY-MM-DD HH:mm"), 
           width: calendarDay.get("width"),
@@ -1582,6 +1600,7 @@ require([
         pk: pos,
         fk_cm: registry.byId("TrainingCrewMemberSelect").get("value"),
         x: x,
+        lbtStart: localStartTraining.format("YYYY-MM-DD HH:mm"),
         utcStart: startTraining.utc().format("YYYY-MM-DD HH:mm"),
         utcEnd: endTraining.utc().format("YYYY-MM-DD HH:mm"), 
         width: width,
@@ -2064,7 +2083,17 @@ require([
   font-weight: bold;
 }
 
+.start_hour {
+  font-size: 9px;
+  fill: gray;
+  text-anchor: start; 
+}
 
+.end_hour {
+  font-size: 9px;
+  fill: gray;
+  text-anchor: end; 
+}
 
 /* text inside a box */
 .label {
