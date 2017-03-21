@@ -333,6 +333,20 @@ require([
     return Rect;
   }
 
+  // Draw a line.
+  function SVG_drawLine(type, x1, y1, x2, y2){
+    var Line = document.createElementNS(svgNS,"line");
+    Line.setAttributeNS(null, "class", type);
+    Line.setAttributeNS(null, "x1", CompressX(x1));
+    Line.setAttributeNS(null, "y1", y1);
+    Line.setAttributeNS(null, "x2", CompressX(x2));
+    Line.setAttributeNS(null, "y2", y2);
+
+
+    return Line;
+  }
+
+
   // Draw a text. 
   function SVG_drawText(type, x, y, label){
     var Text = document.createElementNS(svgNS, "text");
@@ -345,8 +359,9 @@ require([
     return Text;
   }
 
+
   // Draw a highlight in calendar.
-  function SVG_drawHighlight(item){
+  function SVG_drawHighlightSpecific(item){
     var calendarId    = svg.getElementById("calendar");
     var calendarBarId = svg.getElementById("calendar_bar");
 
@@ -363,6 +378,74 @@ require([
     calendarBarId.appendChild(Gbar);
 
     Gbar.appendChild(SVG_drawRect("highlight", item.x, 0, 1, 1));
+  }
+
+  // Draw a distance in calendar.
+  function SVG_drawHighlightDistance(item){
+    var calendarId    = svg.getElementById("calendar");
+
+    var G       = document.createElementNS(svgNS, "g");
+    G.setAttributeNS(null, "id", item.get("ident"));
+    calendarId.appendChild(G);
+
+    var from = activityStore.getSync(item.fk_act1);
+    var to   = activityStore.getSync(item.fk_act2);
+
+    var from_y = crewMemberStore.getSync(from.fk_cm).y;
+    var to_y   = crewMemberStore.getSync(to.fk_cm).y; 
+
+
+    var y = Math.max(from_y, to_y);
+    
+    var dur = Math.abs(from.x - to.x);
+    var min = dur % 60;
+
+    var label = Math.floor(dur / 60) + "h";
+    label += min > 9 ? min : "0" + min;
+ 
+    console.log(label);
+
+    G.appendChild(SVG_drawText("distance_label", (from.x + to.x) / 2 , y, label));
+    G.appendChild(SVG_drawLine("distance", from.x, y, to.x, y));
+
+    var inc = 10;
+
+    // draw arrow.
+    G.appendChild(SVG_drawLine("distance", from.x, y, from.x + inc, y + inc));
+    G.appendChild(SVG_drawLine("distance", from.x, y, from.x + inc, y - inc ));
+
+    // draw second arrow.
+    G.appendChild(SVG_drawLine("distance", to.x, y, to.x - inc, y + inc));
+    G.appendChild(SVG_drawLine("distance", to.x, y, to.x - inc, y - inc));
+
+    // draw vertical lines.
+    if( from_y < y ) {
+      G.appendChild(SVG_drawLine("distance", from.x, y + 2 * inc, from.x, from_y + 150));
+    }
+    else {
+      G.appendChild(SVG_drawLine("distance", from.x, y - 2 * inc, from.x, from_y + 50));
+    }
+
+    if( to_y < y ) {
+      G.appendChild(SVG_drawLine("distance", to.x  , y + 2 * inc, to.x  , to_y   + 150));
+    }
+    else {
+      G.appendChild(SVG_drawLine("distance", to.x  , y - 2 * inc, to.x  , to_y   + 50));
+    }
+
+
+  }
+
+  function SVG_drawHighlight(item){
+    if( item.type == "specific" ) {
+      SVG_drawHighlightSpecific(item);
+    }
+    else if( item.type == "distance" ) {
+      SVG_drawHighlightDistance(item);
+    }
+    else {
+      alert( item.type + " is not a supported type of highlight.");
+    }
   }
 
 
@@ -542,7 +625,7 @@ require([
       MenuGraphOptionActivities: { type: "boolean", default: true, },
       MenuHighLights: { type: "boolean", default: true, },
       MenuHighLightsSpecificDateTime: { type: "boolean", default: false, },
-      MenuHighLightsDistance: { type: "boolean", default: true, },
+      MenuHighLightsDistance: { type: "boolean", default: false, },
       MenuHighLightsWindow: { type: "boolean", default: true, },
     },
     validateOnSet: false,
@@ -627,6 +710,7 @@ require([
   var ActivityModel = declare(Model, {
     schema: {
       name: "string",
+      fullname: "string", 
       pk: "numeric",
       x: "numeric",
       width: "numeric",
@@ -687,7 +771,9 @@ require([
     schema: {
       message: "string",
       pk: "numeric",
-      x: "numeric",
+      type: "string",
+      fk_act1: "numeric",
+      fk_act2: "numeric",
       ident: new ComputedProperty({ 
         dependsOn: ["pk"],
         getValue: function(pk){
@@ -843,6 +929,16 @@ require([
 
     return isOverlap;
   }
+
+  var activityStoreAdapter = new DstoreAdapter(activityStore);
+
+  registry.byId("DistanceFromSelect").set("labelAttr", "fullname");
+  registry.byId("DistanceFromSelect").set("store", activityStoreAdapter);
+  registry.byId("DistanceToSelect").set("labelAttr", "fullname");
+  registry.byId("DistanceToSelect").set("store", activityStoreAdapter);
+
+
+
 
   // -----------------------------------------------
   // stationStore
@@ -1371,6 +1467,7 @@ require([
      
         highLightStore.addSync({
           message: InitialState ? "End DST" : "Start DST",
+          type: "specific",
           x: getPositionX(start),
           pk: pos,
         });
@@ -1500,6 +1597,7 @@ require([
       else { 
         activityStore.addSync({
           name: "DO",
+          fullname: crewMemberStore.getSync(crewmemberId).name + " -- " + moment(calendarDay.get("name")).format("YYYY-MM-DD") + " -- DO",  
           type: "DO",
           pk: pos,
           fk_cm: crewmemberId,
@@ -1589,6 +1687,7 @@ require([
     var width = registry.byId("TrainingDurationHour").get("value") * 60 + registry.byId("TrainingDurationMinute").get("value");
 
     var endTraining = startTraining.clone().add(width, 'm');
+    var crewmemberId = registry.byId("TrainingCrewMemberSelect").get("value");
 
     if( IsActivityOverlap(crewmemberId, x, width) ){
       alert("Cannot create training because of an overlap with another activity."); 
@@ -1596,9 +1695,10 @@ require([
     else { 
       activityStore.addSync({
         name: registry.byId("TrainingName").get("value"),
+        fullname: crewMemberStore.getSync(crewmemberId).name + " -- " + localStartTraining.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TrainingName").get("value"),  
         type: "TRN",
         pk: pos,
-        fk_cm: registry.byId("TrainingCrewMemberSelect").get("value"),
+        fk_cm: crewmemberId,
         x: x,
         lbtStart: localStartTraining.format("YYYY-MM-DD HH:mm"),
         utcStart: startTraining.utc().format("YYYY-MM-DD HH:mm"),
@@ -1653,13 +1753,71 @@ require([
       if( when.isValid() ){   
         highLightStore.addSync({
           message: label,
-          x: getPositionX(when),
+          type: "specific",
+          fk_act1: -1,
+          fk_act2: -1,
           pk: pos,
         });
         pos += 1;
       }
     }
   });  
+
+
+  // -----------------------------------------------
+  // Create Distance dialog
+  // -----------------------------------------------
+   
+  registry.byId("CreateDistance").on("click", function(){
+    if( !registry.byId("CreateDistanceForm").validate() ){
+      return;
+    }
+
+    CreateDistanceDialog.hide();
+    var from = registry.byId("DistanceFromSelect").value;
+    var to   = registry.byId("DistanceToSelect").value;
+
+    var pos = 0;
+
+    // Compute the size of the store.
+    highLightStore.forEach(function(item){
+      pos += 1;
+    }); 
+ 
+    highLightStore.addSync({
+      message: "n/a",
+      type: "distance",
+      fk_act1: from,
+      fk_act2: to,
+      pk: pos,
+    });
+  });  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
   function viewInForm(object, form){
@@ -2022,7 +2180,7 @@ require([
       <span>Highlights</span>
       <div data-dojo-type="dijit/DropDownMenu">
         <div id="MenuHighLightsSpecificDateTime" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateHighlightDialog.show();}">Specific datetime(s)</div>
-        <div id="MenuHighLightsDistance"         data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){alert('not yet available');}">Distance</div>
+        <div id="MenuHighLightsDistance"         data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateDistanceDialog.show();}">Distance</div>
         <div id="MenuHighLightsWindow"           data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){alert('not yet available');}">Window</div>
       </div>
     </div>
@@ -2100,6 +2258,11 @@ require([
   text-anchor: start; 
   font-size: 50px;
   fill: black;
+}
+
+.distance {
+  stroke: black;
+  stroke-width: 1px;
 }
 
 .DO {
@@ -2495,6 +2658,27 @@ require([
       </div>
     </div>
   </div>
+
+
+  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateDistanceDialog" title="Distance" style="display: none;" data-dojo-props="onHide: function(){CreateDistanceForm.reset();}" >
+    <div data-dojo-type="dijit/form/Form" id="CreateDistanceForm" data-dojo-id="CreateDistanceForm" encType="multipart/form-data" action="" method="">
+      <table class="dijitDialogPaneContentArea">
+        <tr>
+          <td><label for="From">From activity</label></td>
+          <td><select data-dojo-type="dijit/form/FilteringSelect" name="From" id="DistanceFromSelect" required="true"></td>
+        </tr>
+        <tr>
+          <td><label for="To">To activity</label></td>
+          <td><select data-dojo-type="dijit/form/FilteringSelect" name="To" id="DistanceToSelect" required="true"></td>
+        </tr>
+      </table>
+
+      <div class="dijitDialogPaneActionBar">
+        <button data-dojo-type="dijit/form/Button" type="button" id="CreateDistance">Create</button>
+      </div>
+    </div>
+  </div>
+
 
   <!-- 
   <script type="text/template" id="activity-dialog-template">

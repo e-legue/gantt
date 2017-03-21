@@ -4,7 +4,9 @@ https://dojotoolkit.org/reference-guide/1.10/dojox/data/XmlStore-examples.html#d
 example of xmlstringstore. That's what i need.
 
 
-
+http://jsfiddle.net/tmkfs/
+http://bl.ocks.org/mccannf/1629464
+resize rectangle.
 
 RESOLVED there is a problem with the svg, which is a independant document from the html page. Then, the svg cannot
 access script from the html page, so it is impossible to click on an activity to be able to delete it or 
