@@ -380,6 +380,20 @@ require([
     Gbar.appendChild(SVG_drawRect("highlight", item.x, 0, 1, 1));
   }
 
+  function getActivityDistancePosition(event, activity) {
+    var x = activity.x;
+ 
+    switch( event ) {
+      case 1: x = x - activity.tp - activity.restb; break;
+      case 2: x = x - activity.tp; break;
+      case 4: x = x + activity.width; break;
+      case 5: x = x + activity.width + activity.tp; break;
+      case 6: x = x + activity.width + activity.tp + activity.resta; break;
+    }
+
+    return x;
+  }
+
   // Draw a distance in calendar.
   function SVG_drawHighlightDistance(item){
     var calendarId    = svg.getElementById("calendar");
@@ -391,44 +405,59 @@ require([
     var from = activityStore.getSync(item.fk_act1);
     var to   = activityStore.getSync(item.fk_act2);
 
-    var from_y = crewMemberStore.getSync(from.fk_cm).y;
-    var to_y   = crewMemberStore.getSync(to.fk_cm).y; 
+    console.log(item);
 
+    var x1 = getActivityDistancePosition(item.act1_event, from);
+    var x2 = getActivityDistancePosition(item.act2_event, to);
 
-    var y = Math.max(from_y, to_y);
+    var y1 = crewMemberStore.getSync(from.fk_cm).y;
+    var y2 = crewMemberStore.getSync(to.fk_cm).y; 
+
+    var y = Math.max(y1, y2);
+
+    if( x2 < x1 ) {
+      var tmp = x1;
+      x1 = x2;
+      x2 = tmp;
+      
+      tmp = y1;
+      y1 = y2;
+      y2 = tmp;
+    }
     
-    var dur = Math.abs(from.x - to.x);
+    var dur = x2 - x1;
     var min = dur % 60;
 
     var label = Math.floor(dur / 60) + "h";
     label += min > 9 ? min : "0" + min;
  
-    G.appendChild(SVG_drawText("distance_label", (from.x + to.x) / 2 , y, label));
-    G.appendChild(SVG_drawLine("distance", from.x, y, to.x, y));
+    G.appendChild(SVG_drawText("distance_label", (x1 + x2) / 2 , y, label));
+    G.appendChild(SVG_drawLine("distance", x1, y, x2, y));
 
     var inc = 10;
+    var xinc = 10 * Xfactor; 
 
     // draw arrow.
-    G.appendChild(SVG_drawLine("distance", from.x, y, from.x + inc, y + inc));
-    G.appendChild(SVG_drawLine("distance", from.x, y, from.x + inc, y - inc ));
+    G.appendChild(SVG_drawLine("distance", x1, y, x1 + xinc, y + inc));
+    G.appendChild(SVG_drawLine("distance", x1, y, x1 + xinc, y - inc ));
 
     // draw second arrow.
-    G.appendChild(SVG_drawLine("distance", to.x, y, to.x - inc, y + inc));
-    G.appendChild(SVG_drawLine("distance", to.x, y, to.x - inc, y - inc));
+    G.appendChild(SVG_drawLine("distance", x2, y, x2 - xinc, y + inc));
+    G.appendChild(SVG_drawLine("distance", x2, y, x2 - xinc, y - inc));
 
     // draw vertical lines.
-    if( from_y < y ) {
-      G.appendChild(SVG_drawLine("distance", from.x, y + 2 * inc, from.x, from_y + 150));
+    if( y1 < y ) {
+      G.appendChild(SVG_drawLine("distance", x1, y1 - 100, x1, y + 2 * inc));
     }
     else {
-      G.appendChild(SVG_drawLine("distance", from.x, y - 2 * inc, from.x, from_y + 50));
+      G.appendChild(SVG_drawLine("distance", x1, y1 + 100, x1, y - 2 * inc));
     }
 
-    if( to_y < y ) {
-      G.appendChild(SVG_drawLine("distance", to.x  , y + 2 * inc, to.x  , to_y   + 150));
+    if( y2 < y ) {
+      G.appendChild(SVG_drawLine("distance", x2, y2 - 100, x2, y + 2 * inc));
     }
     else {
-      G.appendChild(SVG_drawLine("distance", to.x  , y - 2 * inc, to.x  , to_y   + 50));
+      G.appendChild(SVG_drawLine("distance", x2, y2 + 100, x2, y - 2 * inc));
     }
 
 
@@ -467,7 +496,7 @@ require([
     var duration = moment.duration(minutes, "minutes");
 
     for(var i = 0; i < item.width; i += minutes){ 
-      G.appendChild(SVG_drawText("hour_label", i, 20, time.format("H:mm")));
+      G.appendChild(SVG_drawText("hour_label", i, 0, time.format("H:mm")));
       time.add(duration);   
     }
 
@@ -596,6 +625,8 @@ require([
       id: { type: "numeric", default: 0 },
       transportationTime: { type: "numeric", default: 0},
       midnightOffset: { type: "numeric", default: 0},
+      reportTime: { type: "numeric", default: 0},
+      releaseTime: { type: "numeric", default: 0},
       timezone: { type: "string", default: ""},
       station: { type: "string", default: ""},
       calendarStart: { type: "string", default: ""},
@@ -612,7 +643,7 @@ require([
       MenuBusinessObjectCreateCrewMember: { type: "boolean", default: false, },
       MenuBusinessObjectCreateActivity: { type: "boolean", default: false, },
       MenuBusinessObjectCreateActivityDayOff: { type: "boolean", default: false, },
-      MenuBusinessObjectCreateActivityTrip: { type: "boolean", default: true, },
+      MenuBusinessObjectCreateActivityTrip: { type: "boolean", default: false, },
       MenuBusinessObjectCreateActivityTraining: { type: "boolean", default: false, },
       MenuBusinessObjectCreateActivityOtherActivity: { type: "boolean", default: true, },
       MenuGraphOption: { type: "boolean", default: true, },
@@ -769,7 +800,9 @@ require([
       type: "string",
       x: "numeric",
       fk_act1: "numeric",
+      act1_event: "numeric",
       fk_act2: "numeric",
+      act2_event: "numeric",
       ident: new ComputedProperty({ 
         dependsOn: ["pk"],
         getValue: function(pk){
@@ -1767,6 +1800,25 @@ require([
   // -----------------------------------------------
   // Create Distance dialog
   // -----------------------------------------------
+  function UpdateEvent(val, idEventSelect) {
+    var activity = activityStore.getSync(val);
+    if( activity ) {      
+      var when = registry.byId(idEventSelect);
+
+      when.set("disabled", false);
+      when.getOptions("1").disabled = activity.restb > 0 ? false : true;
+      when.getOptions("2").disabled = activity.tp > 0 ? false : true;
+      when.getOptions("5").disabled = activity.tp > 0 ? false : true;
+      when.getOptions("6").disabled = activity.resta > 0 ? false : true;
+    }
+  }
+          
+  registry.byId("DistanceFromSelect").on("change", function(val) {
+    UpdateEvent(val, "DistanceFromEventSelect");
+  });
+  registry.byId("DistanceToSelect").on("change", function(val) {
+    UpdateEvent(val, "DistanceToEventSelect");
+  });
    
   registry.byId("CreateDistance").on("click", function(){
     if( !registry.byId("CreateDistanceForm").validate() ){
@@ -1774,8 +1826,11 @@ require([
     }
 
     CreateDistanceDialog.hide();
-    var from = registry.byId("DistanceFromSelect").value;
-    var to   = registry.byId("DistanceToSelect").value;
+
+    var from      = registry.byId("DistanceFromSelect").value;
+    var to        = registry.byId("DistanceToSelect").value;
+    var fromEvent = registry.byId("DistanceFromEventSelect").value;
+    var toEvent   = registry.byId("DistanceToEventSelect").value;
 
     var pos = 0;
 
@@ -1787,7 +1842,9 @@ require([
     highLightStore.addSync({
       type: "distance",
       fk_act1: from,
+      act1_event: Number(fromEvent),
       fk_act2: to,
+      act2_event: Number(toEvent),
       pk: pos,
     });
   });  
@@ -2161,7 +2218,7 @@ require([
           <span>Create activity</span>
           <div id="MenuBusinessObjectCreateActivity" data-dojo-type="dijit/DropDownMenu">
             <div id="MenuBusinessObjectCreateActivityDayOff"        data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateDayOffDialog.show();}">Day off</div>
-            <div id="MenuBusinessObjectCreateActivityTrip"          data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){alert('not yet available');}">Trip</div>
+            <div id="MenuBusinessObjectCreateActivityTrip"          data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateTripDialog.show();}">Trip</div>
             <div id="MenuBusinessObjectCreateActivityTraining"      data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateTrainingDialog.show();}">Training</div>
             <div id="MenuBusinessObjectCreateActivityOtherActivity" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){alert('not yet available');}">Other activity</div>
           </div>
@@ -2618,11 +2675,19 @@ require([
       <table class="dijitDialogPaneContentArea">
         <tr>
           <td><label for="transportationTime">Transportation time duration (in minutes)</label></td>
-          <td><input data-dojo-type="dijit/form/NumberTextBox" name="transportationTime" data-dojo-id="transportationTime" value="10" data-dojo-props="constraints:{min:0, places:0}" required="true" style="width: 5em;"></td>
+          <td><input data-dojo-type="dijit/form/NumberTextBox" name="transportationTime" data-dojo-id="transportationTime" data-dojo-props="constraints:{min:0, places:0}" required="true" style="width: 5em;"></td>
+        </tr>
+        <tr>
+          <td><label for="reportTime">Report time (in minutes)</label></td>
+          <td><input data-dojo-type="dijit/form/NumberTextBox" name="reportTime" data-dojo-id="reportTime" data-dojo-props="constraints:{min:0, places:0}" required="true" style="width: 5em;"></td>
+        </tr>
+        <tr>
+          <td><label for="releaseTime">Release time (in minutes)</label></td>
+          <td><input data-dojo-type="dijit/form/NumberTextBox" name="releaseTime" data-dojo-id="releaseTime" data-dojo-props="constraints:{min:0, places:0}" required="true" style="width: 5em;"></td>
         </tr>
         <tr>
           <td><label for="midnightOffset">Midnight offset (in minutes)</label></td>
-          <td><input data-dojo-type="dijit/form/NumberTextBox" name="midnightOffset" data-dojo-id="midnightOffset" value="11" data-dojo-props="constraints:{min:0, max: 1438, places:0}" required="true" style="width: 5em;"></td>
+          <td><input data-dojo-type="dijit/form/NumberTextBox" name="midnightOffset" data-dojo-id="midnightOffset" data-dojo-props="constraints:{min:0, max: 1438, places:0}" required="true" style="width: 5em;"></td>
         </tr>
       </table>
 
@@ -2665,15 +2730,96 @@ require([
         <tr>
           <td><label for="From">From activity</label></td>
           <td><select data-dojo-type="dijit/form/FilteringSelect" name="From" id="DistanceFromSelect" style="width: 30em;" required="true"></td>
+          <td>
+            <select data-dojo-type="dijit/form/Select" id="DistanceFromEventSelect" disabled="true" required="true">
+              <option value="1">rest before start</option>
+              <option value="2">transp. time before start</option>
+              <option value="3" selected="selected">activity start</option>
+              <option value="4">activity end</option>
+              <option value="5">transp. time after end</option>
+              <option value="6">rest after end</option>
+            </select>
+          </td>
         </tr>
         <tr>
           <td><label for="To">To activity</label></td>
           <td><select data-dojo-type="dijit/form/FilteringSelect" name="To" id="DistanceToSelect" style="width: 30em;" required="true"></td>
+          <td>
+            <select data-dojo-type="dijit/form/Select" id="DistanceToEventSelect" disabled="true" required="true">
+              <option value="1">rest before start</option>
+              <option value="2">transp. time before start</option>
+              <option value="3" selected="selected">activity start</option>
+              <option value="4">activity end</option>
+              <option value="5">transp. time after end</option>
+              <option value="6">rest after end</option>
+            </select>
+          </td>
         </tr>
       </table>
 
       <div class="dijitDialogPaneActionBar">
         <button data-dojo-type="dijit/form/Button" type="button" id="CreateDistance">Create</button>
+      </div>
+    </div>
+  </div>
+
+  
+  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateTripDialog" title="Create Trip" style="display: none;" data-dojo-props="onHide: function(){CreateTripForm.reset();}" >
+    <div data-dojo-type="dijit/form/Form" id="CreateTripForm" data-dojo-id="CreateTripForm" encType="multipart/form-data" action="" method="">
+      <table class="dijitDialogPaneContentArea">
+        <tr>
+          <td><label for="name">Name</label></td>
+          <td><input data-dojo-type="dijit/form/TextBox" name="name" id="TripName" required="true"></td>
+        </tr>
+        <tr>
+          <td><label for="TrnCm">Crew member</label></td>
+          <td><select data-dojo-type="dijit/form/FilteringSelect" name="TrnCm" id="TripCrewMemberSelect"></td>
+        </tr>
+        <tr>
+          <td><label for="transportationtime">Transportation time apply</label></td>
+          <td><input data-dojo-type="dijit/form/CheckBox" name="transportationtime" id="TripTransportationTime" value="true" required="true"></td>
+        </tr>
+        <tr>
+          <td><label for="restbefore">Rest before</label></td>
+          <td>
+            <input class="durationHour" data-dojo-type="dijit/form/NumberSpinner" name="restbefore" id="TripRestBeforeH" value="0" data-dojo-props="constraints:{min:0}" required="true">
+            <input class="durationMinute" data-dojo-type="dijit/form/NumberSpinner" name="restbefore" id="TripRestBeforeM" value="0" data-dojo-props="constraints:{min:0,max:59}" required="true">
+          </td>
+        </tr>
+        <tr>
+          <td><label for="start">Start date time</label></td>
+          <td class="datetime">
+            <input id="TripStartDate" name="start" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"/>
+            <input id="TripStartTime" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'"/>
+          </td>
+        </tr>
+<!--        
+        <tr>
+          <td><label for="duration">Duration</label></td>
+          <td>
+            <input id="TripDurationHour"   class="durationHour" data-dojo-type="dijit/form/NumberSpinner" name="duration" data-dojo-props="constraints:{min:0,max:999}, placeHolder:'hhh'" required="true" readonly="true">
+            <input id="TripDurationMinute" class="durationMinute" data-dojo-type="dijit/form/NumberSpinner" name="duration" data-dojo-props="constraints:{min:0,max:59}, placeHolder:'mm'" required="true" readonly="true">
+          </td>
+        </tr>
+-->        
+        <tr>
+          <td><label for="end">End date time</label></td>
+          <td class="datetime">
+            <input id="TripEndDate" name="start" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'" readonly="true" disabled="true" />
+            <input id="TripEndTime" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'" readonly="true" disabled="true" />
+          </td>
+        </tr> 
+        <tr>
+          <td><label for="restafter">Rest after</label></td>
+          <td>
+            <input class="durationHour" data-dojo-type="dijit/form/NumberSpinner" name="restafter" id="TripRestAfterH" value="0" data-dojo-props="constraints:{min:0}" required="true">
+            <input class="durationMinute" data-dojo-type="dijit/form/NumberSpinner" name="restafter" id="TripRestAfterM" value="0" data-dojo-props="constraints:{min:0,max:59}" required="true">
+          </td>
+        </tr>
+      </table>
+
+      <div class="dijitDialogPaneActionBar">
+        <button data-dojo-type="dijit/form/Button" type="button" id="CreateTrip">Create</button>
       </div>
     </div>
   </div>
