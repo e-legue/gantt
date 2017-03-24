@@ -301,7 +301,7 @@ require([
   //  apply the compression factor on axe X.
   // ===============================================
   function CompressX(x) {
-    return x / Xfactor;
+    return x / config.XGraphCompression;
   }
 
   // ===============================================
@@ -320,7 +320,6 @@ require([
   var svgNS   = "http://www.w3.org/2000/svg";
   var xlinkNS = "http://www.w3.org/1999/xlink";
   var Xorig   = 0;
-  var Xfactor = registry.byId("XGraphCompression").get("value"); 
 
   // Draw a rectangle.
   function SVG_drawRect(type, x, y, width, height){
@@ -435,7 +434,7 @@ require([
     G.appendChild(SVG_drawLine("distance", x1, y, x2, y));
 
     var inc = 10;
-    var xinc = 10 * Xfactor; 
+    var xinc = 10 * config.XGraphCompression; 
 
     // draw arrow.
     G.appendChild(SVG_drawLine("distance", x1, y, x1 + xinc, y + inc));
@@ -653,6 +652,13 @@ require([
       MenuHighLightsSpecificDateTime: { type: "boolean", default: false, },
       MenuHighLightsDistance: { type: "boolean", default: false, },
       MenuHighLightsWindow: { type: "boolean", default: true, },
+      SHCoordinates: { type: "boolean", default: true, },
+      SHCalendarHours: { type: "boolean", default: true, },
+      SHCalendarHourBars: { type: "boolean", default: true, },
+      SHCalendarDayX: { type: "boolean", default: true, },
+      SHCalendarDayYYYYMMDD: { type: "boolean", default: true, },
+      SHCalendarDayBars: { type: "boolean", default: true, },
+      XGraphCompression: { type: "numeric", default: 1, },
     },
     validateOnSet: false,
   });
@@ -1267,7 +1273,10 @@ require([
   }, true);
 
   registry.byId("XGraphCompression").on("change", function(value){
-    Xfactor = value;
+    config.XGraphCompression = value;
+
+    configurationStore.putSync(config);          
+          
     RedrawSVG ();
   }, true);
 
@@ -1355,6 +1364,26 @@ require([
     ShowConstantsDialog.hide();
 
     setFromForm(config, dom.byId("ShowConstantsForm"));
+
+    configurationStore.putSync(config);
+  });
+
+  // -----------------------------------------------
+  // Show/Hide dialog
+  // -----------------------------------------------
+
+  registry.byId("ShowHideDialog").on("show", function(){
+    viewInForm(config, dom.byId("ShowHideForm"));
+  }, true);
+
+  registry.byId("SaveShowHide").on("click", function(){
+    if( !registry.byId("ShowHideForm").validate() ){
+      return;
+    }
+
+    ShowHideDialog.hide();
+
+    setFromForm(config, dom.byId("ShowHideForm"));
 
     configurationStore.putSync(config);
   });
@@ -1877,41 +1906,57 @@ require([
 
 
   function viewInForm(object, form){
-    // copy initial values into form inputs
-    for(var i in object){
-      updateInput(i, object.get(i));
-    }
+    for(var i = 0; i < form.elements.length; i++ ) {
+      if(form.elements[i].name) {
+        var element = form.elements[i];
+        var name = element.name;
+        var value = object[name];
 
-    function updateInput(name, value){
-      var input = query("input[name=" + name + "]", form)[0];
-      if(input){
-        console.log(name + "---" + value);
-        // here is a little hack. dijit dialog create an hidden input with the right name.
-        // but the one used to display is the sibling before. So I reference the parent and
-        // pick the first child with the right class.
-        var dijitInputInner  = query(".dijitInputInner", input.parentNode)[0];
-        var dijitPlaceHolder = query(".dijitPlaceHolder", input.parentNode)[0];
+        console.log(name);
+        console.log(element.type);
+        console.log(element.checked);
+        console.log(object[name]);
 
-        console.log(dijitInputInner);
+        if( element.type == "checkbox" ) {
+          console.log('on checked');
+          console.log(registry.byId(name));
+          registry.byId(name).set("checked", value);
+        }
+        else {
+          console.log('on value');
+          console.log(registry.byId(name));
+          if( registry.byId(name) ) {
+            registry.byId(name).set("value", value);
+          }
+          else  {
+            var input = query("input[name=" + name + "]", form)[0];
+            if(input){
+              console.log(name + "---" + value);
+              // here is a little hack. dijit dialog create an hidden input with the right name.
+              // but the one used to display is the sibling before. So I reference the parent and
+              // pick the first child with the right class.
+              var dijitInputInner  = query(".dijitInputInner", input.parentNode)[0];
+              var dijitPlaceHolder = query(".dijitPlaceHolder", input.parentNode)[0];
 
-        if( dijitInputInner ) dijitInputInner.value = value;
-        if( dijitPlaceHolder ) dijitPlaceHolder.style.display = "none";  
+              console.log(dijitInputInner);
+
+              if( dijitInputInner ) dijitInputInner.value = value;
+              if( dijitPlaceHolder ) dijitPlaceHolder.style.display = "none";  
+            }
+          }
+        }
       }
     }
   }
           
- function setFromForm(object, form){
-    for(var i in object){
-      updateObject(i);
-    }
-
-    function updateObject(name){
-      var input = query("input[name=" + name + "]", form)[0];
-      if(input){
-        // here is a little hack. dijit dialog create an hidden input with the right name.
-        // but the one used to display is the sibling before. So I reference the parent and
-        // pick the first child node.
-        object[name] = input.parentNode.childNodes[0].value;
+  function setFromForm(object, form){
+    for(var i = 0; i < form.elements.length; i++ ) {
+      if(form.elements[i].name) {
+        // console.log(form.elements[i].name);
+        // console.log(form.elements[i].value);
+        // console.log(form.elements[i].type);
+        // console.log(form.elements[i].checked);
+        object[form.elements[i].name] =form.elements[i].type == "checkbox" ?  form.elements[i].checked : form.elements[i].value;
       }
     }
   }
@@ -2475,50 +2520,52 @@ require([
 
 
 
-  <div data-dojo-type="dijit/Dialog" data-dojo-id="ShowHideDialog" title="Show/hide SVG items" style="display: none;">
-    <table class="dijitDialogPaneContentArea">
-      <tr>
-        <td><label for="SHCoordinates">Show coordinates X and Y</label></td>
-        <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCoordinates" id="SHCoordinates" checked></td>
-      </tr>
-      <tr>
-        <td><label for="SHCalendarHours">Show calendar hour label</label></td>
-        <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarHours" id="SHCalendarHours" checked></td>
-      </tr>
-      <tr>
-        <td><label for="SHCalendarHourBars">Show calendar hour bars</label></td>
-        <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarHourBars" id="SHCalendarHourBars" checked></td>
-      </tr>
-      <tr>
-        <td><label for="SHCalendarDayX">Show calendar Day X</label></td>
-        <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarDayX" id="SHCalendarDayX" checked></td>
-      </tr>
-      <tr>
-        <td><label for="SHCalendarDayYYYYMMDD">Show calendar day YYYY-MM-DD</label></td>
-        <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarDayYYYYMMDD" id="SHCalendarDayYYYYMMDD" checked></td>
-      </tr>
-      <tr>
-        <td><label for="SHCalendarDayBars">Show calendar day bars</label></td>
-        <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarDayBars" id="SHCalendarDayBars" checked></td>
-      </tr>
-      <tr>
-        <td><label for="Xcompression">Graph factor compression on axe X</label></td>
-        <td>
-          <select data-dojo-type="dijit/form/Select" name="Xcompression" id="XGraphCompression" style="width: 3em;">
-            <option value="1" selected="selected">1</option>
-            <option value="2">2</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
-            <option value="6">6</option>
-            <option value="8">8</option>
-            <option value="10">10</option>
-          </select>
-        </td>
-      </tr>
-    </table>
+  <div data-dojo-type="dijit/Dialog" id="ShowHideDialog" data-dojo-id="ShowHideDialog" title="Show/hide SVG items" style="display: none;">
+    <div data-dojo-type="dijit/form/Form" id="ShowHideForm" encType="multipart/form-data" action="" method="">
+      <table class="dijitDialogPaneContentArea">
+        <tr>
+          <td><label for="SHCoordinates">Show coordinates X and Y</label></td>
+          <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCoordinates" id="SHCoordinates" checked></td>
+        </tr>
+        <tr>
+          <td><label for="SHCalendarHours">Show calendar hour label</label></td>
+          <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarHours" id="SHCalendarHours" checked></td>
+        </tr>
+        <tr>
+          <td><label for="SHCalendarHourBars">Show calendar hour bars</label></td>
+          <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarHourBars" id="SHCalendarHourBars" checked></td>
+        </tr>
+        <tr>
+          <td><label for="SHCalendarDayX">Show calendar Day X</label></td>
+          <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarDayX" id="SHCalendarDayX"></td>
+        </tr>
+        <tr>
+          <td><label for="SHCalendarDayYYYYMMDD">Show calendar day YYYY-MM-DD</label></td>
+          <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarDayYYYYMMDD" id="SHCalendarDayYYYYMMDD"></td>
+        </tr>
+        <tr>
+          <td><label for="SHCalendarDayBars">Show calendar day bars</label></td>
+          <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarDayBars" id="SHCalendarDayBars"></td>
+        </tr>
+        <tr>
+          <td><label for="XGraphCompression">Graph factor compression on axe X</label></td>
+          <td>
+            <select data-dojo-type="dijit/form/Select" name="XGraphCompression" id="XGraphCompression" style="width: 3em;">
+              <option value="1" selected="selected">1</option>
+              <option value="2">2</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+              <option value="8">8</option>
+              <option value="10">10</option>
+            </select>
+          </td>
+        </tr>
+      </table>
 
-    <div class="dijitDialogPaneActionBar">
-      <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){ShowHideDialog.hide();}">Close</button>
+      <div class="dijitDialogPaneActionBar">
+        <button data-dojo-type="dijit/form/Button" type="button" id="SaveShowHide">Save</button>
+      </div>
     </div>
   </div>
 

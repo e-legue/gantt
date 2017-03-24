@@ -12,7 +12,7 @@
           <xsl:element name="birth-date-lbt"><xsl:value-of select="birthdate"/></xsl:element>
           <xsl:element name="seniority"><xsl:value-of select="pk"/></xsl:element>
           <xsl:element name="base">
-            <xsl:attribute name="ref"><xsl:value-of select="//station[name=//configuration/station]/code"/></xsl:attribute>
+            <xsl:attribute name="ref"><xsl:value-of select="//configuration/station"/></xsl:attribute>
           </xsl:element>
 
           <!-- ================== -->
