@@ -319,7 +319,10 @@ require([
   var svg     = dom.byId("graph"); // .getSVGDocument();
   var svgNS   = "http://www.w3.org/2000/svg";
   var xlinkNS = "http://www.w3.org/1999/xlink";
-  var Xorig   = 0;
+
+  var Xorig          = 0; // unix time of the start of the calendar.
+  var HEIGHT_CM_LINE = 200;
+  var IsDrawingEnable = true; // flag used to disable the drawing.
 
   // Draw a rectangle.
   function SVG_drawRect(type, x, y, width, height){
@@ -433,8 +436,8 @@ require([
     G.appendChild(SVG_drawText("distance_label", (x1 + x2) / 2 , y, label));
     G.appendChild(SVG_drawLine("distance", x1, y, x2, y));
 
-    var inc = 10;
-    var xinc = 10 * config.XGraphCompression; 
+    var inc = HEIGHT_CM_LINE / 20;
+    var xinc = inc * config.XGraphCompression; 
 
     // draw arrow.
     G.appendChild(SVG_drawLine("distance", x1, y, x1 + xinc, y + inc));
@@ -446,17 +449,17 @@ require([
 
     // draw vertical lines.
     if( y1 < y ) {
-      G.appendChild(SVG_drawLine("distance", x1, y1 - 100, x1, y + 2 * inc));
+      G.appendChild(SVG_drawLine("distance", x1, y1 - HEIGHT_CM_LINE / 2, x1, y + 2 * inc));
     }
     else {
-      G.appendChild(SVG_drawLine("distance", x1, y1 + 100, x1, y - 2 * inc));
+      G.appendChild(SVG_drawLine("distance", x1, y1 + HEIGHT_CM_LINE / 2, x1, y - 2 * inc));
     }
 
     if( y2 < y ) {
-      G.appendChild(SVG_drawLine("distance", x2, y2 - 100, x2, y + 2 * inc));
+      G.appendChild(SVG_drawLine("distance", x2, y2 - HEIGHT_CM_LINE / 2, x2, y + 2 * inc));
     }
     else {
-      G.appendChild(SVG_drawLine("distance", x2, y2 + 100, x2, y - 2 * inc));
+      G.appendChild(SVG_drawLine("distance", x2, y2 + HEIGHT_CM_LINE / 2, x2, y - 2 * inc));
     }
 
 
@@ -511,7 +514,7 @@ require([
     Gbar.appendChild(SVG_drawRect("line", 0, 0, 1, 1));
     Gbar.appendChild(SVG_drawRect("line", item.width, 0, 1, 1));
 
-    for(var i = 60; i < item.width; i += 120){ 
+    for(var i = 60; i < item.width; i += minutes){ 
       Gbar.appendChild(SVG_drawRect("hour_bar", i, 0, 60, 1));
     }
   }
@@ -529,7 +532,7 @@ require([
     G.setAttributeNS(null,"id", item.get("ident"));
     crewMemberId.appendChild(G);
 
-    G.appendChild(SVG_drawText("crewmember", -50, 100, item.get("name")));
+    G.appendChild(SVG_drawText("crewmember", -50, HEIGHT_CM_LINE / 2, item.get("name")));
 
     
     var Gbar = document.createElementNS(svgNS, "g");
@@ -538,7 +541,7 @@ require([
     crewMemberBarId.appendChild(Gbar);
 
     Gbar.appendChild(SVG_drawRect("line", 0,   0, 1, 1));
-    Gbar.appendChild(SVG_drawRect("line", 0, 200, 1, 1));
+    Gbar.appendChild(SVG_drawRect("line", 0, HEIGHT_CM_LINE, 1, 1));
 
 
     // scale vertically the calendar to fit the number of crewmember.
@@ -556,7 +559,7 @@ require([
     var parentId = svg.getElementById(line.get("ident"));
 
     var G = document.createElementNS(svgNS, "g");
-    G.setAttributeNS(null, "transform", "translate(" + CompressX(activity.x) + ",50)");
+    G.setAttributeNS(null, "transform", "translate(" + CompressX(activity.x) + "," + HEIGHT_CM_LINE / 4 +")");
     G.setAttributeNS(null, "id", activity.get("ident"));
 
     on(G, "click", function(evt){
@@ -569,10 +572,10 @@ require([
     Rect.setAttributeNS(null, "class", activity.get("type"));
     Rect.setAttributeNS(null, "x", 0);
     Rect.setAttributeNS(null, "y", 0);
-    Rect.setAttributeNS(null, "rx", CompressX(20));
-    Rect.setAttributeNS(null, "ry", CompressX(20));
+    Rect.setAttributeNS(null, "rx", CompressX(HEIGHT_CM_LINE / 10));
+    Rect.setAttributeNS(null, "ry", CompressX(HEIGHT_CM_LINE / 10));
     Rect.setAttributeNS(null, "width", CompressX(activity.width));
-    Rect.setAttributeNS(null, "height", 100);
+    Rect.setAttributeNS(null, "height", HEIGHT_CM_LINE / 2);
     G.appendChild(Rect);
 
     G.appendChild(SVG_drawText("label", 10, 50, activity.get("name")));
@@ -693,17 +696,15 @@ require([
     },
     validateOnSet: false,
     DrawSVG: function(){ 
-      SVG_drawCalendarDate(this); 
+      if( IsDrawingEnable ) SVG_drawCalendarDate(this); 
     },
     ClearSVG: function(){
       var item_lbl = svg.getElementById(this.get("ident"));
       var item_bar = svg.getElementById(this.get("barident"));
       
-      item_lbl.parentNode.removeChild(item_lbl);
-      item_bar.parentNode.removeChild(item_bar);
+      if( item_lbl) item_lbl.parentNode.removeChild(item_lbl);
+      if( item_bar) item_bar.parentNode.removeChild(item_bar);
     },
-    ToXML: function(){
-    }  
   });
 
   var CrewMemberModel = declare(Model, {
@@ -728,14 +729,14 @@ require([
     },
     validateOnSet: false,
     DrawSVG: function(){ 
-      SVG_drawCrewMember(this); 
+      if( IsDrawingEnable ) SVG_drawCrewMember(this); 
     },
     ClearSVG: function(){
       var item_lbl = svg.getElementById(this.get("ident"));
       var item_bar = svg.getElementById(this.get("barident"));
       
-      item_lbl.parentNode.removeChild(item_lbl);
-      item_bar.parentNode.removeChild(item_bar);
+      if( item_lbl) item_lbl.parentNode.removeChild(item_lbl);
+      if( item_bar) item_bar.parentNode.removeChild(item_bar);
     },
   });
 
@@ -763,7 +764,7 @@ require([
     },
     validateOnSet: false,
     DrawSVG: function(crewmember){ 
-      SVG_drawActivity(this, crewmember); 
+      if( IsDrawingEnable ) SVG_drawActivity(this, crewmember); 
     },
     ClearSVG: function(){
       var item = svg.getElementById(this.get("ident"));
@@ -824,7 +825,7 @@ require([
     },
     validateOnSet: false,
     DrawSVG: function(){ 
-      SVG_drawHighlight(this); 
+      if( IsDrawingEnable ) SVG_drawHighlight(this); 
     },
     ClearSVG: function(){
       var item_lbl = svg.getElementById(this.get("ident"));
@@ -1024,6 +1025,8 @@ require([
   }
 
   function RedrawSVG(){
+    IsDrawingEnable = true;
+
     RemoveIntroMessage();
 
     var x = 0;
@@ -1125,6 +1128,8 @@ require([
   function LoadSvgStores(svgNode){
     RemoveIntroMessage();
 
+    IsDrawingEnable = false;
+
     LoadStore(configurationStore, svgNode.getElementById("ConfigurationStore"),"configuration");
     // load single object (id 0) in config.
     config = configurationStore.getSync(0);
@@ -1150,6 +1155,8 @@ require([
         registry.byId("CalendarStation").set("value", results[0].id);
       }
     });
+
+    RedrawSVG();
   }
 
 
@@ -1277,7 +1284,7 @@ require([
 
     configurationStore.putSync(config);          
           
-    RedrawSVG ();
+    RedrawSVG();
   }, true);
 
 
@@ -1615,8 +1622,8 @@ require([
       name: registry.byId("CrewMemberName").get("value"),
       birthdate: registry.byId("CrewMemberBirthDate").get("value").toISOString().substring(0, 10),
       pk: pos,
-      y:coordY,
-      height:200,
+      y: coordY,
+      height: HEIGHT_CM_LINE,
     });
 
     CreateCrewMemberDialog.hide();
@@ -1647,12 +1654,11 @@ require([
       pos += 1;
     }); 
 
-
     days.forEach(function(day){
       var calendarDay = calendarStore.getSync(day); 
 
-      var x          = calendarDay.get("x");
-      var width      = calendarDay.get("width");
+      var x     = calendarDay.get("x");
+      var width = calendarDay.get("width") + 1;
 
       if( IsActivityOverlap(crewmemberId, x, width) ){
         alert("Cannot create activity starting " + calendarDay.get("name") + " because of an overlap with another activity."); 
@@ -1664,11 +1670,11 @@ require([
           type: "DO",
           pk: pos,
           fk_cm: crewmemberId,
-          x: calendarDay.get("x"),
+          x: x,
           lbtStart: moment(calendarDay.get("name")).format("YYYY-MM-DD HH:mm"), 
           utcStart: moment(calendarDay.get("name")).utc().format("YYYY-MM-DD HH:mm"), 
           utcEnd: moment(calendarDay.get("name")).add(width, 'm').utc().format("YYYY-MM-DD HH:mm"), 
-          width: calendarDay.get("width"),
+          width: width,
           tp: 0,
           resta: 0,
           restb: 0,
@@ -2409,9 +2415,12 @@ require([
         -->
         <g id="calendar">
           <g id="intro">
-            <text x="100" y="50"  style="fill:black;font-size:40p">To start, please do one of: </text>
-            <text x="120" y="80"  style="fill:black;font-size:40p">- Use File menu to load an XML station file and then Calendar menu to set a period or</text>
-            <text x="120" y="110" style="fill:black;font-size:40p">- Use File menu to load a SVG file.</text>
+            <image x="100" y="20" width="280" height="390" xlink:href="https://i.ebayimg.com/00/s/MzkwWDI4MA==/z/YKQAAOSwYqxXi7cf/$_86.JPG" />
+
+            <text x="400" y="50"  style="fill:black;font-size:40px;">Bob, the "problem" builder v0.1</text>
+            <text x="400" y="90"  style="fill:black;font-size:20px;">To start, please do one of: </text>
+            <text x="420" y="120" style="fill:black;font-size:20px;">- Use File menu to load an XML station file and then Calendar menu to set a period or</text>
+            <text x="420" y="150" style="fill:black;font-size:20px;">- Use File menu to load a SVG file.</text>
           </g>
           <g id="calendar_bar" transform="scale(1,100)"></g>
         </g>
