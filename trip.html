@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <title>Test Grid Store Observation</title>
+
+  <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dijit/themes/claro/claro.css" />
+  <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dojo/resources/dojo.css" />
+  <link rel="stylesheet" href="http://cdn.rawgit.com/SitePen/dgrid/v1.1.0/css/dgrid.css" />
+  <link rel="stylesheet" href="http://cdn.rawgit.com/SitePen/dgrid/v1.1.0/css/skins/claro.css" />
+
+  <style>
+    .dgrid {
+      margin: 10px;
+    }
+    .dgrid-grid {
+      width: 700px;
+    }
+    .dgrid-list {
+      width: 200px;
+    }
+
+    #grid2 {
+      width: 500px;
+      float: left;
+    }
+    #grid3 {
+      width: 500px;
+      float: right;
+    }
+
+    .dgrid .field-bool {
+      width: 6em;
+    }
+    .dgrid .field-type {
+      width: 80px;
+    }
+
+    #grid2 .field-date, #grid2 .field-date2 {
+      width: 16em;
+    }
+    #grid2 .field-integer {
+      width: 6em;
+    }
+    #grid2 .field-bool { /* checkbox */
+      width: 4em;
+    }
+
+    #gridAddDel, #listAddDel {
+      float: left;
+    }
+  </style>
+  <script>
+var start= new Date().getTime();
+  </script>
+
+ 
+  <script>
+var dojoConfig = {
+  async: true, 
+  debug: true,
+  packages: [{
+    name: "dstore",
+    location: "http://cdn.rawgit.com/SitePen/dstore/v1.1.1"
+  }, {
+    name: "dmodel",
+    location: "http://cdn.rawgit.com/SitePen/dmodel/master"
+  }, {
+    name: "dgrid",
+    location: "http://cdn.rawgit.com/SitePen/dgrid/v1.1.0"
+  }]
+};
+  </script>
+
+  <script src="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dojo/dojo.js"></script>
+
+
+
+<script>
+			require(["dgrid/Grid", "dgrid/Selection", "dgrid/Keyboard", "dgrid/Editor", "dijit/form/NumberSpinner", "dojo/_base/declare", "dgrid/test/data/typesData", "dojo/domReady!"],
+				function(Grid, Selection, Keyboard, Editor, NumberSpinner, declare, typesData){
+					var columns = [
+						{
+							label: 'Integer',
+							field: 'integer',
+							autoSave: true,
+							editor: NumberSpinner,
+							editorArgs: {style: 'width: 5em;', constraints: {min:1,max:1550,places:0}}
+						},
+						{
+							label: 'Text',
+							field: 'text',
+							autoSave: true,
+							editor: "text",
+							editOn: "dblclick"
+						},
+						{
+							label: 'Non editable text',
+							field: 'text',
+							sortable: false
+						}
+					];
+
+					window.grid = new (declare([Grid, Selection, Keyboard, Editor]))({
+						columns: columns,
+						selectionMode: "single"
+					}, "grid");
+					// use data directly rather than store
+console.log(typesData);
+console.log(typesData.items);
+					grid.renderArray(typesData.items);
+
+					grid.on(".field-integer:change", function(event){
+						if(event.value > 100){
+							event.preventDefault();
+							alert("Values above 100 not allowed");
+						}
+					});
+				});
+
+		</script>
+
+
+  </head>
+  <body class="claro">
+    <h2>A basic grid with Rest store</h2>
+    <div id="grid"></div>
+  </body>
+</html>

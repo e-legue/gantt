@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <title>Test Grid Store Observation</title>
+
+  <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dijit/themes/claro/claro.css" />
+  <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dojo/resources/dojo.css" />
+  <link rel="stylesheet" href="http://cdn.rawgit.com/SitePen/dgrid/v1.1.0/css/dgrid.css" />
+  <link rel="stylesheet" href="http://cdn.rawgit.com/SitePen/dgrid/v1.1.0/css/skins/claro.css" />
+
+  <style>
+    .dgrid {
+      margin: 10px;
+    }
+    .dgrid-grid {
+      width: 900px;
+    }
+    .dgrid-list {
+      width: 200px;
+    }
+
+    #grid2 {
+      width: 500px;
+      float: left;
+    }
+    #grid3 {
+      width: 500px;
+      float: right;
+    }
+
+    .dgrid .field-bool {
+      width: 6em;
+    }
+    .dgrid .field-type {
+      width: 10em;
+    }
+
+    #grid .field-date, #grid .field-date2 {
+      width: 16em;
+    }
+    #grid .field-integer {
+      width: 6em;
+    }
+    #grid .field-bool { /* checkbox */
+      width: 4em;
+    }
+    #grid .field-date, #grid .field-date2 {
+      width: 16em;
+   }
+    #gridAddDel, #listAddDel {
+      float: left;
+    }
+  </style>
+  <script>
+var start= new Date().getTime();
+  </script>
+
+ 
+  <script>
+var dojoConfig = {
+  async: true, 
+  debug: true,
+  packages: [{
+    name: "dstore",
+    location: "http://cdn.rawgit.com/SitePen/dstore/v1.1.1"
+  }, {
+    name: "dmodel",
+    location: "http://cdn.rawgit.com/SitePen/dmodel/master"
+  }, {
+    name: "dgrid",
+    location: "http://cdn.rawgit.com/SitePen/dgrid/v1.1.0"
+  }]
+};
+  </script>
+
+  <script src="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dojo/dojo.js"></script>
+
+
+
+<script>
+require([
+    "dgrid/OnDemandGrid", 
+    "dgrid/Selection", 
+    "dgrid/Keyboard", 
+    "dgrid/Editor", 
+    "dijit/form/NumberSpinner", 
+    "dojo/_base/declare", 
+    "dgrid/test/data/typesData", 
+    "dstore/Memory",
+    "dstore/Trackable",   
+    "dmodel/Model",
+
+    "dojo/data/ObjectStore", 
+    "dijit/form/FilteringSelect",
+
+    "dojo/store/Memory", 
+    "dojo/store/Observable",
+
+
+    "dojo/domReady!"],
+  function(Grid, Selection, Keyboard, Editor, NumberSpinner, declare, typesData, Memory, Trackable, Model, ObjectStore, FilteringSelect, LegacyMemory, LegacyObservable){
+
+  var ActivityModel = declare(Model, {
+    schema: {
+      pk: "numeric",
+      type: "string",
+      station: "string", 
+      datetime: "numeric",
+      duration: "numeric",
+    },
+    validateOnSet: false,
+  });
+
+  var TrackableMemory = declare([Memory, Trackable]);
+  
+   var activityStore = new TrackableMemory({
+    Model: ActivityModel,
+    idProperty: "pk",
+  });
+
+   activityStore.addSync({
+    pk: 1,
+    type: "leg",
+    station: "AUH",
+    datetime: 1490905094,
+    duration: 150*60,
+   });
+   activityStore.addSync({
+    pk: 2,
+    type: "leg",
+    station: "AUH",
+    datetime: 1490905094,
+    duration: 250*60,
+   });
+   activityStore.addSync({
+    pk: 3,
+    type: "lay",
+    station: "BEN",
+    datetime: 1490905094,
+    duration: 350*60,
+   });
+   activityStore.addSync({
+    pk: 4,
+    type: "leg",
+    station: "AUH",
+    datetime: 1490905094,
+    duration: 450*60,
+   });
+   activityStore.addSync({
+    pk: 5,
+    type: "leg",
+    station: "AMD",
+    datetime: 1490905094,
+    duration: 550*60,
+   });
+/*
+    var columns = [
+
+    {
+      label: 'Integer',
+      field: 'integer',
+      autoSave: true,
+      editor: NumberSpinner,
+      editorArgs: {style: 'width: 5em;', constraints: {min:1,max:1550,places:0}}
+    },
+    {
+      label: 'Text',
+      field: 'text',
+      autoSave: true,
+      editor: "text",
+      editOn: "dblclick"
+    },
+    {
+      label: 'Non editable text',
+      field: 'text',
+      sortable: false
+    }
+    ];
+
+    
+    window.grid = new (declare([Grid, Selection, Keyboard, Editor]))({
+      columns: columns,
+      selectionMode: "single"
+    }, "grid");
+    // use data directly rather than store
+    console.log(typesData);
+    console.log(typesData.items);
+    grid.renderArray(typesData.items);
+
+    grid.on(".field-integer:change", function(event){
+      if(event.value > 100){
+        event.preventDefault();
+        alert("Values above 100 not allowed");
+      }
+    });
+*/
+
+    var typeData = {
+	identifier: 'type',
+	items: [
+		{ 'type': 'leg', 'name': 'Leg' },
+		{ 'type': 'lay', 'name': 'Lay over' },
+               ]
+    };
+
+    typeStore = new ObjectStore({
+      objectStore: LegacyObservable(new LegacyMemory({data: typeData})),
+      labelProperty: "name"
+    });
+
+    var stationData = {
+      identifier: 'code',
+      items: [
+      {'code':'ADD', 'name':'Addis Ababa'},
+      {'code':'ALA', 'name':'Almaty'},
+      {'code':'AMD', 'name':'Ahmedabad'},
+      {'code':'AMM', 'name':'Amman Queen Alia International Apt'},
+      {'code':'AMS', 'name':'Amsterdam'},
+      {'code':'ATH', 'name':'Athens'},
+      {'code':'AUH', 'name':'Abu Dhabi International Apt'},
+      {'code':'BAH', 'name':'Bahrain'},
+      {'code':'BEN', 'name':'Benghazi'},
+             ]
+
+    };
+
+    stationStore = new ObjectStore({
+      objectStore: LegacyObservable(new LegacyMemory({data: stationData})),
+      labelProperty: "name"
+    });
+
+
+    var columns = [
+      { field: 'pk',
+        label: 'PK',
+      },
+      {
+        label: "Type",
+        field: "type",
+        editor: FilteringSelect,
+        editorArgs: {
+          store: typeStore,
+         maxHeight: 150,
+          style: "width:8em;"
+        }
+      },
+      {
+        label: "Station",
+        field: "station",
+        editor: FilteringSelect,
+        editorArgs: {
+          store: stationStore,
+         maxHeight: 150,
+          style: "width:15em;"
+        }
+      },
+      { field: 'station',
+        label: 'Station',
+      },
+      { field: 'duration',
+        label: 'Duration',
+      },
+     ];
+
+   var grid = new (declare([Grid, Selection, Keyboard, Editor]))(
+                     { collection: activityStore,
+		       columns: columns
+		     }, 
+                     'grid'
+                   );
+
+  grid.startup();
+
+});
+
+</script>
+
+
+  </head>
+  <body class="claro">
+    <h2>A basic trip grid with memory store</h2>
+    <div id="grid"></div>
+  </body>
+</html>
