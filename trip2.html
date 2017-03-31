@@ -6,6 +6,7 @@
 
   <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dijit/themes/claro/claro.css" />
   <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dojo/resources/dojo.css" />
+  <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dojox/mobile/themes/common/domButtons/DomButtonRedCross.css" />
   <link rel="stylesheet" href="http://cdn.rawgit.com/SitePen/dgrid/v1.1.0/css/dgrid.css" />
   <link rel="stylesheet" href="http://cdn.rawgit.com/SitePen/dgrid/v1.1.0/css/skins/claro.css" />
 
@@ -20,21 +21,19 @@
       width: 200px;
     }
 
-    #grid2 {
-      width: 500px;
-      float: left;
+    .dgrid .field-pk {
+      width: 2em;
     }
-    #grid3 {
-      width: 500px;
-      float: right;
-    }
-
     .dgrid .field-bool {
       width: 6em;
     }
     .dgrid .field-type {
       width: 10em;
     }
+    .dgrid .field-station {
+      width: 8em;
+    }
+
 
     #grid .field-date, #grid .field-date2 {
       width: 16em;
@@ -96,18 +95,80 @@ require([
 
     "dojo/store/Memory", 
     "dojo/store/Observable",
+    "dijit/_WidgetBase",
 
+    'dijit/Toolbar',
+    'dijit/form/Button',
 
     "dojo/domReady!"],
-  function(Grid, Selection, Keyboard, Editor, NumberSpinner, declare, typesData, Memory, Trackable, Model, ObjectStore, FilteringSelect, LegacyMemory, LegacyObservable){
+  function(Grid, Selection, Keyboard, Editor, NumberSpinner, declare, typesData, Memory, Trackable, Model, ObjectStore, FilteringSelect, LegacyMemory, LegacyObservable, _WidgetBase, Toolbar, Button){
+
+  
+    var CustomEditorOperations = declare([_WidgetBase], {
+      value: null,
+      buildRendering: function() {
+        var self = this;
+        this.inherited(arguments);
+
+        self._buttonLeg = new Button({
+          label: "New leg"
+        });
+        self._buttonLayover = new Button({
+          label: "New layover"
+        });
+        self._buttonDelete = new Button({
+          iconClass: "dijitIconDelete"
+        });
+
+        self._buttonLeg.on("click", function() {
+          self.grid.collection.put({pk: self.value.pk + 0.1, lblType: "Leg", type: "leg", btnAction: 2, datetime: 0, duration:99});
+          self.grid.collection.put({pk:self.value.pk + 0.3, btnAction: 1, slctAction: 1, type: "sta"});
+        });
+        self._buttonLayover.on("click", function() {
+          self.grid.collection.put({pk: self.value.pk + 0.1, lblType: "Lay over", type: "lay", btnAction: 2, datetime: 0, duration:99});
+          self.grid.collection.put({pk:self.value.pk + 0.3, btnAction: 1, slctAction: 0, type: "sta", station: self.value.station});
+        });
+
+
+        self._buttonDelete.on("click", function() {
+          self.grid.collection.remove(self.value.pk + 1);
+          self.grid.collection.remove(self.value.pk);
+        });
+ 
+      },
+      _setValueAttr: function(value) {
+        this.value = value;
+
+        if (this.value.btnAction == 1 ){
+         this.domNode.appendChild(this._buttonLeg.domNode);
+         this.domNode.appendChild(this._buttonLayover.domNode);
+        }
+        else if( this.value.btnAction == 2 ){
+         this.domNode.appendChild(this._buttonDelete.domNode);
+        }
+
+      },
+      _getValueAttr: function() {
+        return this.value;
+      },
+      destroy: function() {
+        this._buttonLeg.destroy();
+        this._buttonLayover.destroy();
+        this._buttonDelete.destroy();
+        this.inherited(arguments);
+      }
+    });
+
 
   var ActivityModel = declare(Model, {
     schema: {
       pk: "numeric",
+      btnAction: "numeric",
       type: "string",
       station: "string", 
       datetime: "numeric",
       duration: "numeric",
+      status: "string",
     },
     validateOnSet: false,
   });
@@ -117,84 +178,70 @@ require([
    var activityStore = new TrackableMemory({
     Model: ActivityModel,
     idProperty: "pk",
+    len: 0,
   });
 
    activityStore.addSync({
     pk: 1,
-    type: "leg",
+    btnAction: 1,
+    slctAction: 0, 
+    type: "sta",
     station: "AUH",
-    datetime: 1490905094,
-    duration: 150*60,
    });
    activityStore.addSync({
     pk: 2,
+    btnAction: 2,
     type: "leg",
-    station: "AUH",
+    lblType: "Leg",
     datetime: 1490905094,
     duration: 250*60,
    });
    activityStore.addSync({
     pk: 3,
+    btnAction: 1,
+    slctAction: 1, 
+    type: "sta",
+    station: "ATH",
+   });
+   activityStore.addSync({
+    pk: 4,
+    btnAction: 2,
     type: "lay",
-    station: "BEN",
+    lblType: "Lay over",
     datetime: 1490905094,
     duration: 350*60,
    });
    activityStore.addSync({
-    pk: 4,
+    pk: 5,
+    btnAction: 1,
+    slctAction: 0, 
+    type: "sta",
+    station: "ATH",
+   });
+   activityStore.addSync({
+    pk: 6,
+    btnAction: 2,
     type: "leg",
-    station: "AUH",
+    lblType: "Leg",
     datetime: 1490905094,
     duration: 450*60,
    });
    activityStore.addSync({
-    pk: 5,
-    type: "leg",
-    station: "AMD",
-    datetime: 1490905094,
-    duration: 550*60,
+    pk: 7,
+    btnAction: 0,
+    slctAction: 0, 
+    type: "sta",
+    station: "AUH",
    });
-/*
-    var columns = [
 
-    {
-      label: 'Integer',
-      field: 'integer',
-      autoSave: true,
-      editor: NumberSpinner,
-      editorArgs: {style: 'width: 5em;', constraints: {min:1,max:1550,places:0}}
-    },
-    {
-      label: 'Text',
-      field: 'text',
-      autoSave: true,
-      editor: "text",
-      editOn: "dblclick"
-    },
-    {
-      label: 'Non editable text',
-      field: 'text',
-      sortable: false
-    }
-    ];
+   
 
-    
-    window.grid = new (declare([Grid, Selection, Keyboard, Editor]))({
-      columns: columns,
-      selectionMode: "single"
-    }, "grid");
-    // use data directly rather than store
-    console.log(typesData);
-    console.log(typesData.items);
-    grid.renderArray(typesData.items);
+  activityStore.fetch().then(function(results){
+    // the array of results
+    activityStore.len = results.length;
+  });
 
-    grid.on(".field-integer:change", function(event){
-      if(event.value > 100){
-        event.preventDefault();
-        alert("Values above 100 not allowed");
-      }
-    });
-*/
+
 
     var typeData = {
 	identifier: 'type',
@@ -227,50 +274,63 @@ require([
 
     stationStore = new ObjectStore({
       objectStore: LegacyObservable(new LegacyMemory({data: stationData})),
-      labelProperty: "name"
+      labelProperty: "code",
     });
 
 
-    var columns = [
+   var grid = new (declare([Grid, Selection, Keyboard, Editor]))(
+                     { collection: activityStore},
+                     'grid'
+                   );
+   var columns = [
       { field: 'pk',
         label: 'PK',
-      },
-      {
-        label: "Type",
-        field: "type",
-        editor: FilteringSelect,
-        editorArgs: {
-          store: typeStore,
-         maxHeight: 150,
-          style: "width:8em;"
-        }
+        sortable: false,
       },
       {
         label: "Station",
         field: "station",
+        sortable: false,
         editor: FilteringSelect,
         editorArgs: {
           store: stationStore,
-         maxHeight: 150,
-          style: "width:15em;"
-        }
+          maxHeight: 150,
+          style: "width:6em;",
+          labelAttr: "code",
+          searchAttr: "code",
+        },
+        canEdit: function (object, value) {
+          return object.slctAction;
+        },
+
       },
-      { field: 'station',
-        label: 'Station',
+      {
+        label: "Type",
+        field: "lblType",
+        sortable: false,
       },
       { field: 'duration',
         label: 'Duration',
+        sortable: false,
       },
+      {
+        label: 'Operations',
+        sortable: false,
+        editor: CustomEditorOperations,
+        editorArgs:{
+          grid: grid 
+        },
+      },
+
+
+
      ];
 
-   var grid = new (declare([Grid, Selection, Keyboard, Editor]))(
-                     { collection: activityStore,
-		       columns: columns
-		     }, 
-                     'grid'
-                   );
 
-  grid.startup();
+   grid.set('columns',columns);
+
+//   grid.startup();
+
 
 });
 
@@ -279,6 +339,10 @@ require([
 
   </head>
   <body class="claro">
+
+    <div data-dojo-type="dijit/MenuItem" id="destroy"
+				 data-dojo-props="iconClass:'dijitIconDelete'">Destroy All
+			</div>
     <h2>A basic trip grid with memory store</h2>
     <div id="grid"></div>
   </body>
