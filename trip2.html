@@ -123,6 +123,8 @@ require([
         self._buttonLeg.on("click", function() {
           self.grid.collection.put({pk: self.value.pk + 0.1, lblType: "Leg", type: "leg", btnAction: 2, datetime: 0, duration:99});
           self.grid.collection.put({pk:self.value.pk + 0.3, btnAction: 1, slctAction: 1, type: "sta"});
+
+          reordonateStore(self.grid.collection);
         });
         self._buttonLayover.on("click", function() {
           self.grid.collection.put({pk: self.value.pk + 0.1, lblType: "Lay over", type: "lay", btnAction: 2, datetime: 0, duration:99});
@@ -159,6 +161,19 @@ require([
       }
     });
 
+    function reordonateStore(store) {
+      var i = store.len;
+      
+      store.sort('pk', [ { descending: true } ]).forEach(function (object) {
+        // called for each item in the final result set
+        object.pk = i;
+        store.put(object);
+        console.log(object);
+        i --; 
+                    });
+
+    }
+
 
   var ActivityModel = declare(Model, {
     schema: {
@@ -180,6 +195,17 @@ require([
     idProperty: "pk",
     len: 0,
   });
+
+
+  activityStore.on('add', function(event){
+    console.log('add item in store');
+     activityStore.len += 1;
+   }); 
+   activityStore.on('delete', function(event){
+    console.log('delete item in store');
+     activityStore.len -= 1;
+   }); 
+
 
    activityStore.addSync({
     pk: 1,
@@ -233,14 +259,6 @@ require([
     type: "sta",
     station: "AUH",
    });
-
-   
-
-  activityStore.fetch().then(function(results){
-    // the array of results
-    activityStore.len = results.length;
-  });
-
 
 
     var typeData = {
