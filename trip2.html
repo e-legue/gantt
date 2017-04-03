@@ -24,6 +24,9 @@
     .dgrid .field-pk {
       width: 2em;
     }
+    .dgrid .field-order {
+      width: 2em;
+    }
     .dgrid .field-bool {
       width: 6em;
     }
@@ -121,20 +124,42 @@ require([
         });
 
         self._buttonLeg.on("click", function() {
-          self.grid.collection.put({pk: self.value.pk + 0.1, lblType: "Leg", type: "leg", btnAction: 2, datetime: 0, duration:99});
-          self.grid.collection.put({pk:self.value.pk + 0.3, btnAction: 1, slctAction: 1, type: "sta"});
+          console.log("self.grid.collection");
+          console.log(self.grid.collection.len);
+
+          self.grid.collection.put({pk: self.grid.collection.nextPk, order: self.value.order + 0.1, lblType: "Leg", type: "leg", btnAction: 2, datetime: 0, duration:99});
+          self.grid.collection.put({pk: self.grid.collection.nextPk, order: self.value.order + 0.2, btnAction: 1, slctAction: 1, type: "sta"});
 
           reordonateStore(self.grid.collection);
         });
         self._buttonLayover.on("click", function() {
-          self.grid.collection.put({pk: self.value.pk + 0.1, lblType: "Lay over", type: "lay", btnAction: 2, datetime: 0, duration:99});
-          self.grid.collection.put({pk:self.value.pk + 0.3, btnAction: 1, slctAction: 0, type: "sta", station: self.value.station});
+          self.grid.collection.put({pk: self.grid.collection.nextPk, order: self.value.order + 0.1, lblType: "Lay over", type: "lay", btnAction: 2, datetime: 0, duration:99});
+          self.grid.collection.put({pk: self.grid.collection.nextPk, order: self.value.order + 0.2, btnAction: 1, slctAction: 0, type: "sta", station: self.value.station});
+          
+          reordonateStore(self.grid.collection);
         });
 
 
         self._buttonDelete.on("click", function() {
-          self.grid.collection.remove(self.value.pk + 1);
+          console.log("delete button");
+          if( self.value.order != self.grid.collection.len -1 ) {
+            self.grid.collection.filter({order: self.value.order + 1}).forEach( function (object) {
+              console.log(object);
+              self.grid.collection.remove(object.pk);
+            });
+          } 
+          else {
+            // as this is the last leg/layover in the ordered list, I need to delete the current
+            // leg/layover and the previous station, because the next one is untouchable, required
+            // as the destination station.
+            self.grid.collection.filter({order: self.value.order - 1}).forEach( function (object) {
+              console.log(object);
+              self.grid.collection.remove(object.pk);
+            });
+          }
+
           self.grid.collection.remove(self.value.pk);
+          reordonateStore(self.grid.collection);
         });
  
       },
@@ -145,7 +170,7 @@ require([
          this.domNode.appendChild(this._buttonLeg.domNode);
          this.domNode.appendChild(this._buttonLayover.domNode);
         }
-        else if( this.value.btnAction == 2 ){
+        else if( this.value.btnAction == 2  && this.grid.collection.len > 3 ){
          this.domNode.appendChild(this._buttonDelete.domNode);
         }
 
@@ -164,9 +189,9 @@ require([
     function reordonateStore(store) {
       var i = store.len;
       
-      store.sort('pk', [ { descending: true } ]).forEach(function (object) {
+      store.sort('order', [ { descending: true } ]).forEach(function (object) {
         // called for each item in the final result set
-        object.pk = i;
+        object.order = i;
         store.put(object);
         console.log(object);
         i --; 
@@ -178,6 +203,7 @@ require([
   var ActivityModel = declare(Model, {
     schema: {
       pk: "numeric",
+      order: "numeric",
       btnAction: "numeric",
       type: "string",
       station: "string", 
@@ -194,12 +220,14 @@ require([
     Model: ActivityModel,
     idProperty: "pk",
     len: 0,
+    nextPk: 1,
   });
 
 
   activityStore.on('add', function(event){
     console.log('add item in store');
      activityStore.len += 1;
+     activityStore.nextPk += 1;
    }); 
    activityStore.on('delete', function(event){
     console.log('delete item in store');
@@ -209,6 +237,7 @@ require([
 
    activityStore.addSync({
     pk: 1,
+    order: 1,
     btnAction: 1,
     slctAction: 0, 
     type: "sta",
@@ -216,6 +245,7 @@ require([
    });
    activityStore.addSync({
     pk: 2,
+    order: 2,
     btnAction: 2,
     type: "leg",
     lblType: "Leg",
@@ -224,6 +254,7 @@ require([
    });
    activityStore.addSync({
     pk: 3,
+    order: 3,
     btnAction: 1,
     slctAction: 1, 
     type: "sta",
@@ -231,6 +262,7 @@ require([
    });
    activityStore.addSync({
     pk: 4,
+    order: 4,
     btnAction: 2,
     type: "lay",
     lblType: "Lay over",
@@ -239,6 +271,7 @@ require([
    });
    activityStore.addSync({
     pk: 5,
+    order: 5,
     btnAction: 1,
     slctAction: 0, 
     type: "sta",
@@ -246,6 +279,7 @@ require([
    });
    activityStore.addSync({
     pk: 6,
+    order: 6,
     btnAction: 2,
     type: "leg",
     lblType: "Leg",
@@ -254,6 +288,7 @@ require([
    });
    activityStore.addSync({
     pk: 7,
+    order: 7,
     btnAction: 0,
     slctAction: 0, 
     type: "sta",
@@ -305,6 +340,10 @@ require([
         label: 'PK',
         sortable: false,
       },
+      { field: 'order',
+        label: 'Order',
+        sortable: false,
+      },
       {
         label: "Station",
         field: "station",
@@ -316,6 +355,11 @@ require([
           style: "width:6em;",
           labelAttr: "code",
           searchAttr: "code",
+          onChange: function(value){
+            console.log("select station change");
+            console.log(value);
+          }
+          
         },
         canEdit: function (object, value) {
           return object.slctAction;
@@ -344,8 +388,16 @@ require([
 
      ];
 
+   grid.on("dgrid-datachange",function(event) {
+     console.log("tigidou, c'est la que ca se passe.");
+     console.log(event);
+     console.log(event.cell.row.data);
+     // je vais pouvoir intervenir ici pour faire le sync de la station
+     // dans le cas d'un layover....
+   });
 
    grid.set('columns',columns);
+   grid.set('sort', 'order');
 
 //   grid.startup();
 
