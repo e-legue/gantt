@@ -27,32 +27,30 @@
     .dgrid .field-order {
       width: 2em;
     }
-    .dgrid .field-bool {
-      width: 6em;
-    }
-    .dgrid .field-type {
-      width: 10em;
-    }
     .dgrid .field-station {
-      width: 8em;
+      width: 5em;
+    }
+    .dgrid .field-lblType {
+      width: 7em;
+    }
+    .dgrid .field-legType {
+      width: 7em;
+    }
+    .dgrid .field-startDateTime {
+      width: 11em;
+      color: gray;
+    }
+    .dgrid .dgrid-column-4 {
+      width: 11em;
+    }
+    .dgrid .field-endDateTime {
+      width: 11em;
+      color: gray;
+    }
+    .dgrid .dgrid-column-4 {
+      width: 12em;
     }
 
-
-    #grid .field-date, #grid .field-date2 {
-      width: 16em;
-    }
-    #grid .field-integer {
-      width: 6em;
-    }
-    #grid .field-bool { /* checkbox */
-      width: 4em;
-    }
-    #grid .field-date, #grid .field-date2 {
-      width: 16em;
-   }
-    #gridAddDel, #listAddDel {
-      float: left;
-    }
   </style>
   <script>
 var start= new Date().getTime();
@@ -82,6 +80,8 @@ var dojoConfig = {
 
 <script>
 require([
+    "dojo/date",
+    "dojo/date/locale",
     "dgrid/OnDemandGrid", 
     "dgrid/Selection", 
     "dgrid/Keyboard", 
@@ -103,7 +103,7 @@ require([
 
 
     "dojo/domReady!"],
-  function(Grid, Selection, Keyboard, Editor, declare, Memory, Trackable, Model, ObjectStore, FilteringSelect, ComboBox, Select, Button, LegacyMemory, LegacyObservable, _WidgetBase){
+  function(date, locale, Grid, Selection, Keyboard, Editor, declare, Memory, Trackable, Model, ObjectStore, FilteringSelect, ComboBox, Select, Button, LegacyMemory, LegacyObservable, _WidgetBase){
     var hours = [];
     for( i = 0; i < 100; ++i ){
       hours.push({name: i, id: i});
@@ -118,7 +118,6 @@ require([
     var hourStore = new LegacyMemory({
       data: hours,
     });
-
     var DurationInput = declare([_WidgetBase], {
       value: null,
       buildRendering: function () {
@@ -148,7 +147,7 @@ require([
         if( value.duration === undefined ) value.duration = 0;
         this._hour.set("value", parseInt(value.duration / 60));
         this._minute.set("value", value.duration % 60);
-        if( !value.slctAction) {
+        if( !value.durAction) {
           this._hour.set("disabled", true);
           this._minute.set("disabled", true);
         }
@@ -186,14 +185,40 @@ require([
           console.log("self.grid.collection");
           console.log(self.grid.collection.len);
 
-          self.grid.collection.put({pk: self.grid.collection.nextPk, order: self.value.order + 0.1, lblType: "Leg", type: "leg", btnAction: 2, datetime: 0, duration:99});
-          self.grid.collection.put({pk: self.grid.collection.nextPk, order: self.value.order + 0.2, btnAction: 1, slctAction: 1, type: "sta"});
+          self.grid.collection.put({pk: self.grid.collection.nextPk, 
+                                    order: self.value.order + 0.1, 
+                                    lblType: "Leg", 
+                                    type: "leg", 
+                                    legType: "A",
+                                    btnAction: 2, 
+                                    durAction: 1,
+                                    duration:2*60});
+          self.grid.collection.put({pk: self.grid.collection.nextPk, 
+                                    order: self.value.order + 0.2, 
+                                    btnAction: 1, 
+                                    slctAction: 1, 
+                                    durAction: 1,
+                                    type: "sta"});
 
           reordonateStore(self.grid.collection);
         });
         self._buttonLayover.on("click", function() {
-          self.grid.collection.put({pk: self.grid.collection.nextPk, order: self.value.order + 0.1, lblType: "Lay over", type: "lay", btnAction: 2, datetime: 0, duration:99});
-          self.grid.collection.put({pk: self.grid.collection.nextPk, order: self.value.order + 0.2, btnAction: 1, slctAction: 0, type: "sta", station: self.value.station});
+          // prevoir le chgt de duree de la station d'avant.
+          self.grid.collection.put({pk: self.grid.collection.nextPk, 
+                                    order: self.value.order + 0.1, 
+                                    lblType: "Lay over", 
+                                    type: "lay", 
+                                    btnAction: 2, 
+                                    durAction: 1,
+                                    duration: 12*60});
+          self.grid.collection.put({pk: self.grid.collection.nextPk, 
+                                    order: self.value.order + 0.2, 
+                                    btnAction: 1, 
+                                    slctAction: 0, 
+                                    durAction: 0,
+                                    duration: 20,
+                                    type: "sta", 
+                                    station: self.value.station});
           
           reordonateStore(self.grid.collection);
         });
@@ -254,7 +279,24 @@ require([
         store.put(object);
         console.log(object);
         i --; 
-                    });
+      });
+
+      var toto = new Date();
+//      var toto = date.add(toto, "second", store.start); // Date.add(date, "second", store.start);
+      store.sort('order').forEach(function (object) {
+        // called for each item in the final result set
+        object.startDateTime = locale.format(toto, {datePattern: "yyyy-MM-dd", timePattern: "HH:mm"});
+        if( toto > -1 && object.duration >= 0 ) {
+          toto = date.add(toto, "minute", object.duration);
+        } 
+        else {
+          date = -1;
+        }
+        object.endDateTime = locale.format(toto, {datePattern: "yyyy-MM-dd", timePattern: "HH:mm"});
+        store.put(object);
+
+        console.log(object);
+      });
 
     }
 
@@ -264,11 +306,15 @@ require([
       pk: "numeric",
       order: "numeric",
       btnAction: "numeric",
+      slctAction: "numeric",
       type: "string",
       station: "string", 
       datetime: "numeric",
       duration: "numeric",
       status: "string",
+      legType: "string",
+      startDateTime: "string",
+      endDateTime: "string",
     },
     validateOnSet: false,
   });
@@ -280,6 +326,7 @@ require([
     idProperty: "pk",
     len: 0,
     nextPk: 1,
+    start: 1491324718,
   });
 
 
@@ -298,8 +345,10 @@ require([
     pk: 1,
     order: 1,
     btnAction: 1,
-    slctAction: 0, 
+    slctAction: 0,
+    durAction: 0,
     type: "sta",
+    lblType: "Report time",
     station: "AUH",
     duration: 20,
    });
@@ -307,8 +356,10 @@ require([
     pk: 2,
     order: 2,
     btnAction: 2,
+    durAction: 1,
     type: "leg",
     lblType: "Leg",
+    legType: "A",
     datetime: 1490905094,
     duration: 2*60,
    });
@@ -317,13 +368,17 @@ require([
     order: 3,
     btnAction: 1,
     slctAction: 1, 
+    durAction: 0,
     type: "sta",
+    lblType: "Release time",
     station: "ATH",
+    duration: 15,
    });
    activityStore.addSync({
     pk: 4,
     order: 4,
     btnAction: 2,
+    durAction: 1,
     type: "lay",
     lblType: "Lay over",
     datetime: 1490905094,
@@ -333,42 +388,75 @@ require([
     pk: 5,
     order: 5,
     btnAction: 1,
-    slctAction: 0, 
+    slctAction: 1, 
+    durAction: 0,
     type: "sta",
+    lblType: "Report time",
     station: "ATH",
+    duration: 20,
    });
    activityStore.addSync({
     pk: 6,
     order: 6,
     btnAction: 2,
+    durAction: 1,
     type: "leg",
     lblType: "Leg",
+    legType: "A",
     datetime: 1490905094,
     duration: 4 * 60 + 31,
    });
    activityStore.addSync({
     pk: 7,
     order: 7,
+    btnAction: 1,
+    slctAction: 1, 
+    durAction: 0,
+    type: "sta",
+    lblType: "Ground time",
+    station: "BEN",
+    duration: 20,
+   });
+   activityStore.addSync({
+    pk: 8,
+    order: 8,
+    btnAction: 2,
+    durAction: 1,
+    type: "leg",
+    lblType: "Leg",
+    legType: "D",
+    datetime: 1490905094,
+    duration: 4 * 60 + 31,
+   });
+
+
+   activityStore.addSync({
+    pk: 9,
+    order: 9,
     btnAction: 0,
     slctAction: 0, 
+    durAction: 0,
     type: "sta",
+    lblType: "Release time",
     station: "AUH",
     duration: 15,
    });
 
 
-    var typeData = {
+
+    var typeLegData = {
 	identifier: 'type',
 	items: [
-		{ 'type': 'leg', 'name': 'Leg' },
-		{ 'type': 'lay', 'name': 'Lay over' },
+		{ 'type': 'A', 'name': 'Active' },
+		{ 'type': 'D', 'name': 'Deadhead' },
                ]
     };
 
-    typeStore = new ObjectStore({
-      objectStore: LegacyObservable(new LegacyMemory({data: typeData})),
+    typeLegStore = new ObjectStore({
+      objectStore: LegacyObservable(new LegacyMemory({data: typeLegData})),
       labelProperty: "name"
     });
+
 
     var stationData = {
       identifier: 'code',
@@ -397,6 +485,7 @@ require([
                      'grid'
                    );
    var columns = [
+/*     
       { field: 'pk',
         label: 'PK',
         sortable: false,
@@ -405,6 +494,7 @@ require([
         label: 'Order',
         sortable: false,
       },
+*/      
       {
         label: "Station",
         field: "station",
@@ -413,15 +503,9 @@ require([
         editorArgs: {
           store: stationStore,
           maxHeight: 150,
-          style: "width:6em;",
+          style: "width:4em;",
           labelAttr: "code",
           searchAttr: "code",
-
-//          onChange: function(value){
-//            console.log("select station change");
-//            console.log(value);
-//          }
-          
         },
         canEdit: function (object, value) {
           return object.slctAction;
@@ -433,6 +517,24 @@ require([
         field: "lblType",
         sortable: false,
       },
+      {
+        label: "Leg type",
+        field: "legType",
+        sortable: false,
+        editor: FilteringSelect,
+        editorArgs: {
+          store: typeLegStore,
+          maxHeight: 150,
+          style: "width:6em;",
+        },
+        canEdit: function (object, value) {
+          return object.type == "leg";
+        },
+      },
+      { label: 'Start',
+        field: 'startDateTime',
+        sortable: false,
+      },
       { 
         label: 'Duration',
         sortable: false,
@@ -440,6 +542,10 @@ require([
         editorArgs: {
           grid: grid         
         },
+      },
+      { label: 'End',
+        field: 'endDateTime',
+        sortable: false,
       },
       {
         label: 'Operations',
