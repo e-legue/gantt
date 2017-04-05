@@ -28,13 +28,13 @@
       width: 2em;
     }
     .dgrid .field-station {
-      width: 5em;
+      width: 6em;
     }
     .dgrid .field-lblType {
       width: 7em;
     }
     .dgrid .field-legType {
-      width: 7em;
+      width: 8em;
     }
     .dgrid .field-startDateTime {
       width: 11em;
@@ -114,10 +114,10 @@ require([
       minutes.push({label: i.toString(), value: i});
     } 
 
-
     var hourStore = new LegacyMemory({
       data: hours,
     });
+
     var DurationInput = declare([_WidgetBase], {
       value: null,
       buildRendering: function () {
@@ -138,31 +138,37 @@ require([
         self.domNode.appendChild(document.createTextNode(" h "));
         self.domNode.appendChild(self._minute.domNode);
         self.domNode.appendChild(document.createTextNode(" m"));
+/*
+        self._hour.on("change", function(value){
+          var duration = self._hour.get("value") * 60 + self._minute.get("value");
+          console.log("hour change");
+          console.log(duration);
+
+          self.grid.collection.updateDuration();
+        });
+        self._minute.on("change", function(value){
+          self.grid.collection.updateDuration();
+        });
+*/
       },
       _setValueAttr: function(value) {
-        console.log("set duration input value");
-        console.log(value);
-        console.log(value.slctAction);
-
         if( value.duration === undefined ) value.duration = 0;
         this._hour.set("value", parseInt(value.duration / 60));
         this._minute.set("value", value.duration % 60);
-        if( !value.durAction) {
+        if( !value.durationSelect) {
           this._hour.set("disabled", true);
           this._minute.set("disabled", true);
         }
       },
       _getValueAttr: function() {
-        console.log("get duration input value");
         this.value.duration = this._hour.value * 60 + this._minute.value;
-        console.log(this.value.duration);
         return this.value;
       },
       destroy: function() {
         this._hour.destroy();
         this._minute.destroy();
         this.inherited(arguments);
-      }
+      },
     });
    
     var CustomEditorOperations = declare([_WidgetBase], {
@@ -182,53 +188,36 @@ require([
         });
 
         self._buttonLeg.on("click", function() {
-          console.log("self.grid.collection");
-          console.log(self.grid.collection.len);
-
-          self.grid.collection.put({pk: self.grid.collection.nextPk, 
+          self.grid.collection.add({pk: self.grid.collection.nextPk, 
                                     order: self.value.order + 0.1, 
-                                    lblType: "Leg", 
                                     type: "leg", 
                                     legType: "A",
-                                    btnAction: 2, 
-                                    durAction: 1,
                                     duration:2*60});
-          self.grid.collection.put({pk: self.grid.collection.nextPk, 
+          self.grid.collection.add({pk: self.grid.collection.nextPk, 
                                     order: self.value.order + 0.2, 
-                                    btnAction: 1, 
-                                    slctAction: 1, 
-                                    durAction: 1,
                                     type: "sta"});
 
-          reordonateStore(self.grid.collection);
+          self.grid.collection.process();
         });
         self._buttonLayover.on("click", function() {
           // prevoir le chgt de duree de la station d'avant.
-          self.grid.collection.put({pk: self.grid.collection.nextPk, 
+          self.grid.collection.add({pk: self.grid.collection.nextPk, 
                                     order: self.value.order + 0.1, 
-                                    lblType: "Lay over", 
                                     type: "lay", 
-                                    btnAction: 2, 
-                                    durAction: 1,
                                     duration: 12*60});
-          self.grid.collection.put({pk: self.grid.collection.nextPk, 
+          self.grid.collection.add({pk: self.grid.collection.nextPk, 
                                     order: self.value.order + 0.2, 
-                                    btnAction: 1, 
-                                    slctAction: 0, 
-                                    durAction: 0,
                                     duration: 20,
                                     type: "sta", 
                                     station: self.value.station});
           
-          reordonateStore(self.grid.collection);
+          self.grid.collection.process();
         });
 
 
         self._buttonDelete.on("click", function() {
-          console.log("delete button");
           if( self.value.order != self.grid.collection.len -1 ) {
             self.grid.collection.filter({order: self.value.order + 1}).forEach( function (object) {
-              console.log(object);
               self.grid.collection.remove(object.pk);
             });
           } 
@@ -237,27 +226,21 @@ require([
             // leg/layover and the previous station, because the next one is untouchable, required
             // as the destination station.
             self.grid.collection.filter({order: self.value.order - 1}).forEach( function (object) {
-              console.log(object);
               self.grid.collection.remove(object.pk);
             });
           }
 
           self.grid.collection.remove(self.value.pk);
-          reordonateStore(self.grid.collection);
+          self.grid.collection.process();
         });
  
       },
       _setValueAttr: function(value) {
         this.value = value;
 
-        if (this.value.btnAction == 1 ){
-         this.domNode.appendChild(this._buttonLeg.domNode);
-         this.domNode.appendChild(this._buttonLayover.domNode);
-        }
-        else if( this.value.btnAction == 2  && this.grid.collection.len > 3 ){
-         this.domNode.appendChild(this._buttonDelete.domNode);
-        }
-
+        if( this.value.newLegButton ) this.domNode.appendChild(this._buttonLeg.domNode);
+        if( this.value.newLayButton ) this.domNode.appendChild(this._buttonLayover.domNode);
+        if( this.value.deleteButton ) this.domNode.appendChild(this._buttonDelete.domNode);
       },
       _getValueAttr: function() {
         return this.value;
@@ -270,105 +253,174 @@ require([
       }
     });
 
-    function reordonateStore(store) {
-      var i = store.len;
-      
-      store.sort('order', [ { descending: true } ]).forEach(function (object) {
-        // called for each item in the final result set
-        object.order = i;
-        store.put(object);
-        console.log(object);
-        i --; 
-      });
-
-      var toto = new Date();
-//      var toto = date.add(toto, "second", store.start); // Date.add(date, "second", store.start);
-      store.sort('order').forEach(function (object) {
-        // called for each item in the final result set
-        object.startDateTime = locale.format(toto, {datePattern: "yyyy-MM-dd", timePattern: "HH:mm"});
-        if( toto > -1 && object.duration >= 0 ) {
-          toto = date.add(toto, "minute", object.duration);
-        } 
-        else {
-          date = -1;
-        }
-        object.endDateTime = locale.format(toto, {datePattern: "yyyy-MM-dd", timePattern: "HH:mm"});
-        store.put(object);
-
-        console.log(object);
-      });
-
-    }
-
 
   var ActivityModel = declare(Model, {
     schema: {
       pk: "numeric",
       order: "numeric",
-      btnAction: "numeric",
-      slctAction: "numeric",
       type: "string",
       station: "string", 
-      datetime: "numeric",
-      duration: "numeric",
       status: "string",
       legType: "string",
+
       startDateTime: "string",
+      duration: "numeric",
       endDateTime: "string",
+
+      stationSelect: "numeric",
+      legTypeSelect: "numeric",
+      durationSelect: "numeric",
+      newLegButton: "numeric",
+      newLayButton: "numeric",
+      deleteButton: "numeric",
+
     },
     validateOnSet: false,
   });
 
   var TrackableMemory = declare([Memory, Trackable]);
+
+
+  function _updDur(array){
+      var currentDate = new Date();
+      for( i = 0; i < array.length ; ++i ) {
+        array[i].startDateTime = locale.format(currentDate, {datePattern: "yyyy-MM-dd" , timePattern: "HH:mm"});
+        currentDate = date.add(currentDate, "minute", array[i].duration);
+        array[i].endDateTime = locale.format(currentDate, {datePattern: "yyyy-MM-dd", timePattern: "HH:mm"});
+      }
+    }
   
    var activityStore = new TrackableMemory({
     Model: ActivityModel,
     idProperty: "pk",
     len: 0,
     nextPk: 1,
-    start: 1491324718,
+    reportTime: 20,
+    releaseTime: 15,
+
+    updateDuration : function(){
+      // based on the assumption that the store will have a reasonable size,
+      // there is no need to re 
+      this.sort('order').fetch().then(function (objects) {
+        _updDur(objects);
+
+        for( i = 0; i < objects.length ; ++i ) {
+          self.put(objects[i]);
+        }
+      });
+    },
+
+    process : function() {
+      // based on the assumption that the store will have a reasonable size,
+      // there is no need to re 
+      var self = this; 
+      self.sort('order').fetch().then(function (objects) {
+        for( i = 0; i < objects.length ; ++i ) {
+          objects[i].order = i + 1;
+        }
+
+        for( i = 0; i < objects.length ; ++i ) {
+          if( objects[i].order == 1 ) {
+            objects[i].newLegButton = 1;
+            objects[i].newLayButton = 0;
+            objects[i].deleteButton = 0;
+
+            objects[i].stationSelect = 0;
+
+            objects[i].lblType        = "Report time";
+            objects[i].duration       = self.reportTime;
+            objects[i].durationSelect = 0;
+          } 
+          else if( objects[i].order == objects.length ) {
+            objects[i].newLegButton = 0;
+            objects[i].newLayButton = 0;
+            objects[i].deleteButton = 0;
+            
+            objects[i].stationSelect = 0;
+
+            objects[i].lblType        = "Release time";
+            objects[i].duration       = self.releaseTime;
+            objects[i].durationSelect = 0;
+          }
+          else if( objects[i].order % 2 == 1 ) {
+            objects[i].newLegButton = 1;
+            objects[i].newLayButton = 1;
+            objects[i].deleteButton = 0;
+            
+            if( objects[i-1].type == "leg" ) {
+              objects[i].lblType        = "Ground time";
+              objects[i].durationSelect = 1;
+              objects[i].stationSelect  = 1;
+            }
+          }
+          else {
+            objects[i].newLegButton = 0;
+            objects[i].newLayButton = 0;
+            objects[i].deleteButton = objects.length > 3 ? 1 : 0; 
+
+            objects[i].durationSelect = 1;
+
+            objects[i].lblType = objects[i].type == "leg" ? "Leg" : "Lay over";
+
+            if( objects[i].type == "leg" ) {
+              objects[i].lblType = "Leg";
+            }
+            else {
+              objects[i].lblType = "Lay over";
+              objects[i+1].station = objects[i-1].station;
+
+              objects[i+1].lblType        = "Report time";
+              objects[i+1].duration       = self.reportTime;
+              objects[i+1].durationSelect = 0;
+              objects[i+1].stationSelect  = 0;
+
+              objects[i-1].lblType        = "Release time";
+              objects[i-1].duration       = self.releaseTime;
+              objects[i-1].durationSelect = 0;
+            }
+          }
+        }
+        _updDur(objects);
+
+        for( i = 0; i < objects.length ; ++i ) {
+          self.put(objects[i]);
+        }
+      });
+    }
   });
 
 
   activityStore.on('add', function(event){
-    console.log('add item in store');
      activityStore.len += 1;
      activityStore.nextPk += 1;
    }); 
    activityStore.on('delete', function(event){
-    console.log('delete item in store');
      activityStore.len -= 1;
    }); 
+
+   activityStore.on('update', function(value){
+     console.log("test manu change on activityStore");
+     process();
+   });
 
 
    activityStore.addSync({
     pk: 1,
     order: 1,
-    btnAction: 1,
-    slctAction: 0,
-    durAction: 0,
     type: "sta",
-    lblType: "Report time",
     station: "AUH",
     duration: 20,
    });
    activityStore.addSync({
     pk: 2,
     order: 2,
-    btnAction: 2,
-    durAction: 1,
     type: "leg",
-    lblType: "Leg",
     legType: "A",
-    datetime: 1490905094,
     duration: 2*60,
    });
    activityStore.addSync({
     pk: 3,
     order: 3,
-    btnAction: 1,
-    slctAction: 1, 
-    durAction: 0,
     type: "sta",
     lblType: "Release time",
     station: "ATH",
@@ -377,70 +429,46 @@ require([
    activityStore.addSync({
     pk: 4,
     order: 4,
-    btnAction: 2,
-    durAction: 1,
     type: "lay",
-    lblType: "Lay over",
-    datetime: 1490905094,
     duration: 3*60,
    });
    activityStore.addSync({
     pk: 5,
     order: 5,
-    btnAction: 1,
-    slctAction: 1, 
-    durAction: 0,
     type: "sta",
-    lblType: "Report time",
-    station: "ATH",
+    station: "BEN",
     duration: 20,
    });
    activityStore.addSync({
     pk: 6,
     order: 6,
-    btnAction: 2,
-    durAction: 1,
     type: "leg",
-    lblType: "Leg",
     legType: "A",
-    datetime: 1490905094,
     duration: 4 * 60 + 31,
    });
    activityStore.addSync({
     pk: 7,
     order: 7,
-    btnAction: 1,
-    slctAction: 1, 
-    durAction: 0,
     type: "sta",
-    lblType: "Ground time",
     station: "BEN",
     duration: 20,
    });
    activityStore.addSync({
     pk: 8,
     order: 8,
-    btnAction: 2,
-    durAction: 1,
     type: "leg",
-    lblType: "Leg",
     legType: "D",
-    datetime: 1490905094,
     duration: 4 * 60 + 31,
    });
-
-
    activityStore.addSync({
     pk: 9,
     order: 9,
-    btnAction: 0,
-    slctAction: 0, 
-    durAction: 0,
     type: "sta",
-    lblType: "Release time",
     station: "AUH",
     duration: 15,
    });
+
+   activityStore.process();
 
 
 
@@ -481,20 +509,15 @@ require([
 
 
    var grid = new (declare([Grid, Selection, Keyboard, Editor]))(
-                     { collection: activityStore},
+                     { collection: activityStore,
+                     },
                      'grid'
                    );
    var columns = [
-/*     
-      { field: 'pk',
-        label: 'PK',
-        sortable: false,
-      },
-      { field: 'order',
-        label: 'Order',
-        sortable: false,
-      },
-*/      
+    
+      { field: 'pk', label: 'PK', sortable: false, },
+      { field: 'order', label: 'Order', sortable: false, },
+      
       {
         label: "Station",
         field: "station",
@@ -503,14 +526,14 @@ require([
         editorArgs: {
           store: stationStore,
           maxHeight: 150,
-          style: "width:4em;",
+          style: "width:5em;",
           labelAttr: "code",
           searchAttr: "code",
         },
         canEdit: function (object, value) {
-          return object.slctAction;
+          return object.stationSelect;
         },
-
+        autoSave: true,
       },
       {
         label: "Type",
@@ -525,11 +548,12 @@ require([
         editorArgs: {
           store: typeLegStore,
           maxHeight: 150,
-          style: "width:6em;",
+          style: "width:7em;",
         },
         canEdit: function (object, value) {
           return object.type == "leg";
         },
+        autoSave: true,
       },
       { label: 'Start',
         field: 'startDateTime',
@@ -542,6 +566,7 @@ require([
         editorArgs: {
           grid: grid         
         },
+        autoSave: true,
       },
       { label: 'End',
         field: 'endDateTime',
@@ -560,13 +585,25 @@ require([
 
      ];
 
+   /*
    grid.on("dgrid-datachange",function(event) {
      console.log("tigidou, c'est la que ca se passe.");
      console.log(event);
+     console.log(event.cell);
+     console.log(event.cell.row);
      console.log(event.cell.row.data);
+     console.log(event.oldValue);
+     console.log(event.value);
+     
+
+//      var obj = event.cell.row.data;
+     
      // je vais pouvoir intervenir ici pour faire le sync de la station
      // dans le cas d'un layover....
+     event.grid.collection.process();
    });
+*/
+
 
    grid.set('columns',columns);
    grid.set('sort', 'order');
