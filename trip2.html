@@ -105,11 +105,11 @@ var dojoConfig = {
     "dojo/store/Memory", 
     "dojo/store/Observable",
     "dijit/_WidgetBase",
-    "dijit/_TemplatedMixin",
+    "dijit/_FocusMixin",
 
     "dojo/domReady!"],
     function(on, date, locale, Grid, Selection, Keyboard, Editor, declare, Memory, Trackable, Model, ObjectStore, FilteringSelect, ComboBox, Select, Button, LegacyMemory, LegacyObservable, 
-    _WidgetBase, _TemplatedMixin){
+    _WidgetBase, _FocusMixin){
     var hours = [];
     for( i = 0; i < 100; ++i ){
       hours.push({name: i, id: i});
@@ -124,7 +124,7 @@ var dojoConfig = {
       data: hours,
     });
 
-    var DurationInput = declare([_WidgetBase],{ //, _TemplatedMixin], {
+    var DurationInput = declare([_WidgetBase], {
       value: null,
       _duration: 0,
       _dur_h: 0,
@@ -137,30 +137,22 @@ var dojoConfig = {
           store: hourStore,
           style:{width: "4em"},
           regExp: "[0-9]+",
+          onBlur: function(){self.emit('blur');},
           onChange: function(value){
             self._dur_h = value;
             console.log('hourupd' + self._dur_h );
             console.log(self._dur_h * 60 + self._dur_m);
-            on.emit(self, "change", 
-            {
-                  bubbles: true,
-                      cancelable: true
-                        });
-            // self._dur_h * 60 + self._dur_m);
+            self.emit("change");
           },
         });
         self._minute = new Select({
           options: minutes,
+          onBlur: function(){self.emit('blur');},
           onChange: function(value){
             self._dur_m = value;
             console.log('minuteupd' + self._dur_m );
             console.log(self._dur_h * 60 + self._dur_m);
-            on.emit(self, "change", 
-            {
-                  bubbles: true,
-                      cancelable: true
-                        });
-            //self._dur_h * 60 + self._dur_m);
+            self.emit("change");
           },
           style:{width: "3em"},
         });
@@ -171,41 +163,14 @@ var dojoConfig = {
         self.domNode.appendChild(document.createTextNode(" m"));
       },
 
-/*
-      postCreate: function(){
-                        this.connect(this.domNode, "change", "_clicker");
-                        this.BARNODE = dojo.place("<p>CLICK IT<p>", this.domNode);
-                                }, 
-                                */
-
       _setValueAttr: function(value) {
         this._duration = value; 
         this._hour.set("value", parseInt(value / 60));
         this._minute.set("value", value % 60);
-/*
-        if( value.duration === undefined ) value.duration = 0;
-        this._hour.set("value", parseInt(value.duration / 60));
-        this._minute.set("value", value.duration % 60);
-        if( !value.durationSelect) {
-          this._hour.set("disabled", true);
-          this._minute.set("disabled", true);
-        }*/
       },
       _getValueAttr: function() {
         console.log("_getValueAttr");
-        //this._duration = this._hour.get("value") * 60 + this._minute.get("value");
-        //console.log(this._duration);
         return this._dur_h * 60 + this._dur_m;
-      },
-      /*
-      postCreate: function() {
-        this.connect(this._hour, "onchange", "increment");
-        this.connect(this._minute, "onchange", "increment");
-      },*/
-      destroy: function() {
-        this._hour.destroy();
-        this._minute.destroy();
-        this.inherited(arguments);
       },
     });
    
@@ -549,10 +514,10 @@ var dojoConfig = {
                      'grid'
                    );
    var columns = [
-    
+/*    
       { field: 'pk', label: 'PK', sortable: false, },
       { field: 'order', label: 'Order', sortable: false, },
-      
+*/      
       {
         label: "Station",
         field: "station",
@@ -599,9 +564,6 @@ var dojoConfig = {
         field: "duration",
         sortable: false,
         editor: DurationInput,
-        editorArgs: {
-          grid: grid         
-        },
         canEdit: function( object, value) {
           return object.durationSelect;
         },
