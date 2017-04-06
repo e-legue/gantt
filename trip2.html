@@ -51,6 +51,10 @@
       width: 12em;
     }
 
+    .dgrid-row-even {
+      background-color: ivory !important;
+    }
+
   </style>
   <script>
 var start= new Date().getTime();
@@ -101,10 +105,11 @@ var dojoConfig = {
     "dojo/store/Memory", 
     "dojo/store/Observable",
     "dijit/_WidgetBase",
-
+    "dijit/_TemplatedMixin",
 
     "dojo/domReady!"],
-  function(on, date, locale, Grid, Selection, Keyboard, Editor, declare, Memory, Trackable, Model, ObjectStore, FilteringSelect, ComboBox, Select, Button, LegacyMemory, LegacyObservable, _WidgetBase){
+    function(on, date, locale, Grid, Selection, Keyboard, Editor, declare, Memory, Trackable, Model, ObjectStore, FilteringSelect, ComboBox, Select, Button, LegacyMemory, LegacyObservable, 
+    _WidgetBase, _TemplatedMixin){
     var hours = [];
     for( i = 0; i < 100; ++i ){
       hours.push({name: i, id: i});
@@ -119,8 +124,11 @@ var dojoConfig = {
       data: hours,
     });
 
-    var DurationInput = declare([_WidgetBase], {
+    var DurationInput = declare([_WidgetBase],{ //, _TemplatedMixin], {
       value: null,
+      _duration: 0,
+      _dur_h: 0,
+      _dur_m: 0,
       buildRendering: function () {
         var self = this;
         this.inherited(arguments);
@@ -128,10 +136,32 @@ var dojoConfig = {
         self._hour = new ComboBox({
           store: hourStore,
           style:{width: "4em"},
-          regExp: "[0-9]+"
+          regExp: "[0-9]+",
+          onChange: function(value){
+            self._dur_h = value;
+            console.log('hourupd' + self._dur_h );
+            console.log(self._dur_h * 60 + self._dur_m);
+            on.emit(self, "change", 
+            {
+                  bubbles: true,
+                      cancelable: true
+                        });
+            // self._dur_h * 60 + self._dur_m);
+          },
         });
         self._minute = new Select({
           options: minutes,
+          onChange: function(value){
+            self._dur_m = value;
+            console.log('minuteupd' + self._dur_m );
+            console.log(self._dur_h * 60 + self._dur_m);
+            on.emit(self, "change", 
+            {
+                  bubbles: true,
+                      cancelable: true
+                        });
+            //self._dur_h * 60 + self._dur_m);
+          },
           style:{width: "3em"},
         });
          
@@ -139,21 +169,17 @@ var dojoConfig = {
         self.domNode.appendChild(document.createTextNode(" h "));
         self.domNode.appendChild(self._minute.domNode);
         self.domNode.appendChild(document.createTextNode(" m"));
-/*
-        self._hour.on("change", function(value){
-          var duration = self._hour.get("value") * 60 + self._minute.get("value");
-          console.log("hour change");
-          console.log(duration);
-
-          self.grid.collection.updateDuration();
-        });
-        self._minute.on("change", function(value){
-          self.grid.collection.updateDuration();
-        });
-*/
       },
-      _setValueAttr: function(value) {
 
+/*
+      postCreate: function(){
+                        this.connect(this.domNode, "change", "_clicker");
+                        this.BARNODE = dojo.place("<p>CLICK IT<p>", this.domNode);
+                                }, 
+                                */
+
+      _setValueAttr: function(value) {
+        this._duration = value; 
         this._hour.set("value", parseInt(value / 60));
         this._minute.set("value", value % 60);
 /*
@@ -167,8 +193,15 @@ var dojoConfig = {
       },
       _getValueAttr: function() {
         console.log("_getValueAttr");
-        return this._hour.value * 60 + this._minutes.value;
+        //this._duration = this._hour.get("value") * 60 + this._minute.get("value");
+        //console.log(this._duration);
+        return this._dur_h * 60 + this._dur_m;
       },
+      /*
+      postCreate: function() {
+        this.connect(this._hour, "onchange", "increment");
+        this.connect(this._minute, "onchange", "increment");
+      },*/
       destroy: function() {
         this._hour.destroy();
         this._minute.destroy();
@@ -460,7 +493,7 @@ var dojoConfig = {
     order: 8,
     type: "leg",
     legType: "D",
-    duration: 4 * 60 + 31,
+    duration: 1 * 60 + 51,
    });
    activityStore.addSync({
     pk: 9,
@@ -568,6 +601,9 @@ var dojoConfig = {
         editor: DurationInput,
         editorArgs: {
           grid: grid         
+        },
+        canEdit: function( object, value) {
+          return object.durationSelect;
         },
         autoSave: true,
       },
