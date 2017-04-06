@@ -79,7 +79,8 @@ var dojoConfig = {
 
 
 <script>
-require([
+  require([
+    "dojo/on",
     "dojo/date",
     "dojo/date/locale",
     "dgrid/OnDemandGrid", 
@@ -103,7 +104,7 @@ require([
 
 
     "dojo/domReady!"],
-  function(date, locale, Grid, Selection, Keyboard, Editor, declare, Memory, Trackable, Model, ObjectStore, FilteringSelect, ComboBox, Select, Button, LegacyMemory, LegacyObservable, _WidgetBase){
+  function(on, date, locale, Grid, Selection, Keyboard, Editor, declare, Memory, Trackable, Model, ObjectStore, FilteringSelect, ComboBox, Select, Button, LegacyMemory, LegacyObservable, _WidgetBase){
     var hours = [];
     for( i = 0; i < 100; ++i ){
       hours.push({name: i, id: i});
@@ -152,17 +153,21 @@ require([
 */
       },
       _setValueAttr: function(value) {
+
+        this._hour.set("value", parseInt(value / 60));
+        this._minute.set("value", value % 60);
+/*
         if( value.duration === undefined ) value.duration = 0;
         this._hour.set("value", parseInt(value.duration / 60));
         this._minute.set("value", value.duration % 60);
         if( !value.durationSelect) {
           this._hour.set("disabled", true);
           this._minute.set("disabled", true);
-        }
+        }*/
       },
       _getValueAttr: function() {
-        this.value.duration = this._hour.value * 60 + this._minute.value;
-        return this.value;
+        console.log("_getValueAttr");
+        return this._hour.value * 60 + this._minutes.value;
       },
       destroy: function() {
         this._hour.destroy();
@@ -313,6 +318,7 @@ require([
     process : function() {
       // based on the assumption that the store will have a reasonable size,
       // there is no need to re 
+      console.log("function process....");
       var self = this; 
       self.sort('order').fetch().then(function (objects) {
         for( i = 0; i < objects.length ; ++i ) {
@@ -367,6 +373,8 @@ require([
             }
             else {
               objects[i].lblType = "Lay over";
+
+              console.log("je passe ici"); 
               objects[i+1].station = objects[i-1].station;
 
               objects[i+1].lblType        = "Report time";
@@ -389,7 +397,6 @@ require([
     }
   });
 
-
   activityStore.on('add', function(event){
      activityStore.len += 1;
      activityStore.nextPk += 1;
@@ -397,11 +404,6 @@ require([
    activityStore.on('delete', function(event){
      activityStore.len -= 1;
    }); 
-
-   activityStore.on('update', function(value){
-     console.log("test manu change on activityStore");
-     process();
-   });
 
 
    activityStore.addSync({
@@ -561,6 +563,7 @@ require([
       },
       { 
         label: 'Duration',
+        field: "duration",
         sortable: false,
         editor: DurationInput,
         editorArgs: {
@@ -584,25 +587,18 @@ require([
 
 
      ];
-
-   /*
-   grid.on("dgrid-datachange",function(event) {
-     console.log("tigidou, c'est la que ca se passe.");
-     console.log(event);
-     console.log(event.cell);
-     console.log(event.cell.row);
-     console.log(event.cell.row.data);
-     console.log(event.oldValue);
-     console.log(event.value);
      
-
-//      var obj = event.cell.row.data;
-     
-     // je vais pouvoir intervenir ici pour faire le sync de la station
-     // dans le cas d'un layover....
-     event.grid.collection.process();
-   });
-*/
+     grid.on('dgrid-datachange', function (event) {
+       console.log(event);
+       var cell = grid.cell(event);
+       var nextRow = grid.down(cell.row, 1);
+       if( nextRow.data.type == "lay" ){
+         nextRow = grid.down(cell.row, 2);
+         nextRow.data.station = event.value;
+         //console.log(nextRow);
+         grid.collection.put(nextRow.data);
+       }
+     });
 
 
    grid.set('columns',columns);
