@@ -154,6 +154,8 @@ var dojoConfig = {
                                    });
           self.grid.collection.add({pk: self.grid.collection.nextPk, 
                                     order: self.value.order + 0.2, 
+                                    dhour: 0,
+                                    dminute: 45,
                                     type: "sta"});
 
           self.grid.collection.process();
@@ -278,76 +280,86 @@ var dojoConfig = {
     process : function() {
       // based on the assumption that the store will have a reasonable size,
       // there is no need to re 
-      console.log("function process....");
       var self = this; 
       self.sort('order').fetch().then(function (objects) {
         for( i = 0; i < objects.length ; ++i ) {
+          objects[i].newLegButton   = 1;
+          objects[i].newLayButton   = 1;
+          objects[i].deleteButton   = 1;
+          objects[i].stationSelect  = 1;
+          objects[i].durationSelect = 1;
+          objects[i].legTypeSelect  = 1;
+
           objects[i].order = i + 1;
         }
 
         for( i = 0; i < objects.length ; ++i ) {
-          if( objects[i].order == 1 ) {
-            objects[i].newLegButton = 1;
-            objects[i].newLayButton = 0;
-            objects[i].deleteButton = 0;
-
-            objects[i].stationSelect = 0;
+          if( i == 0 ) { // first station
+            objects[i].newLayButton   = 0;
+            objects[i].deleteButton   = 0;
+            objects[i].stationSelect  = 0;
+            objects[i].durationSelect = 0;
+            objects[i].legTypeSelect  = 0;
 
             objects[i].lblType        = "Report time";
             objects[i].dhour          = parseInt(self.reportTime / 60);
             objects[i].dminute        = self.reportTime % 60;
-            objects[i].durationSelect = 0;
           } 
-          else if( objects[i].order == objects.length ) {
-            objects[i].newLegButton = 0;
-            objects[i].newLayButton = 0;
-            objects[i].deleteButton = 0;
-            
-            objects[i].stationSelect = 0;
+          else if( i == objects.length - 1) { // last station
+            objects[i].newLegButton   = 0;
+            objects[i].newLayButton   = 0;
+            objects[i].deleteButton   = 0;
+            objects[i].stationSelect  = 0;
+            objects[i].durationSelect = 0;
+            objects[i].legTypeSelect  = 0;
 
             objects[i].lblType        = "Release time";
             objects[i].dhour          = parseInt(self.releaseTime / 60);
             objects[i].dminute        = self.releaseTime % 60;
-            objects[i].durationSelect = 0;
           }
-          else if( objects[i].order % 2 == 1 ) {
-            objects[i].newLegButton = 1;
-            objects[i].newLayButton = 1;
-            objects[i].deleteButton = 0;
-            
-            if( objects[i-1].type == "leg" ) {
-              objects[i].lblType        = "Ground time";
-              objects[i].durationSelect = 1;
-              objects[i].stationSelect  = 1;
-            }
-          }
-          else {
-            objects[i].newLegButton = 0;
-            objects[i].newLayButton = 0;
-            objects[i].deleteButton = objects.length > 3 ? 1 : 0; 
+          else if( i % 2 == 0 ) { // a station
+            objects[i].deleteButton   = 0;
+            objects[i].legTypeSelect  = 0;
 
-            objects[i].durationSelect = 1;
+            objects[i].lblType = "Ground time";
+
+            if( objects[i+1].type == "lay" ) {
+              objects[i].durationSelect = 0;
+              objects[i].newLayButton   = 0;
+
+              objects[i].lblType = "Release time";
+              objects[i].dhour   = parseInt(self.releaseTime / 60);
+              objects[i].dminute = self.releaseTime % 60;
+            }
+            if( objects[i-1].type == "lay" ) {
+              objects[i].durationSelect = 0;
+              objects[i].stationSelect  = 0;
+              objects[i].newLayButton   = 0;
+
+              objects[i].lblType = "Report time";
+              objects[i].dhour   = parseInt(self.reportTime / 60);
+              objects[i].dminute = self.reportTime % 60;
+            }
+
+          }
+          else { // a leg or a lay.
+            objects[i].newLegButton  = 0;
+            objects[i].newLayButton  = 0;
+            objects[i].stationSelect = 0;
 
             objects[i].lblType = objects[i].type == "leg" ? "Leg" : "Lay over";
 
-            if( objects[i].type == "leg" ) {
-              objects[i].lblType = "Leg";
+            if( objects.length <= 3 ){
+              objects[i].deleteButton = 0; 
             }
-            else {
-              objects[i].lblType = "Lay over";
 
-              objects[i+1].station = objects[i-1].station;
-
-              objects[i+1].lblType        = "Report time";
-              objects[i+1].dhour          = parseInt(self.reportTime / 60);
-              objects[i+1].dminute        = self.reportTime % 60;
-              objects[i+1].durationSelect = 0;
-              objects[i+1].stationSelect  = 0;
-
-              objects[i-1].lblType        = "Release time";
-              objects[i-1].dhour          = parseInt(self.releaseTime / 60);
-              objects[i-1].dminute        = self.releaseTime % 60;
-              objects[i-1].durationSelect = 0;
+            // can not delete a leg when it is the first, and it is followed by a lay.
+            if( i == 1 && i + 2 < objects.length && objects[i+2].type == "lay" ) {
+              objects[i].deleteButton = 0; 
+            }
+            // can not delete a leg when it is the last, and it is preceded by a lay.
+            if( i == objects.length - 2 && i > 2 && objects[i-2].type == "lay" ) {
+              objects[i].deleteButton = 0; 
             }
           }
         }
@@ -538,7 +550,7 @@ var dojoConfig = {
         label: 'Duration',
         children: [
           { field: 'dhour', 
-            label: 'Hour(s)', 
+            label: 'Hour', 
             sortable: false,
             editor: ComboBox,
             editorArgs: {
@@ -552,7 +564,7 @@ var dojoConfig = {
             },
           },
           { field: 'dminute', 
-            label: 'Minutes', 
+            label: 'Minute', 
             sortable: false,
             editor: Select,
             editorArgs: {
@@ -581,22 +593,26 @@ var dojoConfig = {
      ];
      
      grid.on('dgrid-datachange', function (event) {
-       console.log(event);
        var cell = grid.cell(event);
        
        var columnName =  cell.column.field;
 
        if( columnName == "station") {
-         console.log(cell);
          var nextRow = grid.down(cell.row, 1);
          if( nextRow.data.type == "lay" ){
            nextRow = grid.down(cell.row, 2);
            nextRow.data.station = event.value;
-           //console.log(nextRow);
            grid.collection.put(nextRow.data);
          }
        }
-       else if( columnName != "legType" ) {
+       else if( columnName == "dhour" ) {
+         cell.row.data.dhour  = event.value;
+         grid.collection.put(cell.row.data);
+         grid.collection.updateDuration();
+       } 
+       else if( columnName == "dminute" ) {
+         cell.row.data.dminute = event.value;
+         grid.collection.put(cell.row.data);
          grid.collection.updateDuration();
        }
 
@@ -605,9 +621,6 @@ var dojoConfig = {
 
    grid.set('columns',columns);
    grid.set('sort', 'order');
-
-//   grid.startup();
-
 
 });
 
