@@ -6,6 +6,7 @@
   <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dijit/themes/claro/claro.css" />
   <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dojox/form/resources/CheckedMultiSelect.css" />
   <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dojox/form/resources/UploaderFileList.css" />
+  <link rel="stylesheet" href="http://cdn.rawgit.com/SitePen/dgrid/v1.1.0/css/dgrid.css" />
 
   <style type="text/css">
 .datetime {
@@ -84,6 +85,50 @@
   height: 14em; /* DOES NOT WORK */
 }
 
+    .dgrid {
+      margin: 10px;
+    }
+    .dgrid-grid {
+      width: 1000px;
+    }
+    .dgrid-list {
+      width: 200px;
+    }
+
+    .dgrid .field-pk {
+      width: 2em;
+    }
+    .dgrid .field-order {
+      width: 2em;
+    }
+    .dgrid .field-station {
+      width: 6em;
+    }
+    .dgrid .field-lblType {
+      width: 7em;
+    }
+    .dgrid .field-legType {
+      width: 8em;
+    }
+    .dgrid .field-startDateTime {
+      width: 11em;
+      color: gray;
+    }
+    .dgrid .field-dhour {
+      width: 6em;
+    }
+    .dgrid .field-dminute {
+      width: 4em;
+    }
+    .dgrid .field-endDateTime {
+      width: 11em;
+      color: gray;
+    }
+
+    .dgrid-row-even {
+      background-color: ivory !important;
+    }
+
 
 
   </style>
@@ -94,10 +139,13 @@ var dojoConfig = {
   debug: true,
   packages: [{
     name: "dstore",
-    location: "http://cdn.rawgit.com/SitePen/dstore/v1.0.0"
+    location: "http://cdn.rawgit.com/SitePen/dstore/v1.1.1"
   }, {
     name: "dmodel",
     location: "http://cdn.rawgit.com/SitePen/dmodel/master"
+  }, {
+    name: "dgrid",
+    location: "http://cdn.rawgit.com/SitePen/dgrid/v1.1.0"
   }, {
     name: "moment",
     location: "http://cdn.rawgit.com/moment/moment/2.17.1",
@@ -125,21 +173,36 @@ require([
   "dojo/dom-construct",
   "dojo/parser",
   "dojo/request/script",
-  "dijit/registry",
-  "dojox/form/CheckedMultiSelect",
   "dojo/date",
+  "dojo/Stateful", 
+  "dojo/query", 
+  "dojo/data/ObjectStore", 
+  "dojo/store/Memory", 
+  "dojo/store/Observable",
+  "dijit/_Widget",
+  "dijit/registry",
+  "dijit/Dialog",
+  "dijit/form/Button",
+  "dijit/form/Select",
+  "dijit/form/FilteringSelect",
+  "dijit/form/ComboBox",
+  "dojox/xml/parser", 
+  "dojox/widget/Standby",
+  "dojox/form/CheckedMultiSelect",
   "dstore/Memory",
   "dstore/Trackable",
   "dstore/legacy/DstoreAdapter",
   "dmodel/Model",
   "dmodel/ComputedProperty",
-  "dijit/Dialog",
-  "dijit/form/Button",
+  "dgrid/OnDemandGrid", 
+  "dgrid/Selection", 
+  "dgrid/Keyboard", 
+  "dgrid/Editor", 
+  "dgrid/extensions/CompoundColumns",
   "moment/moment",
   "moment-timezone/builds/moment-timezone-with-data",
-  "dojox/xml/parser", 
-  "dojo/Stateful", 
-  "dojo/query", 
+  
+  
   "dojo/domReady!",
 
   "dijit/MenuBar",
@@ -155,15 +218,14 @@ require([
   "dijit/form/DateTextBox",
   "dijit/form/TimeTextBox",
   "dijit/form/NumberTextBox",
-  "dijit/form/FilteringSelect",
   "dijit/form/NumberSpinner",
   "dijit/layout/TabContainer", 
   "dijit/layout/ContentPane", 
   "dojox/layout/TableContainer",
   "dojox/form/Uploader",
   "dojox/form/uploader/FileList",
-  "dijit/form/Select"
 ], function(
+  // dojo
   declare,
   win,
   has,
@@ -174,21 +236,40 @@ require([
   domConstruct, 
   parser, 
   script,
-  registry, 
-  CheckedMultiSelect,
   date,
+  Stateful,
+  query,
+  ObjectStore, 
+  LegacyMemory,
+  LegacyObservable,
+  // dijit
+  _WidgetBase,
+  registry, 
+  Dialog,
+  Button,
+  Select,
+  FilteringSelect,
+  ComboBox,
+  // dojox
+  xmlparser,
+  Standby,
+  CheckedMultiSelect,
+  // dstore
   Memory,
   Trackable,
   DstoreAdapter,
+  // dmodel
   Model,
   ComputedProperty,
-  Dialog,
-  Button,
+  // dgrid
+  OnDemandGrid, 
+  Selection, 
+  Keyboard, 
+  Editor, 
+  CompoundColumns,
+  // moment
   moment,
-  timezone,
-  xmlparser,
-  Stateful,
-  query
+  timezone
 //  ganttSVG
   ){
 
@@ -222,13 +303,237 @@ require([
     },
   });
 
+  // ===============================================
+  // Set data for duration input.
+  // ===============================================
+   var hours = [];
+    for( i = 0; i < 100; ++i ){
+      hours.push({name: i, id: i});
+    } 
+
+    var minutes = [];
+    for( i = 0; i < 60; ++i ){
+      minutes.push({label: i.toString(), value: i});
+    } 
+
+    var hourStore = new LegacyMemory({
+      data: hours,
+    });
+
+
+  // ===============================================
+  // Widget for leg/lay/station from.
+  // ===============================================
+    var CustomEditorOperations = declare([_WidgetBase], {
+      value: null,
+      buildRendering: function() {
+        var self = this;
+        this.inherited(arguments);
+
+        self._buttonLeg = new Button({
+          label: "New leg"
+        });
+        self._buttonLayover = new Button({
+          label: "New layover"
+        });
+        self._buttonDelete = new Button({
+          iconClass: "dijitIconDelete"
+        });
+
+        self._buttonLeg.on("click", function() {
+          self.grid.collection.add({pk: self.grid.collection.nextPk, 
+                                    order: self.value.order + 0.1, 
+                                    type: "leg", 
+                                    legType: "A",
+                                    dhour: 2,
+                                    dminute: 0,
+                                   });
+          self.grid.collection.add({pk: self.grid.collection.nextPk, 
+                                    order: self.value.order + 0.2, 
+                                    dhour: 0,
+                                    dminute: 45,
+                                    type: "sta"});
+
+          self.grid.collection.process();
+        });
+        self._buttonLayover.on("click", function() {
+          // prevoir le chgt de duree de la station d'avant.
+          self.grid.collection.add({pk: self.grid.collection.nextPk, 
+                                    order: self.value.order + 0.1, 
+                                    type: "lay", 
+                                    dhour: 12,
+                                    dminute: 0,
+                                   });
+          self.grid.collection.add({pk: self.grid.collection.nextPk, 
+                                    order: self.value.order + 0.2, 
+                                    dhour: 0,
+                                    dminute: 20,
+                                    type: "sta", 
+                                    station: self.value.station});
+          
+          self.grid.collection.process();
+        });
+
+
+        self._buttonDelete.on("click", function() {
+          if( self.value.order != self.grid.collection.len -1 ) {
+            self.grid.collection.filter({order: self.value.order + 1}).forEach( function (object) {
+              self.grid.collection.remove(object.pk);
+            });
+          } 
+          else {
+            // as this is the last leg/layover in the ordered list, I need to delete the current
+            // leg/layover and the previous station, because the next one is untouchable, required
+            // as the destination station.
+            self.grid.collection.filter({order: self.value.order - 1}).forEach( function (object) {
+              self.grid.collection.remove(object.pk);
+            });
+          }
+
+          self.grid.collection.remove(self.value.pk);
+          self.grid.collection.process();
+        });
  
+      },
+      _setValueAttr: function(value) {
+        this.value = value;
+
+        if( this.value.newLegButton ) this.domNode.appendChild(this._buttonLeg.domNode);
+        if( this.value.newLayButton ) this.domNode.appendChild(this._buttonLayover.domNode);
+        if( this.value.deleteButton ) this.domNode.appendChild(this._buttonDelete.domNode);
+      },
+      _getValueAttr: function() {
+        return this.value;
+      },
+      destroy: function() {
+        this._buttonLeg.destroy();
+        this._buttonLayover.destroy();
+        this._buttonDelete.destroy();
+        this.inherited(arguments);
+      }
+    });
+
+  // ===============================================
+  // Type of leg.
+  // ===============================================
+    var typeLegData = {
+	identifier: 'type',
+	items: [
+		{ 'type': 'A', 'name': 'Active' },
+		{ 'type': 'D', 'name': 'Deadhead' },
+               ]
+    };
+
+    typeLegStore = new ObjectStore({
+      objectStore: LegacyObservable(new LegacyMemory({data: typeLegData})),
+      labelProperty: "name"
+    });
+
+
+  // ===============================================
+  // column definition for dgrid.
+  // ===============================================
+   var columns = [
+/*    
+      { field: 'pk', label: 'PK', sortable: false, },
+      { field: 'order', label: 'Order', sortable: false, },
+*/      
+      {
+        label: "Station",
+        field: "station",
+        sortable: false,
+        editor: FilteringSelect,
+        editorArgs: {
+          store: stationStore,
+          maxHeight: 150,
+          style: "width:5em;",
+          labelAttr: "code",
+          searchAttr: "code",
+        },
+        canEdit: function (object, value) {
+          return object.stationSelect;
+        },
+        autoSave: true,
+      },
+      {
+        label: "Type",
+        field: "lblType",
+        sortable: false,
+      },
+      {
+        label: "Leg type",
+        field: "legType",
+        sortable: false,
+        editor: FilteringSelect,
+        editorArgs: {
+          store: typeLegStore,
+          maxHeight: 150,
+          style: "width:7em;",
+        },
+        canEdit: function (object, value) {
+          return object.type == "leg";
+        },
+        autoSave: true,
+      },
+      { label: 'Start',
+        field: 'startDateTime',
+        sortable: false,
+      },
+
+      {
+        label: 'Duration',
+        children: [
+          { field: 'dhour', 
+            label: 'Hour', 
+            sortable: false,
+            editor: ComboBox,
+            editorArgs: {
+              store: hourStore,
+              regExp: "[0-9]+",
+              style: "width:4em;",
+            },
+            autoSave: true,
+            canEdit: function( object, value) {
+              return object.durationSelect;
+            },
+          },
+          { field: 'dminute', 
+            label: 'Minute', 
+            sortable: false,
+            editor: Select,
+            editorArgs: {
+              options: minutes,
+              style: "width:3em;",
+            },
+            autoSave: true,
+            canEdit: function( object, value) {
+              return object.durationSelect;
+            },
+          },
+        ],
+      },
+      { label: 'End',
+        field: 'endDateTime',
+        sortable: false,
+      },
+      {
+        label: 'Operations',
+        sortable: false,
+        editor: CustomEditorOperations,
+        editorArgs:{
+          grid: grid 
+        },
+      },
+     ];
+
 
   parser.parse().then(function(){ 
     dom.byId("loader").style.display = "none";
     dom.byId("content").style.display = "block";
   });
 
+
+ 
   // ===============================================
   // Install gantt svg data at the right place.
   // ===============================================
@@ -780,6 +1085,32 @@ require([
     },
   });
  
+  var TripDetailModel = declare(Model, {
+    schema: {
+      pk: "numeric",
+      order: "numeric",
+      type: "string",
+      station: "string", 
+      status: "string",
+      legType: "string",
+
+      startDateTime: "string",
+      dhour: "numeric",
+      dminute: "numeric",
+      endDateTime: "string",
+
+      fk_activity: "numeric",
+
+      stationSelect: "numeric",
+      legTypeSelect: "numeric",
+      durationSelect: "numeric",
+      newLegButton: "numeric",
+      newLayButton: "numeric",
+      deleteButton: "numeric",
+
+    },
+    validateOnSet: false,
+  });
 
   var StationModel = declare(Model, {
     schema: {
@@ -981,6 +1312,149 @@ require([
   registry.byId("DistanceToSelect").set("store", activityStoreAdapter);
 
 
+  // -----------------------------------------------
+  // tripDetailStore
+  // -----------------------------------------------
+ 
+   var tripDetailStore = new TrackableMemory({
+    Model: TripDetailModel,
+    idProperty: "pk",
+    len: 0,
+    nextPk: 1,
+    reportTime: 20,
+    releaseTime: 15,
+    startDateTime: new Date(),
+
+
+    _updDur: function(array){
+      var self = this;
+
+      var currentDate = self.refDateTime;
+      for( i = 0; i < array.length ; ++i ) {
+        array[i].startDateTime = locale.format(currentDate, {datePattern: "yyyy-MM-dd" , timePattern: "HH:mm"});
+        currentDate = date.add(currentDate, "minute", array[i].dminute + array[i].dhour * 60);
+        array[i].endDateTime = locale.format(currentDate, {datePattern: "yyyy-MM-dd", timePattern: "HH:mm"});
+      }
+    },
+ 
+    updateDuration : function(){
+      var self = this; 
+      // based on the assumption that the store will have a reasonable size,
+      // there is no need to re 
+      self.sort('order').fetch().then(function (objects) {
+        self._updDur(objects);
+
+        for( i = 0; i < objects.length ; ++i ) {
+          self.put(objects[i]);
+        }
+      });
+    },
+
+    process : function() {
+      // based on the assumption that the store will have a reasonable size,
+      // there is no need to re 
+      var self = this; 
+
+      self.sort('order').fetch().then(function (objects) {
+        for( i = 0; i < objects.length ; ++i ) {
+          objects[i].newLegButton   = 1;
+          objects[i].newLayButton   = 1;
+          objects[i].deleteButton   = 1;
+          objects[i].stationSelect  = 1;
+          objects[i].durationSelect = 1;
+          objects[i].legTypeSelect  = 1;
+
+          objects[i].order = i + 1;
+        }
+
+        for( i = 0; i < objects.length ; ++i ) {
+          if( i == 0 ) { // first station
+            objects[i].newLayButton   = 0;
+            objects[i].deleteButton   = 0;
+            objects[i].stationSelect  = 0;
+            objects[i].durationSelect = 0;
+            objects[i].legTypeSelect  = 0;
+
+            objects[i].lblType        = "Report time";
+            objects[i].dhour          = parseInt(self.reportTime / 60);
+            objects[i].dminute        = self.reportTime % 60;
+          } 
+          else if( i == objects.length - 1) { // last station
+            objects[i].newLegButton   = 0;
+            objects[i].newLayButton   = 0;
+            objects[i].deleteButton   = 0;
+            objects[i].stationSelect  = 0;
+            objects[i].durationSelect = 0;
+            objects[i].legTypeSelect  = 0;
+
+            objects[i].lblType        = "Release time";
+            objects[i].dhour          = parseInt(self.releaseTime / 60);
+            objects[i].dminute        = self.releaseTime % 60;
+          }
+          else if( i % 2 == 0 ) { // a station
+            objects[i].deleteButton   = 0;
+            objects[i].legTypeSelect  = 0;
+
+            objects[i].lblType = "Ground time";
+
+            if( objects[i+1].type == "lay" ) {
+              objects[i].durationSelect = 0;
+              objects[i].newLayButton   = 0;
+
+              objects[i].lblType = "Release time";
+              objects[i].dhour   = parseInt(self.releaseTime / 60);
+              objects[i].dminute = self.releaseTime % 60;
+            }
+            if( objects[i-1].type == "lay" ) {
+              objects[i].durationSelect = 0;
+              objects[i].stationSelect  = 0;
+              objects[i].newLayButton   = 0;
+
+              objects[i].lblType = "Report time";
+              objects[i].dhour   = parseInt(self.reportTime / 60);
+              objects[i].dminute = self.reportTime % 60;
+            }
+
+          }
+          else { // a leg or a lay.
+            objects[i].newLegButton  = 0;
+            objects[i].newLayButton  = 0;
+            objects[i].stationSelect = 0;
+
+            objects[i].lblType = objects[i].type == "leg" ? "Leg" : "Lay over";
+
+            if( objects.length <= 3 ){
+              objects[i].deleteButton = 0; 
+            }
+
+            // can not delete a leg when it is the first, and it is followed by a lay.
+            if( i == 1 && i + 2 < objects.length && objects[i+2].type == "lay" ) {
+              objects[i].deleteButton = 0; 
+            }
+            // can not delete a leg when it is the last, and it is preceded by a lay.
+            if( i == objects.length - 2 && i > 2 && objects[i-2].type == "lay" ) {
+              objects[i].deleteButton = 0; 
+            }
+          }
+        }
+        self._updDur(objects);
+
+        for( i = 0; i < objects.length ; ++i ) {
+          self.put(objects[i]);
+        }
+      });
+    }
+  });
+
+  tripDetailStore.on('add', function(event){
+     tripDetailStore.len += 1;
+     tripDetailStore.nextPk += 1;
+   }); 
+   tripDetailStore.on('delete', function(event){
+     tripDetailStore.len -= 1;
+   }); 
+
+
 
 
   // -----------------------------------------------
@@ -1011,6 +1485,43 @@ require([
   highLightStore.on("delete", function(event){
     event.target.ClearSVG();
   });
+
+
+  // ===============================================
+  // 
+  // ===============================================
+
+   var grid = new (declare([OnDemandGrid, Selection, Keyboard, Editor, CompoundColumns]))(
+                     { collection: tripDetailStore,
+                     },
+                     'grid'
+                   );
+     
+     grid.on('dgrid-datachange', function (event) {
+       var cell = grid.cell(event);
+       
+       var columnName =  cell.column.field;
+
+       if( columnName == "station") {
+         var nextRow = grid.down(cell.row, 1);
+         if( nextRow.data.type == "lay" ){
+           nextRow = grid.down(cell.row, 2);
+           nextRow.data.station = event.value;
+           grid.collection.put(nextRow.data);
+         }
+       }
+       else if( columnName == "dhour" ) {
+         cell.row.data.dhour  = event.value;
+         grid.collection.put(cell.row.data);
+         grid.collection.updateDuration();
+       } 
+       else if( columnName == "dminute" ) {
+         cell.row.data.dminute = event.value;
+         grid.collection.put(cell.row.data);
+         grid.collection.updateDuration();
+       }
+
+     });
 
 
 
@@ -2249,7 +2760,9 @@ require([
 </head>
 <body class="claro">
   <div id="loader">
-    <div id="loaderInner" style="direction:ltr;">Loading libraries ...</div> 
+    <div id="loaderInner" style="direction:ltr;">Loading libraries ...
+      <!-- <div id="basicStandby1" data-dojo-type="dojox/widget/Standby" data-dojo-props="target:'basic'"> --> 
+    </div> 
   </div> 
   <div id="content" style="display:none;">
   <div data-dojo-type="dijit/MenuBar" id="navMenu" style="margin-bottom: 8px;">
