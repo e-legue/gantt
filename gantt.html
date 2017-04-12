@@ -72,15 +72,6 @@
   width: 3.25em;
 }
 
-/*
-.durationHour::after { 
-      content: "h";
-}
-.durationMinute::after { 
-      content: "m";
-}
-*/
-
 #CalendarStartPeriods {
   height: 14em; /* DOES NOT WORK */
 }
@@ -160,6 +151,7 @@ var dojoConfig = {
 
   <script src="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dojo/dojo.js"></script>
 
+
   <script>
 
 require([
@@ -217,8 +209,6 @@ require([
   "dijit/form/TextBox",
   "dijit/form/DateTextBox",
   "dijit/form/TimeTextBox",
-  "dijit/form/NumberTextBox",
-  "dijit/form/NumberSpinner",
   "dijit/layout/TabContainer", 
   "dijit/layout/ContentPane", 
   "dojox/layout/TableContainer",
@@ -306,19 +296,21 @@ require([
   // ===============================================
   // Set data for duration input.
   // ===============================================
-   var hours = [];
+  
+    var zeroTo99 = [];
     for( i = 0; i < 100; ++i ){
-      hours.push({name: i, id: i});
+      zeroTo99.push({name: i, id: i});
     } 
-
-    var minutes = [];
+    var zeroTo59 = [];
     for( i = 0; i < 60; ++i ){
-      minutes.push({label: i.toString(), value: i});
+      zeroTo59.push({name: i, id: i});
     } 
 
-    var hourStore = new LegacyMemory({
-      data: hours,
-    });
+    var zeroTo59Store = new LegacyMemory({ data: zeroTo59 });
+
+    var zeroTo99Store = new LegacyMemory({ data: zeroTo99 });
+
+
 
 
   // ===============================================
@@ -449,6 +441,7 @@ require([
           style: "width:5em;",
           labelAttr: "code",
           searchAttr: "code",
+          required: true,
         },
         canEdit: function (object, value) {
           return object.stationSelect;
@@ -469,6 +462,7 @@ require([
           store: typeLegStore,
           maxHeight: 150,
           style: "width:7em;",
+          required: true,
         },
         canEdit: function (object, value) {
           return object.type == "leg";
@@ -488,9 +482,10 @@ require([
             sortable: false,
             editor: ComboBox,
             editorArgs: {
-              store: hourStore,
+              store: zeroTo99Store,
               regExp: "[0-9]+",
               style: "width:4em;",
+              required: true,
             },
             autoSave: true,
             canEdit: function( object, value) {
@@ -502,8 +497,9 @@ require([
             sortable: false,
             editor: Select,
             editorArgs: {
-              options: minutes,
+              options: zeroTo59,
               style: "width:3em;",
+              required: true,
             },
             autoSave: true,
             canEdit: function( object, value) {
@@ -533,7 +529,31 @@ require([
   });
 
 
- 
+  registry.byId("TrainingRestBeforeH").set("store", zeroTo99Store);
+  registry.byId("TrainingRestAfterH").set("store", zeroTo99Store);
+  registry.byId("TrainingDurationHour").set("store", zeroTo99Store);
+  
+  registry.byId("TrainingRestBeforeH").set("regExp", '[0-9]+');
+  registry.byId("TrainingRestAfterH").set("regExp", '[0-9]+');
+  registry.byId("TrainingDurationHour").set("regExp", '[0-9]+');
+
+  registry.byId("TrainingRestBeforeM").set("store", zeroTo59Store);
+  registry.byId("TrainingRestAfterM").set("store", zeroTo59Store);
+  registry.byId("TrainingDurationMinute").set("store", zeroTo59Store);
+
+  registry.byId("TrainingRestBeforeM").set("value", 0);
+  registry.byId("TrainingRestAfterM").set("value", 0);
+
+  registry.byId("transportationTime").set("store", zeroTo99Store);
+  registry.byId("reportTime").set("store", zeroTo99Store);
+  registry.byId("releaseTime").set("store", zeroTo99Store);
+  registry.byId("midnightOffset").set("store", zeroTo99Store);
+
+  registry.byId("transportationTime").set("regExp", '[0-9]+');
+  registry.byId("reportTime").set("regExp", '[0-9]+');
+  registry.byId("releaseTime").set("regExp", '[0-9]+');
+  registry.byId("midnightOffset").set("regExp", '[0-9]+');
+
   // ===============================================
   // Install gantt svg data at the right place.
   // ===============================================
@@ -1285,16 +1305,17 @@ require([
     event.target.ClearSVG();
   });
 
-  function IsValueInRange(value, x, width){ 
-    return (value >= x ) && (value <= x + width -1); 
-  }
-
   function IsActivityOverlap(crewmember, x , width){
     var isOverlap = false;
     
     activityStore.filter({fk_cm: crewmember}).forEach(function(object){
-      if(   IsValueInRange(x, object.get("x"), object.get("width"))
-          || IsValueInRange(x + width -1, object.get("x"), object.get("width"))){
+      var A = x;
+      var B = x + width;
+
+      var C = object.x;
+      var D = object.x + object.width;
+
+      if( !(( B <= C ) || ( A >= D ))) {    
         isOverlap = true;
       }
     });
@@ -1651,6 +1672,9 @@ require([
     config = configurationStore.getSync(0);
     console.log(config);          
     
+    registry.byId("CalendarStart").set("value", config.calendarStart);
+    registry.byId("CalendarEnd").set("value", config.calendarEnd);
+
     var start = moment(config.calendarStart);
     Xorig = start.unix();
 
@@ -1671,6 +1695,7 @@ require([
         registry.byId("CalendarStation").set("value", results[0].id);
       }
     });
+
 
     RedrawSVG();
   }
@@ -1985,6 +2010,8 @@ require([
 
     registry.byId("TrainingStartDate").constraints.min = this.get("value");
     registry.byId("TrainingStartDate").dropDownDefaultValue = this.get("value");
+    registry.byId("TripStartDate").constraints.min = this.get("value");
+    registry.byId("TripStartDate").dropDownDefaultValue = this.get("value");
   }, true);
   
   registry.byId("CalendarEnd").on("change", function(){
@@ -1993,6 +2020,7 @@ require([
     registry.byId("CalendarStart").constraints.max = maxDate;
 
     registry.byId("TrainingStartDate").constraints.max = maxDate;
+    registry.byId("TripStartDate").constraints.max = maxDate;
   }, true);
 
   registry.byId("SetCalendarDialog").on("show", function(){
@@ -2155,7 +2183,7 @@ require([
     }
 
     CreateDayOffDialog.hide();
-    var crewmemberId = registry.byId("DayOffCrewMemberSelect").get("value");
+    var crewmemberId = parseInt(registry.byId("DayOffCrewMemberSelect").get("value"));
     var days = registry.byId("DayOffDatesSelect").value; 
 
     // to avoid the "at least one item must be selected" message, form data are save in 
@@ -2268,11 +2296,10 @@ require([
     console.log("utc start training");
     console.log(startTraining.utc().format("YYYY-MM-DD HH:mm"));
 
-    var crewmemberId = registry.byId("TrainingCrewMemberSelect").get("value");
     var width = registry.byId("TrainingDurationHour").get("value") * 60 + registry.byId("TrainingDurationMinute").get("value");
 
     var endTraining = startTraining.clone().add(width, 'm');
-    var crewmemberId = registry.byId("TrainingCrewMemberSelect").get("value");
+    var crewmemberId = parseInt(registry.byId("TrainingCrewMemberSelect").get("value"));
 
     if( IsActivityOverlap(crewmemberId, x, width) ){
       alert("Cannot create training because of an overlap with another activity."); 
@@ -3007,8 +3034,8 @@ require([
         <tr>
           <td><label for="restbefore">Rest before</label></td>
           <td>
-            <input class="durationHour" data-dojo-type="dijit/form/NumberSpinner" name="restbefore" id="TrainingRestBeforeH" value="0" data-dojo-props="constraints:{min:0}" required="true">
-            <input class="durationMinute" data-dojo-type="dijit/form/NumberSpinner" name="restbefore" id="TrainingRestBeforeM" value="0" data-dojo-props="constraints:{min:0,max:59}" required="true">
+            <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="restbefore" id="TrainingRestBeforeH" value="0" data-dojo-props="" required="true">
+            <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="restbefore" id="TrainingRestBeforeM" value="0" data-dojo-props="" required="true">
           </td>
         </tr>
         <tr>
@@ -3021,8 +3048,8 @@ require([
         <tr>
           <td><label for="duration">Duration</label></td>
           <td>
-            <input id="TrainingDurationHour"   class="durationHour" data-dojo-type="dijit/form/NumberSpinner" name="duration" data-dojo-props="constraints:{min:0,max:999}, placeHolder:'hhh'" required="true" readonly="true">
-            <input id="TrainingDurationMinute" class="durationMinute" data-dojo-type="dijit/form/NumberSpinner" name="duration" data-dojo-props="constraints:{min:0,max:59}, placeHolder:'mm'" required="true" readonly="true">
+            <input id="TrainingDurationHour"   class="durationHour" data-dojo-type="dijit/form/ComboBox" name="duration" data-dojo-props="placeHolder:'hhh'" required="true" readonly="true">
+            <input id="TrainingDurationMinute" class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="duration" data-dojo-props="placeHolder:'mm'" required="true" readonly="true">
           </td>
         </tr>
         <tr>
@@ -3035,8 +3062,8 @@ require([
         <tr>
           <td><label for="restafter">Rest after</label></td>
           <td>
-            <input class="durationHour" data-dojo-type="dijit/form/NumberSpinner" name="restafter" id="TrainingRestAfterH" value="0" data-dojo-props="constraints:{min:0}" required="true">
-            <input class="durationMinute" data-dojo-type="dijit/form/NumberSpinner" name="restafter" id="TrainingRestAfterM" value="0" data-dojo-props="constraints:{min:0,max:59}" required="true">
+            <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="restafter" id="TrainingRestAfterH" value="0" data-dojo-props="" required="true">
+            <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="restafter" id="TrainingRestAfterM" value="0" data-dojo-props="" required="true">
           </td>
         </tr>
       </table>
@@ -3252,19 +3279,19 @@ require([
       <table class="dijitDialogPaneContentArea">
         <tr>
           <td><label for="transportationTime">Transportation time duration (in minutes)</label></td>
-          <td><input data-dojo-type="dijit/form/NumberTextBox" name="transportationTime" data-dojo-id="transportationTime" data-dojo-props="constraints:{min:0, places:0}" required="true" style="width: 5em;"></td>
+          <td><input data-dojo-type="dijit/form/ComboBox" name="transportationTime" id="transportationTime" value="0" data-dojo-props="" required="true" style="width: 5em;"></td>
         </tr>
         <tr>
           <td><label for="reportTime">Report time (in minutes)</label></td>
-          <td><input data-dojo-type="dijit/form/NumberTextBox" name="reportTime" data-dojo-id="reportTime" data-dojo-props="constraints:{min:0, places:0}" required="true" style="width: 5em;"></td>
+          <td><input data-dojo-type="dijit/form/ComboBox" name="reportTime" id="reportTime" value="20" data-dojo-props="" required="true" style="width: 5em;"></td>
         </tr>
         <tr>
           <td><label for="releaseTime">Release time (in minutes)</label></td>
-          <td><input data-dojo-type="dijit/form/NumberTextBox" name="releaseTime" data-dojo-id="releaseTime" data-dojo-props="constraints:{min:0, places:0}" required="true" style="width: 5em;"></td>
+          <td><input data-dojo-type="dijit/form/ComboBox" name="releaseTime" id="releaseTime" value="15" data-dojo-props="" required="true" style="width: 5em;"></td>
         </tr>
         <tr>
           <td><label for="midnightOffset">Midnight offset (in minutes)</label></td>
-          <td><input data-dojo-type="dijit/form/NumberTextBox" name="midnightOffset" data-dojo-id="midnightOffset" data-dojo-props="constraints:{min:0, max: 1438, places:0}" required="true" style="width: 5em;"></td>
+          <td><input data-dojo-type="dijit/form/ComboBox" name="midnightOffset" id="midnightOffset" value="0" data-dojo-props="constraints:{max: 1440}" required="true" style="width: 5em;"></td>
         </tr>
       </table>
 
@@ -3359,8 +3386,8 @@ require([
         <tr>
           <td><label for="restbefore">Rest before</label></td>
           <td>
-            <input class="durationHour" data-dojo-type="dijit/form/NumberSpinner" name="restbefore" id="TripRestBeforeH" value="0" data-dojo-props="constraints:{min:0}" required="true">
-            <input class="durationMinute" data-dojo-type="dijit/form/NumberSpinner" name="restbefore" id="TripRestBeforeM" value="0" data-dojo-props="constraints:{min:0,max:59}" required="true">
+            <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="restbefore" id="TripRestBeforeH" value="0" data-dojo-props="" required="true">
+            <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="restbefore" id="TripRestBeforeM" value="0" data-dojo-props="" required="true">
           </td>
         </tr>
         <tr>
@@ -3398,8 +3425,8 @@ require([
         <tr>
           <td><label for="restafter">Rest after</label></td>
           <td>
-            <input class="durationHour" data-dojo-type="dijit/form/NumberSpinner" name="restafter" id="TripRestAfterH" value="0" data-dojo-props="constraints:{min:0}" required="true">
-            <input class="durationMinute" data-dojo-type="dijit/form/NumberSpinner" name="restafter" id="TripRestAfterM" value="0" data-dojo-props="constraints:{min:0,max:59}" required="true">
+            <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="restafter" id="TripRestAfterH" value="0" data-dojo-props="" required="true">
+            <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="restafter" id="TripRestAfterM" value="0" data-dojo-props="" required="true">
           </td>
         </tr>
       </table>
