@@ -602,16 +602,22 @@ require([
   // are handled. 
   // ===============================================
   function UpdateEndDateTime(prefixId){
-    var mydate = registry.byId(prefixId + "StartDate").get("value");
-    var mytime = registry.byId(prefixId + "StartTime").get("value");
-
+    console.log("UpdateEndDateTime  " + prefixId);
+    var mydate = moment(registry.byId(prefixId + "StartDate").get("value"));
+    console.log(mydate);
+    var mytime = moment(registry.byId(prefixId + "StartTime").get("value"));
+    console.log(mytime);
     // rebuild the start date from StartDate and StartTime field values, 
-    var endDate = new Date( mydate.getFullYear(), mydate.getMonth(), mydate.getDate(), mytime.getHours(), mytime.getMinutes(), 0);
+    // var endDate = new Date( mydate.getFullYear(), mydate.getMonth(), mydate.getDate(), mytime.getHours(), mytime.getMinutes(), 0);
+    var endDate = moment([mydate.getFullYear(), mydate.getMonth(), mydate.getDate(), mytime.getHours(), mytime.getMinutes(), 0]);
 
     // add duration to determine end datetime of the activity..
-    endDate = date.add(endDate, "hour", registry.byId(prefixId + "DurationHour").get("value"));
-    endDate = date.add(endDate, "minute", registry.byId(prefixId + "DurationMinute").get("value"));
+    //endDate = date.add(endDate, "hour", registry.byId(prefixId + "DurationHour").get("value"));
+    //endDate = date.add(endDate, "minute", registry.byId(prefixId + "DurationMinute").get("value"));
+    var duration = moment.duration({hours: registry.byId(prefixId + "DurationHour").get("value"), minutes: registry.byId(prefixId + "DurationMinute").get("value")});
 
+    endDate.add(duration);
+    
     // update end date and time fields.
     registry.byId(prefixId + "EndDate").set("value", endDate);
     registry.byId(prefixId + "EndTime").set("value", endDate);
