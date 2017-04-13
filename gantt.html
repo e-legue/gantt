@@ -77,7 +77,7 @@
 }
 
     .dgrid {
-      margin: 10px;
+      margin: 0px;
     }
     .dgrid-grid {
       width: 1000px;
@@ -149,7 +149,7 @@ var dojoConfig = {
 };
   </script>
 
-  <script src="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dojo/dojo.js"></script>
+  <script src="http://ajax.googleapis.com/ajax/libs/dojo/1.12.2/dojo/dojo.js"></script>
 
 
   <script>
@@ -278,7 +278,7 @@ require([
   // Fix to support reset on CheckedMultiSelect.
   // ===============================================
   // source: http://jsfiddle.net/FNL3h/
-  FixedCheckedMultiSelect = declare("dojox/form/FixedCheckedMultiSelect", [ CheckedMultiSelect ], {
+  var FixedCheckedMultiSelect = declare("dojox/form/FixedCheckedMultiSelect", [ CheckedMultiSelect ], {
     reset: function() {
       this.inherited(arguments);
       if (!this._resetValue || !this._resetValue.length) {
@@ -544,6 +544,20 @@ require([
   registry.byId("TrainingRestBeforeM").set("value", 0);
   registry.byId("TrainingRestAfterM").set("value", 0);
 
+
+  registry.byId("TripRestBeforeH").set("store", zeroTo99Store);
+  registry.byId("TripRestAfterH").set("store", zeroTo99Store);
+  
+  registry.byId("TripRestBeforeH").set("regExp", '[0-9]+');
+  registry.byId("TripRestAfterH").set("regExp", '[0-9]+');
+
+  registry.byId("TripRestBeforeM").set("store", zeroTo59Store);
+  registry.byId("TripRestAfterM").set("store", zeroTo59Store);
+
+  registry.byId("TripRestBeforeM").set("value", 0);
+  registry.byId("TripRestAfterM").set("value", 0);
+
+
   registry.byId("transportationTime").set("store", zeroTo99Store);
   registry.byId("reportTime").set("store", zeroTo99Store);
   registry.byId("releaseTime").set("store", zeroTo99Store);
@@ -602,25 +616,23 @@ require([
   // are handled. 
   // ===============================================
   function UpdateEndDateTime(prefixId){
-    console.log("UpdateEndDateTime  " + prefixId);
     var mydate = moment(registry.byId(prefixId + "StartDate").get("value"));
-    console.log(mydate);
     var mytime = moment(registry.byId(prefixId + "StartTime").get("value"));
-    console.log(mytime);
+    
     // rebuild the start date from StartDate and StartTime field values, 
-    // var endDate = new Date( mydate.getFullYear(), mydate.getMonth(), mydate.getDate(), mytime.getHours(), mytime.getMinutes(), 0);
-    var endDate = moment([mydate.getFullYear(), mydate.getMonth(), mydate.getDate(), mytime.getHours(), mytime.getMinutes(), 0]);
+    mydate.minutes(mytime.minutes());
+    mydate.hours(mytime.hours());
 
     // add duration to determine end datetime of the activity..
-    //endDate = date.add(endDate, "hour", registry.byId(prefixId + "DurationHour").get("value"));
-    //endDate = date.add(endDate, "minute", registry.byId(prefixId + "DurationMinute").get("value"));
-    var duration = moment.duration({hours: registry.byId(prefixId + "DurationHour").get("value"), minutes: registry.byId(prefixId + "DurationMinute").get("value")});
-
-    endDate.add(duration);
+    var duration = moment.duration({
+      hours: registry.byId(prefixId + "DurationHour").get("value"), 
+      minutes: registry.byId(prefixId + "DurationMinute").get("value")
+    });
+    mydate.add(duration);
     
     // update end date and time fields.
-    registry.byId(prefixId + "EndDate").set("value", endDate);
-    registry.byId(prefixId + "EndTime").set("value", endDate);
+    registry.byId(prefixId + "EndDate").set("value", mydate.toDate());
+    registry.byId(prefixId + "EndTime").set("value", mydate.toDate());
   } 
 
 
@@ -1288,6 +1300,7 @@ require([
   var crewMemberStoreAdapter = new DstoreAdapter(crewMemberStore);
   registry.byId("DayOffCrewMemberSelect").set("store", crewMemberStoreAdapter);
   registry.byId("TrainingCrewMemberSelect").set("store", crewMemberStoreAdapter);
+  registry.byId("TripCrewMemberSelect").set("store", crewMemberStoreAdapter);
 
 
   // -----------------------------------------------
@@ -1517,39 +1530,6 @@ require([
   // ===============================================
   // 
   // ===============================================
-
-   var grid = new (declare([OnDemandGrid, Selection, Keyboard, Editor, CompoundColumns]))(
-                     { collection: tripDetailStore,
-                     },
-                     'grid'
-                   );
-     
-     grid.on('dgrid-datachange', function (event) {
-       var cell = grid.cell(event);
-       
-       var columnName =  cell.column.field;
-
-       if( columnName == "station") {
-         var nextRow = grid.down(cell.row, 1);
-         if( nextRow.data.type == "lay" ){
-           nextRow = grid.down(cell.row, 2);
-           nextRow.data.station = event.value;
-           grid.collection.put(nextRow.data);
-         }
-       }
-       else if( columnName == "dhour" ) {
-         cell.row.data.dhour  = event.value;
-         grid.collection.put(cell.row.data);
-         grid.collection.updateDuration();
-       } 
-       else if( columnName == "dminute" ) {
-         cell.row.data.dminute = event.value;
-         grid.collection.put(cell.row.data);
-         grid.collection.updateDuration();
-       }
-
-     });
-
 
 
   // ===============================================
@@ -2289,23 +2269,20 @@ require([
     }); 
 
     var lbtStartTraining = registry.byId("TrainingStartDate").get("value");
-    console.log(lbtStartTraining);
-    console.log(moment(lbtStartTraining));
 
-    var mydate = registry.byId("TrainingStartDate").get("value");
-    var mytime = registry.byId("TrainingStartTime").get("value");
+    var mydate = moment(registry.byId("TrainingStartDate").get("value"));
+    var mytime = moment(registry.byId("TrainingStartTime").get("value"));
 
     // rebuild the start date from StartDate and StartTime field values, 
-    var localStartTraining = moment([mydate.getFullYear(), mydate.getMonth(), mydate.getDate(), mytime.getHours(), mytime.getMinutes(), 0]);
-    var x                = getPositionX(localStartTraining);
-    var startTraining    = moment.tz([mydate.getFullYear(), mydate.getMonth(), mydate.getDate(), mytime.getHours(), mytime.getMinutes(), 0], config.timezone);
-    console.log("utc start training");
-    console.log(startTraining.utc().format("YYYY-MM-DD HH:mm"));
+    mydate.hours(mytime.hours());
+    mydate.minutes(mytime.minutes());
+    var x                = getPositionX(mydate);
+    var startTraining    = moment.tz(mydate, timezoneStore.get(config.timezone).name);
 
-    var width = registry.byId("TrainingDurationHour").get("value") * 60 + registry.byId("TrainingDurationMinute").get("value");
+    var width = Number(registry.byId("TrainingDurationHour").get("value")) * 60 + Number(registry.byId("TrainingDurationMinute").get("value"));
 
     var endTraining = startTraining.clone().add(width, 'm');
-    var crewmemberId = parseInt(registry.byId("TrainingCrewMemberSelect").get("value"));
+    var crewmemberId = Number(registry.byId("TrainingCrewMemberSelect").get("value"));
 
     if( IsActivityOverlap(crewmemberId, x, width) ){
       alert("Cannot create training because of an overlap with another activity."); 
@@ -2313,18 +2290,18 @@ require([
     else { 
       activityStore.addSync({
         name: registry.byId("TrainingName").get("value"),
-        fullname: crewMemberStore.getSync(crewmemberId).name + " -- " + localStartTraining.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TrainingName").get("value"),  
+        fullname: crewMemberStore.getSync(crewmemberId).name + " -- " + mydate.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TrainingName").get("value"),  
         type: "TRN",
         pk: pos,
         fk_cm: crewmemberId,
         x: x,
-        lbtStart: localStartTraining.format("YYYY-MM-DD HH:mm"),
+        lbtStart: mydate.format("YYYY-MM-DD HH:mm"),
         utcStart: startTraining.utc().format("YYYY-MM-DD HH:mm"),
         utcEnd: endTraining.utc().format("YYYY-MM-DD HH:mm"), 
         width: width,
         tp: registry.byId("TrainingTransportationTime").checked ? Number(config.transportationTime) : 0,  // registry.byId("TransportationTimeDuration").get("value") : 0,
-        resta: registry.byId("TrainingRestAfterH").get("value") * 60 + registry.byId("TrainingRestAfterM").get("value"),
-        restb: registry.byId("TrainingRestBeforeH").get("value") * 60 + registry.byId("TrainingRestBeforeM").get("value"),
+        resta: Number(registry.byId("TrainingRestAfterH").get("value")) * 60 + Number(registry.byId("TrainingRestAfterM").get("value")),
+        restb: Number(registry.byId("TrainingRestBeforeH").get("value")) * 60 + Number(registry.byId("TrainingRestBeforeM").get("value")),
       });
     }
   });
@@ -2437,7 +2414,125 @@ require([
 
 
 
+  registry.byId("MenuBusinessObjectCreateActivityTrip").on("click", function(){
 
+
+   tripDetailStore.addSync({
+    pk: 1,
+    order: 1,
+    type: "sta",
+    station: "AUH",
+    dhour: 0,
+    dminute: 20,
+   });
+   tripDetailStore.addSync({
+    pk: 2,
+    order: 2,
+    type: "leg",
+    legType: "A",
+    dhour: 2,
+    dminute: 0,
+   });
+   tripDetailStore.addSync({
+    pk: 3,
+    order: 3,
+    type: "sta",
+    lblType: "Release time",
+    station: "ATH",
+    dhour: 0,
+    dminute: 15,
+   });
+   tripDetailStore.addSync({
+    pk: 4,
+    order: 4,
+    type: "lay",
+    dhour: 3,
+    dminute: 19,
+   });
+   tripDetailStore.addSync({
+    pk: 5,
+    order: 5,
+    type: "sta",
+    station: "BEN",
+    dhour: 0,
+    dminute: 20,
+   });
+   tripDetailStore.addSync({
+    pk: 6,
+    order: 6,
+    type: "leg",
+    legType: "A",
+    dhour: 4,
+    dminute: 31,
+   });
+   tripDetailStore.addSync({
+    pk: 7,
+    order: 7,
+    type: "sta",
+    station: "BEN",
+    dhour: 0,
+    dminute: 20,
+   });
+   tripDetailStore.addSync({
+    pk: 8,
+    order: 8,
+    type: "leg",
+    legType: "D",
+    dhour: 1,
+    dminute: 51,
+   });
+   tripDetailStore.addSync({
+    pk: 9,
+    order: 9,
+    type: "sta",
+    station: "AUH",
+    dhour: 0,
+    dminute: 15,
+   });
+
+   tripDetailStore.process();
+
+   var grid = new (declare([OnDemandGrid, Selection, Keyboard, Editor, CompoundColumns]))(
+                     { collection: tripDetailStore,
+                     },
+                     'grid'
+                   );
+     
+     grid.on('dgrid-datachange', function (event) {
+       var cell = grid.cell(event);
+       
+       var columnName =  cell.column.field;
+
+       if( columnName == "station") {
+         var nextRow = grid.down(cell.row, 1);
+         if( nextRow.data.type == "lay" ){
+           nextRow = grid.down(cell.row, 2);
+           nextRow.data.station = event.value;
+           grid.collection.put(nextRow.data);
+         }
+       }
+       else if( columnName == "dhour" ) {
+         cell.row.data.dhour  = event.value;
+         grid.collection.put(cell.row.data);
+         grid.collection.updateDuration();
+       } 
+       else if( columnName == "dminute" ) {
+         cell.row.data.dminute = event.value;
+         grid.collection.put(cell.row.data);
+         grid.collection.updateDuration();
+       }
+
+     });
+
+   grid.set('columns',columns);
+   grid.set('sort', 'order');
+   grid.startup();
+
+
+
+
+    registry.byId("CreateTripDialog").show();
+  });
 
 
 
@@ -2823,7 +2918,7 @@ require([
           <span>Create activity</span>
           <div id="MenuBusinessObjectCreateActivity" data-dojo-type="dijit/DropDownMenu">
             <div id="MenuBusinessObjectCreateActivityDayOff"        data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateDayOffDialog.show();}">Day off</div>
-            <div id="MenuBusinessObjectCreateActivityTrip"          data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateTripDialog.show();}">Trip</div>
+            <div id="MenuBusinessObjectCreateActivityTrip"          data-dojo-type="dijit/MenuItem" data-dojo-props="">Trip</div>
             <div id="MenuBusinessObjectCreateActivityTraining"      data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateTrainingDialog.show();}">Training</div>
             <div id="MenuBusinessObjectCreateActivityOtherActivity" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){alert('not yet available');}">Other activity</div>
           </div>
@@ -3373,8 +3468,8 @@ require([
     </div>
   </div>
 
-  
-  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateTripDialog" title="Create Trip" style="display: none;" data-dojo-props="onHide: function(){CreateTripForm.reset();}" >
+
+  <div data-dojo-type="dijit/Dialog" id="CreateTripDialog" title="Create trip" style="display: none;" data-dojo-props="onHide: function(){CreateTripForm.reset();}" >
     <div data-dojo-type="dijit/form/Form" id="CreateTripForm" data-dojo-id="CreateTripForm" encType="multipart/form-data" action="" method="">
       <table class="dijitDialogPaneContentArea">
         <tr>
@@ -3383,7 +3478,7 @@ require([
         </tr>
         <tr>
           <td><label for="TrnCm">Crew member</label></td>
-          <td><select data-dojo-type="dijit/form/FilteringSelect" name="TrnCm" id="TripCrewMemberSelect"></td>
+          <td><select data-dojo-type="dijit/form/FilteringSelect" name="TrnCm" id="TripCrewMemberSelect" required="true"></td>
         </tr>
         <tr>
           <td><label for="transportationtime">Transportation time apply</label></td>
@@ -3403,31 +3498,17 @@ require([
             <input id="TripStartTime" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'"/>
           </td>
         </tr>
-<!--        
         <tr>
-          <td><label for="duration">Duration</label></td>
-          <td>
-            <input id="TripDurationHour"   class="durationHour" data-dojo-type="dijit/form/NumberSpinner" name="duration" data-dojo-props="constraints:{min:0,max:999}, placeHolder:'hhh'" required="true" readonly="true">
-            <input id="TripDurationMinute" class="durationMinute" data-dojo-type="dijit/form/NumberSpinner" name="duration" data-dojo-props="constraints:{min:0,max:59}, placeHolder:'mm'" required="true" readonly="true">
-          </td>
+          <td><label>Details</label></td>
+          <td><div id="grid"/></td>
         </tr>
--->        
-<tr>
-  <td></td>
-  <td>
- 
-  
-  
-  </td>
-</tr>
-
         <tr>
           <td><label for="end">End date time</label></td>
           <td class="datetime">
             <input id="TripEndDate" name="start" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'" readonly="true" disabled="true" />
             <input id="TripEndTime" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'" readonly="true" disabled="true" />
           </td>
-        </tr> 
+        </tr>
         <tr>
           <td><label for="restafter">Rest after</label></td>
           <td>
