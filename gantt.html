@@ -3,12 +3,31 @@
 <head>
   <meta charset="UTF-8" /> 
   
-  <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dijit/themes/claro/claro.css" />
-  <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dojox/form/resources/CheckedMultiSelect.css" />
-  <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.10.4/dojox/form/resources/UploaderFileList.css" />
+  <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.12.2/dijit/themes/claro/claro.css" />
+  <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.12.2/dojox/form/resources/CheckedMultiSelect.css" />
+  <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.12.2/dojox/form/resources/UploaderFileList.css" />
   <link rel="stylesheet" href="http://cdn.rawgit.com/SitePen/dgrid/v1.1.0/css/dgrid.css" />
+  <link rel="stylesheet" href="http://cdn.rawgit.com/SitePen/dgrid/v1.1.0/css/skins/claro.css" />
 
   <style type="text/css">
+
+.thinButton .dijitButtonNode {
+	padding: 0px !important;	
+}
+
+.thinButtonHover .dijitButtonNode {
+	border-color:#a5beda !important;
+	border-bottom-color:#5c7590 !important;
+	border-right-color:#5c7590 !important;
+	color:#000 !important;
+	background:#fcfdff url(/dojo/dijit/themes/claro/images/buttonHover.png) repeat-x bottom !important;
+}
+
+.thinButtonActive .dijitButtonNode {
+	border-color:#366dba !important;
+	background: #ededed url(/dojo/dijit/themes/claro/images/buttonActive.png) bottom repeat-x !important;
+}
+
 .datetime {
   border: 1px solid #759dc0;
   background: white;
@@ -85,6 +104,9 @@
     .dgrid-list {
       width: 200px;
     }
+    .dgrid {
+      font-size: 12px;
+    }
 
     .dgrid .field-pk {
       width: 2em;
@@ -96,7 +118,7 @@
       width: 6em;
     }
     .dgrid .field-lblType {
-      width: 7em;
+      width: 9em;
     }
     .dgrid .field-legType {
       width: 8em;
@@ -109,7 +131,7 @@
       width: 6em;
     }
     .dgrid .field-dminute {
-      width: 4em;
+      width: 6em;
     }
     .dgrid .field-endDateTime {
       width: 11em;
@@ -323,13 +345,16 @@ require([
         this.inherited(arguments);
 
         self._buttonLeg = new Button({
-          label: "New leg"
+          label: "New leg",
+          class: "thinButton",
         });
         self._buttonLayover = new Button({
-          label: "New layover"
+          label: "New layover",
+          class: "thinButton",
         });
         self._buttonDelete = new Button({
-          iconClass: "dijitIconDelete"
+          iconClass: "dijitIconDelete",
+          class: "thinButton",
         });
 
         self._buttonLeg.on("click", function() {
@@ -421,106 +446,6 @@ require([
       labelProperty: "name"
     });
 
-
-  // ===============================================
-  // column definition for dgrid.
-  // ===============================================
-   var columns = [
-/*    
-      { field: 'pk', label: 'PK', sortable: false, },
-      { field: 'order', label: 'Order', sortable: false, },
-*/      
-      {
-        label: "Station",
-        field: "station",
-        sortable: false,
-        editor: FilteringSelect,
-        editorArgs: {
-          store: stationStore,
-          maxHeight: 150,
-          style: "width:5em;",
-          labelAttr: "code",
-          searchAttr: "code",
-          required: true,
-        },
-        canEdit: function (object, value) {
-          return object.stationSelect;
-        },
-        autoSave: true,
-      },
-      {
-        label: "Type",
-        field: "lblType",
-        sortable: false,
-      },
-      {
-        label: "Leg type",
-        field: "legType",
-        sortable: false,
-        editor: FilteringSelect,
-        editorArgs: {
-          store: typeLegStore,
-          maxHeight: 150,
-          style: "width:7em;",
-          required: true,
-        },
-        canEdit: function (object, value) {
-          return object.type == "leg";
-        },
-        autoSave: true,
-      },
-      { label: 'Start',
-        field: 'startDateTime',
-        sortable: false,
-      },
-
-      {
-        label: 'Duration',
-        children: [
-          { field: 'dhour', 
-            label: 'Hour', 
-            sortable: false,
-            editor: ComboBox,
-            editorArgs: {
-              store: zeroTo99Store,
-              regExp: "[0-9]+",
-              style: "width:4em;",
-              required: true,
-            },
-            autoSave: true,
-            canEdit: function( object, value) {
-              return object.durationSelect;
-            },
-          },
-          { field: 'dminute', 
-            label: 'Minute', 
-            sortable: false,
-            editor: Select,
-            editorArgs: {
-              options: zeroTo59,
-              style: "width:3em;",
-              required: true,
-            },
-            autoSave: true,
-            canEdit: function( object, value) {
-              return object.durationSelect;
-            },
-          },
-        ],
-      },
-      { label: 'End',
-        field: 'endDateTime',
-        sortable: false,
-      },
-      {
-        label: 'Operations',
-        sortable: false,
-        editor: CustomEditorOperations,
-        editorArgs:{
-          grid: grid 
-        },
-      },
-     ];
 
 
   parser.parse().then(function(){ 
@@ -931,7 +856,6 @@ require([
     var startActivity = moment(activity.get("lbtStart"));
     var endActivity   = startActivity.clone();
     endActivity.add(activity.width, "m");
-    console.log(startActivity);
     
     G.appendChild(SVG_drawText("start_hour", 0 , 0, startActivity.format("HH:mm")));
     G.appendChild(SVG_drawText("end_hour", activity.width , 110, endActivity.format("HH:mm")));
@@ -1363,18 +1287,21 @@ require([
     nextPk: 1,
     reportTime: 20,
     releaseTime: 15,
-    startDateTime: new Date(),
-
+    startDateTime: new moment(),
 
     _updDur: function(array){
       var self = this;
 
-      var currentDate = self.refDateTime;
+      var currentDate = moment(self.startDateTime);
       for( i = 0; i < array.length ; ++i ) {
-        array[i].startDateTime = locale.format(currentDate, {datePattern: "yyyy-MM-dd" , timePattern: "HH:mm"});
-        currentDate = date.add(currentDate, "minute", array[i].dminute + array[i].dhour * 60);
-        array[i].endDateTime = locale.format(currentDate, {datePattern: "yyyy-MM-dd", timePattern: "HH:mm"});
+        array[i].startDateTime = currentDate.format("YYYY-MM-DD HH:mm");
+        currentDate.add(array[i].dminute, "m");
+        currentDate.add(array[i].dhour  , "h");
+        array[i].endDateTime = currentDate.format("YYYY-MM-DD HH:mm");
       }
+
+      registry.byId("TripEndDate").set("value", currentDate.toDate());
+      registry.byId("TripEndTime").set("value", currentDate.toDate());
     },
  
     updateDuration : function(){
@@ -2411,91 +2338,87 @@ require([
   });  
 
 
+  function TryEnableGrid() {
+    if(   registry.byId("TripStartTime").get("value") != null 
+       && registry.byId("TripStartDate").get("value") != null ){
 
+   tripDetailStore.reportTime = config.reportTime;
+   tripDetailStore.releaseTime = config.releaseTime;
 
+    var mydate = moment(registry.byId("TripStartDate").get("value"));
+    var mytime = moment(registry.byId("TripStartTime").get("value"));
 
-  registry.byId("MenuBusinessObjectCreateActivityTrip").on("click", function(){
+    // rebuild the start date from StartDate and StartTime field values, 
+    mydate.hours(mytime.hours());
+    mydate.minutes(mytime.minutes());
 
+   tripDetailStore.startDateTime = mydate;
 
-   tripDetailStore.addSync({
-    pk: 1,
-    order: 1,
-    type: "sta",
-    station: "AUH",
-    dhour: 0,
-    dminute: 20,
-   });
-   tripDetailStore.addSync({
-    pk: 2,
-    order: 2,
-    type: "leg",
-    legType: "A",
-    dhour: 2,
-    dminute: 0,
-   });
-   tripDetailStore.addSync({
-    pk: 3,
-    order: 3,
-    type: "sta",
-    lblType: "Release time",
-    station: "ATH",
-    dhour: 0,
-    dminute: 15,
-   });
-   tripDetailStore.addSync({
-    pk: 4,
-    order: 4,
-    type: "lay",
-    dhour: 3,
-    dminute: 19,
-   });
-   tripDetailStore.addSync({
-    pk: 5,
-    order: 5,
-    type: "sta",
-    station: "BEN",
-    dhour: 0,
-    dminute: 20,
-   });
-   tripDetailStore.addSync({
-    pk: 6,
-    order: 6,
-    type: "leg",
-    legType: "A",
-    dhour: 4,
-    dminute: 31,
-   });
-   tripDetailStore.addSync({
-    pk: 7,
-    order: 7,
-    type: "sta",
-    station: "BEN",
-    dhour: 0,
-    dminute: 20,
-   });
-   tripDetailStore.addSync({
-    pk: 8,
-    order: 8,
-    type: "leg",
-    legType: "D",
-    dhour: 1,
-    dminute: 51,
-   });
-   tripDetailStore.addSync({
-    pk: 9,
-    order: 9,
-    type: "sta",
-    station: "AUH",
-    dhour: 0,
-    dminute: 15,
-   });
+   if( tripDetailStore.len == 0 ) {
+      tripDetailStore.putSync({
+        pk: 1,
+        order: 1,
+        type: "sta",
+        station: config.station,
+       });
+       tripDetailStore.putSync({
+        pk: 2,
+        order: 2,
+        type: "leg",
+        legType: "A",
+        dhour: 2,
+        dminute: 0,
+       });
+       tripDetailStore.putSync({
+        pk: 3,
+        order: 3,
+        type: "sta",
+        station: config.station,
+       });
+   }
 
    tripDetailStore.process();
 
+//       dgrid.refresh();
+    }
+
+  }
+
+
+  registry.byId("TripStartDate").on("click,mousedown", function(){
+    TryEnableGrid();          
+  });
+
+  registry.byId("TripStartDate").on("change", function(value){
+    TryEnableGrid();          
+  });
+
+  registry.byId("TripStartTime").on("click,mousedown", function(){
+    TryEnableGrid();          
+  });
+
+  registry.byId("TripStartTime").on("change", function(value){
+    TryEnableGrid();          
+  });
+
+ registry.byId("MenuBusinessObjectCreateActivityTrip").on("click", function(){
+
+   // should be in first, otherwise the dgrid will be empty...
+   registry.byId("CreateTripDialog").show();
+   // registry.byId("TripGrid").readOnly = true;
+
+
+
+   console.log("tripDetailStore");
+   console.log(tripDetailStore);
+
+
    var grid = new (declare([OnDemandGrid, Selection, Keyboard, Editor, CompoundColumns]))(
                      { collection: tripDetailStore,
+                       sort: 'order',
+                       showHeader: true,
                      },
-                     'grid'
+                     'TripGrid'
                    );
      
      grid.on('dgrid-datachange', function (event) {
@@ -2523,15 +2446,107 @@ require([
        }
 
      });
+     console.log(stationStore);
 
-   grid.set('columns',columns);
-   grid.set('sort', 'order');
-   grid.startup();
+ var columns = [
+/*
+      { field: 'pk', label: 'PK', sortable: false, },
+      { field: 'order', label: 'Order', sortable: false, },
+  */    
+      {
+        label: "Station",
+        field: "station",
+        sortable: false,
+        editor: FilteringSelect,
+        editorArgs: {
+          store: stationStoreAdapter,
+          maxHeight: 150,
+          style: "width:5em;",
+          labelAttr: "code",
+          searchAttr: "code",
+          required: true,
+        },
+        canEdit: function (object, value) {
+          return object.stationSelect;
+        },
+        autoSave: true,
+      },
+      {
+        label: "Type",
+        field: "lblType",
+        sortable: false,
+      },
+      {
+        label: "Leg type",
+        field: "legType",
+        sortable: false,
+        editor: FilteringSelect,
+        editorArgs: {
+          store: typeLegStore,
+          maxHeight: 150,
+          style: "width:7em;",
+          required: true,
+        },
+        canEdit: function (object, value) {
+          return object.type == "leg";
+        },
+        autoSave: true,
+      },
+      { label: 'Start',
+        field: 'startDateTime',
+        sortable: false,
+      },
 
+      {
+        label: 'Duration',
+        children: [
+          { field: 'dhour', 
+            label: 'Hour', 
+            sortable: false,
+            editor: ComboBox,
+            editorArgs: {
+              store: zeroTo99Store,
+              regExp: "[0-9]+",
+              style: "width:5em;",
+              required: true,
+            },
+            autoSave: true,
+            canEdit: function( object, value) {
+              return object.durationSelect;
+            },
+          },
+          { field: 'dminute', 
+            label: 'Minute', 
+            sortable: false,
+            editor: FilteringSelect,
+            editorArgs: {
+              store: zeroTo59Store,
+              style: "width:5em;",
+              required: true,
+            },
+            autoSave: true,
+            canEdit: function( object, value) {
+              return object.durationSelect;
+            },
+          },
+        ],
+      },
+      { label: 'End',
+        field: 'endDateTime',
+        sortable: false,
+      },
+      {
+        label: 'Operations',
+        sortable: false,
+        editor: CustomEditorOperations,
+        editorArgs:{
+          grid: grid 
+        },
+      },
+     ];
 
+   grid.set("columns", columns);
 
-
-    registry.byId("CreateTripDialog").show();
   });
 
 
@@ -3478,7 +3493,7 @@ require([
         </tr>
         <tr>
           <td><label for="TrnCm">Crew member</label></td>
-          <td><select data-dojo-type="dijit/form/FilteringSelect" name="TrnCm" id="TripCrewMemberSelect" required="true"></td>
+          <td><select data-dojo-type="dijit/form/FilteringSelect" name="TrnCm" id="TripCrewMemberSelect" /></td>
         </tr>
         <tr>
           <td><label for="transportationtime">Transportation time apply</label></td>
@@ -3500,7 +3515,7 @@ require([
         </tr>
         <tr>
           <td><label>Details</label></td>
-          <td><div id="grid"/></td>
+          <td><div id="TripGrid"></div></td>
         </tr>
         <tr>
           <td><label for="end">End date time</label></td>
