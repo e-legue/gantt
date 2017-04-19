@@ -99,7 +99,7 @@
       margin: 0px;
     }
     .dgrid-grid {
-      width: 1000px;
+      width: 900px;
     }
     .dgrid-list {
       width: 200px;
@@ -370,9 +370,9 @@ require([
                                     dhour: 0,
                                     dminute: 45,
                                     type: "sta"});
-
           self.grid.collection.process();
         });
+
         self._buttonLayover.on("click", function() {
           // prevoir le chgt de duree de la station d'avant.
           self.grid.collection.add({pk: self.grid.collection.nextPk, 
@@ -387,10 +387,8 @@ require([
                                     dminute: 20,
                                     type: "sta", 
                                     station: self.value.station});
-          
           self.grid.collection.process();
         });
-
 
         self._buttonDelete.on("click", function() {
           if( self.value.order != self.grid.collection.len -1 ) {
@@ -479,8 +477,6 @@ require([
   registry.byId("TripRestBeforeM").set("store", zeroTo59Store);
   registry.byId("TripRestAfterM").set("store", zeroTo59Store);
 
-  registry.byId("TripRestBeforeM").set("value", 0);
-  registry.byId("TripRestAfterM").set("value", 0);
 
 
   registry.byId("transportationTime").set("store", zeroTo99Store);
@@ -1300,6 +1296,8 @@ require([
         array[i].endDateTime = currentDate.format("YYYY-MM-DD HH:mm");
       }
 
+      console.log("_udpDur ....");
+      console.log(currentDate);
       registry.byId("TripEndDate").set("value", currentDate.toDate());
       registry.byId("TripEndTime").set("value", currentDate.toDate());
     },
@@ -1312,7 +1310,7 @@ require([
         self._updDur(objects);
 
         for( i = 0; i < objects.length ; ++i ) {
-          self.put(objects[i]);
+          self.putSync(objects[i]);
         }
       });
     },
@@ -1407,7 +1405,7 @@ require([
         self._updDur(objects);
 
         for( i = 0; i < objects.length ; ++i ) {
-          self.put(objects[i]);
+          self.putSync(objects[i]);
         }
       });
     }
@@ -1454,9 +1452,6 @@ require([
   });
 
 
-  // ===============================================
-  // 
-  // ===============================================
 
 
   // ===============================================
@@ -1680,6 +1675,146 @@ require([
 
   var stationStoreAdapter = new DstoreAdapter(stationStore);
   registry.byId("CalendarStation").set("store", stationStoreAdapter);
+
+
+
+  // ===============================================
+  // 
+  // ===============================================
+
+  var grid = new (declare([OnDemandGrid, Selection, Keyboard, Editor, CompoundColumns]))(
+                     { collection: tripDetailStore,
+                       showHeader: true,
+                       noDataMessage: 'Please fill in the "Start date time" field first.',
+                     },
+                     'TripGrid'
+                   );
+
+     
+     grid.on('dgrid-datachange', function (event) {
+       var cell = grid.cell(event);
+       
+       var columnName =  cell.column.field;
+
+       if( columnName == "station") {
+         var nextRow = grid.down(cell.row, 1);
+         if( nextRow.data.type == "lay" ){
+           nextRow = grid.down(cell.row, 2);
+           nextRow.data.station = event.value;
+           grid.collection.putSync(nextRow.data);
+         }
+       }
+       else if( columnName == "dhour" ) {
+         cell.row.data.dhour  = event.value;
+         grid.collection.putSync(cell.row.data);
+         grid.collection.updateDuration();
+       } 
+       else if( columnName == "dminute" ) {
+         cell.row.data.dminute = event.value;
+         grid.collection.putSync(cell.row.data);
+         grid.collection.updateDuration();
+       }
+
+     });
+
+ var columns = [
+      {
+        label: "Station",
+        field: "station",
+        sortable: false,
+        editor: FilteringSelect,
+        editorArgs: {
+          store: stationStoreAdapter,
+          maxHeight: 150,
+          style: "width:5em;",
+          labelAttr: "code",
+          searchAttr: "code",
+          required: true,
+        },
+        canEdit: function (object, value) {
+          return object.stationSelect;
+        },
+        autoSave: true,
+      },
+      {
+        label: "Type",
+        field: "lblType",
+        sortable: false,
+      },
+      {
+        label: "Leg type",
+        field: "legType",
+        sortable: false,
+        editor: FilteringSelect,
+        editorArgs: {
+          store: typeLegStore,
+          maxHeight: 150,
+          style: "width:7em;",
+          required: true,
+        },
+        canEdit: function (object, value) {
+          return object.type == "leg";
+        },
+        autoSave: true,
+      },
+      { label: 'Start',
+        field: 'startDateTime',
+        sortable: false,
+      },
+
+      {
+        label: 'Duration',
+        children: [
+          { field: 'dhour', 
+            label: 'Hour', 
+            sortable: false,
+            editor: ComboBox,
+            editorArgs: {
+              store: zeroTo99Store,
+              regExp: "[0-9]+",
+              style: "width:5em;",
+              required: true,
+            },
+            autoSave: true,
+            canEdit: function( object, value) {
+              return object.durationSelect;
+            },
+          },
+          { field: 'dminute', 
+            label: 'Minute', 
+            sortable: false,
+            editor: FilteringSelect,
+            editorArgs: {
+              store: zeroTo59Store,
+              style: "width:5em;",
+              required: true,
+            },
+            autoSave: true,
+            canEdit: function( object, value) {
+              return object.durationSelect;
+            },
+          },
+        ],
+      },
+      { label: 'End',
+        field: 'endDateTime',
+        sortable: false,
+      },
+      {
+        label: 'Operations',
+        sortable: false,
+        editor: CustomEditorOperations,
+        editorArgs:{
+          grid: grid 
+        },
+      },
+     ];
+
+    grid.set("columns", columns);
+    grid.set('sort', 'order');
+
+   grid.startup();          
+
 
   // ===============================================
   // EVENTS on dijit
@@ -2338,50 +2473,72 @@ require([
   });  
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   function TryEnableGrid() {
+    console.log("TryEnableGrid");
     if(   registry.byId("TripStartTime").get("value") != null 
        && registry.byId("TripStartDate").get("value") != null ){
+      console.log("computation");
+      tripDetailStore.reportTime = config.reportTime;
+      tripDetailStore.releaseTime = config.releaseTime;
 
-   tripDetailStore.reportTime = config.reportTime;
-   tripDetailStore.releaseTime = config.releaseTime;
+      var mydate = moment(registry.byId("TripStartDate").get("value"));
+      var mytime = moment(registry.byId("TripStartTime").get("value"));
 
-    var mydate = moment(registry.byId("TripStartDate").get("value"));
-    var mytime = moment(registry.byId("TripStartTime").get("value"));
+      // rebuild the start date from StartDate and StartTime field values, 
+      mydate.hours(mytime.hours());
+      mydate.minutes(mytime.minutes());
 
-    // rebuild the start date from StartDate and StartTime field values, 
-    mydate.hours(mytime.hours());
-    mydate.minutes(mytime.minutes());
+      tripDetailStore.startDateTime = mydate;
 
-   tripDetailStore.startDateTime = mydate;
-
-   if( tripDetailStore.len == 0 ) {
-      tripDetailStore.putSync({
-        pk: 1,
-        order: 1,
-        type: "sta",
-        station: config.station,
-       });
-       tripDetailStore.putSync({
-        pk: 2,
-        order: 2,
-        type: "leg",
-        legType: "A",
-        dhour: 2,
-        dminute: 0,
-       });
-       tripDetailStore.putSync({
-        pk: 3,
-        order: 3,
-        type: "sta",
-        station: config.station,
-       });
-   }
-
-   tripDetailStore.process();
-
-//       dgrid.refresh();
+      if( tripDetailStore.len == 0 ) {
+        console.log("trip detail store empty, so add....");
+       
+        tripDetailStore.addSync({
+          pk: 1,
+          order: 1,
+          type: "sta",
+          station: config.station,
+        });
+        tripDetailStore.addSync({
+          pk: 2,
+          order: 2,
+          type: "leg",
+          legType: "A",
+          dhour: 2,
+          dminute: 0,
+        });
+        tripDetailStore.addSync({
+          pk: 3,
+          order: 3,
+          type: "sta",
+          station: config.station,
+        });
+      }
+      // console.log(tripDetailStore);
+      // allow to recompute end date time.
+      tripDetailStore.process();
     }
-
   }
 
 
@@ -2401,157 +2558,31 @@ require([
     TryEnableGrid();          
   });
 
- registry.byId("MenuBusinessObjectCreateActivityTrip").on("click", function(){
+  registry.byId("MenuBusinessObjectCreateActivityTrip").on("click", function(){
+    registry.byId("TripRestBeforeM").set("value", 0);
+    registry.byId("TripRestAfterM").set("value", 0);
+   
+    registry.byId("CreateTripDialog").show();
 
-   // should be in first, otherwise the dgrid will be empty...
-   registry.byId("CreateTripDialog").show();
-   // registry.byId("TripGrid").readOnly = true;
-
-
-
-   console.log("tripDetailStore");
-   console.log(tripDetailStore);
-
-
-   var grid = new (declare([OnDemandGrid, Selection, Keyboard, Editor, CompoundColumns]))(
-                     { collection: tripDetailStore,
-                       sort: 'order',
-                       showHeader: true,
-                     },
-                     'TripGrid'
-                   );
-     
-     grid.on('dgrid-datachange', function (event) {
-       var cell = grid.cell(event);
-       
-       var columnName =  cell.column.field;
-
-       if( columnName == "station") {
-         var nextRow = grid.down(cell.row, 1);
-         if( nextRow.data.type == "lay" ){
-           nextRow = grid.down(cell.row, 2);
-           nextRow.data.station = event.value;
-           grid.collection.put(nextRow.data);
-         }
-       }
-       else if( columnName == "dhour" ) {
-         cell.row.data.dhour  = event.value;
-         grid.collection.put(cell.row.data);
-         grid.collection.updateDuration();
-       } 
-       else if( columnName == "dminute" ) {
-         cell.row.data.dminute = event.value;
-         grid.collection.put(cell.row.data);
-         grid.collection.updateDuration();
-       }
-
-     });
-     console.log(stationStore);
-
- var columns = [
-/*
-      { field: 'pk', label: 'PK', sortable: false, },
-      { field: 'order', label: 'Order', sortable: false, },
-  */    
-      {
-        label: "Station",
-        field: "station",
-        sortable: false,
-        editor: FilteringSelect,
-        editorArgs: {
-          store: stationStoreAdapter,
-          maxHeight: 150,
-          style: "width:5em;",
-          labelAttr: "code",
-          searchAttr: "code",
-          required: true,
-        },
-        canEdit: function (object, value) {
-          return object.stationSelect;
-        },
-        autoSave: true,
-      },
-      {
-        label: "Type",
-        field: "lblType",
-        sortable: false,
-      },
-      {
-        label: "Leg type",
-        field: "legType",
-        sortable: false,
-        editor: FilteringSelect,
-        editorArgs: {
-          store: typeLegStore,
-          maxHeight: 150,
-          style: "width:7em;",
-          required: true,
-        },
-        canEdit: function (object, value) {
-          return object.type == "leg";
-        },
-        autoSave: true,
-      },
-      { label: 'Start',
-        field: 'startDateTime',
-        sortable: false,
-      },
-
-      {
-        label: 'Duration',
-        children: [
-          { field: 'dhour', 
-            label: 'Hour', 
-            sortable: false,
-            editor: ComboBox,
-            editorArgs: {
-              store: zeroTo99Store,
-              regExp: "[0-9]+",
-              style: "width:5em;",
-              required: true,
-            },
-            autoSave: true,
-            canEdit: function( object, value) {
-              return object.durationSelect;
-            },
-          },
-          { field: 'dminute', 
-            label: 'Minute', 
-            sortable: false,
-            editor: FilteringSelect,
-            editorArgs: {
-              store: zeroTo59Store,
-              style: "width:5em;",
-              required: true,
-            },
-            autoSave: true,
-            canEdit: function( object, value) {
-              return object.durationSelect;
-            },
-          },
-        ],
-      },
-      { label: 'End',
-        field: 'endDateTime',
-        sortable: false,
-      },
-      {
-        label: 'Operations',
-        sortable: false,
-        editor: CustomEditorOperations,
-        editorArgs:{
-          grid: grid 
-        },
-      },
-     ];
-
-   grid.set("columns", columns);
-
+    grid.resize();
   });
 
 
 
 
+ registry.byId("CreateTripDialog").on("hide", function(){
+
+    tripDetailStore.fetch().then(function (items){
+      for (var i = items.length - 1; i >= 0; i--) {
+        tripDetailStore.remove(items[i].pk);
+      }           
+
+      console.log("hide....");
+      console.log(tripDetailStore);
+
+      grid.refresh();
+    });
+ });
 
 
 
