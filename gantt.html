@@ -676,8 +676,6 @@ require([
     var from = activityStore.getSync(item.fk_act1);
     var to   = activityStore.getSync(item.fk_act2);
 
-    console.log(item);
-
     var x1 = getActivityDistancePosition(item.act1_event, from);
     var x2 = getActivityDistancePosition(item.act2_event, to);
 
@@ -1296,8 +1294,6 @@ require([
         array[i].endDateTime = currentDate.format("YYYY-MM-DD HH:mm");
       }
 
-      console.log("_udpDur ....");
-      console.log(currentDate);
       registry.byId("TripEndDate").set("value", currentDate.toDate());
       registry.byId("TripEndTime").set("value", currentDate.toDate());
     },
@@ -2174,8 +2170,6 @@ require([
 
 
     var newStarts = registry.byId("CalendarStartPeriods").value;
-    console.log("newStarts ");
-    console.log( newStarts);          
     var ref =  newStarts.length > 0 ? newStarts[0] : 0; 
 
     var i = 0; 
@@ -2495,10 +2489,8 @@ require([
 
 
   function TryEnableGrid() {
-    console.log("TryEnableGrid");
     if(   registry.byId("TripStartTime").get("value") != null 
        && registry.byId("TripStartDate").get("value") != null ){
-      console.log("computation");
       tripDetailStore.reportTime = config.reportTime;
       tripDetailStore.releaseTime = config.releaseTime;
 
@@ -2512,7 +2504,6 @@ require([
       tripDetailStore.startDateTime = mydate;
 
       if( tripDetailStore.len == 0 ) {
-        console.log("trip detail store empty, so add....");
        
         tripDetailStore.addSync({
           pk: 1,
@@ -2535,7 +2526,6 @@ require([
           station: config.station,
         });
       }
-      // console.log(tripDetailStore);
       // allow to recompute end date time.
       tripDetailStore.process();
     }
@@ -2577,12 +2567,64 @@ require([
         tripDetailStore.remove(items[i].pk);
       }           
 
-      console.log("hide....");
-      console.log(tripDetailStore);
-
       grid.refresh();
     });
  });
+
+  registry.byId("CreateTrip").on("click", function(){
+    if( !registry.byId("CreateTripForm").validate() ){
+      return;
+    }
+
+    CreateTripDialog.hide();
+
+    var pos = 0;
+
+    // Compute the position and Y coordinate of the new crewmember based on 
+    // existing data.
+    activityStore.forEach(function(item){
+      pos += 1;
+    }); 
+
+    var mydate = moment(registry.byId("TripStartDate").get("value"));
+    var mytime = moment(registry.byId("TripStartTime").get("value"));
+
+    // rebuild the start date from StartDate and StartTime field values, 
+    mydate.hours(mytime.hours());
+    mydate.minutes(mytime.minutes());
+    var x            = getPositionX(mydate);
+    var endTrip = moment(registry.byId("TripEndDate").get("value")); //startTrip.clone().add(width, 'm');
+    mytime = moment(registry.byId("TripEndTime").get("value"));
+    endTrip.hours(mytime.hours());
+    endTrip.minutes(mytime.minutes());
+    var width = getPositionX(endTrip) - x;
+
+    var startTrip    = moment.tz(mydate, timezoneStore.get(config.timezone).name);
+
+    var crewmemberId = Number(registry.byId("TripCrewMemberSelect").get("value"));
+
+    if( IsActivityOverlap(crewmemberId, x, width) ){
+      alert("Cannot create Trip because of an overlap with another activity."); 
+    }
+    else { 
+      activityStore.addSync({
+        name: registry.byId("TripName").get("value"),
+        fullname: crewMemberStore.getSync(crewmemberId).name + " -- " + mydate.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TripName").get("value"),  
+        type: "TRP",
+        pk: pos,
+        fk_cm: crewmemberId,
+        x: x,
+        lbtStart: mydate.format("YYYY-MM-DD HH:mm"),
+        utcStart: startTrip.utc().format("YYYY-MM-DD HH:mm"),
+        utcEnd: endTrip.utc().format("YYYY-MM-DD HH:mm"), 
+        width: width,
+        tp: registry.byId("TripTransportationTime").checked ? Number(config.transportationTime) : 0,  // registry.byId("TransportationTimeDuration").get("value") : 0,
+        resta: Number(registry.byId("TripRestAfterH").get("value")) * 60 + Number(registry.byId("TripRestAfterM").get("value")),
+        restb: Number(registry.byId("TripRestBeforeH").get("value")) * 60 + Number(registry.byId("TripRestBeforeM").get("value")),
+      });
+      console.log(activityStore);
+    }
+  });
 
 
 
@@ -3515,7 +3557,7 @@ require([
   </div>
 
 
-  <div data-dojo-type="dijit/Dialog" id="CreateTripDialog" title="Create trip" style="display: none;" data-dojo-props="onHide: function(){CreateTripForm.reset();}" >
+  <div data-dojo-type="dijit/Dialog" id="CreateTripDialog" data-dojo-id="CreateTripDialog" title="Create trip" style="display: none;" data-dojo-props="onHide: function(){CreateTripForm.reset();}" >
     <div data-dojo-type="dijit/form/Form" id="CreateTripForm" data-dojo-id="CreateTripForm" encType="multipart/form-data" action="" method="">
       <table class="dijitDialogPaneContentArea">
         <tr>
