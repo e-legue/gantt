@@ -1008,9 +1008,12 @@ require([
 
   var ActivityModel = declare(Model, {
     schema: {
+      pk: "numeric",
+      fk_cm: "numeric", // foreign key to CrewMember.
+      fk_station: "numeric", // foreign key to Station.
+      fk_parent: "numeric", // foreign key to parent activity.
       name: "string",
       fullname: "string", 
-      pk: "numeric",
       x: "numeric",
       width: "numeric",
       tp: "numeric",
@@ -1020,7 +1023,7 @@ require([
       lbtStart: "string", 
       utcStart: "string",
       utcEnd: "string",
-      fk_cm: "numeric", // foreign key to CrewMember.
+
       ident: new ComputedProperty({ 
         dependsOn: ["pk", "type"],
         getValue: function(pk, type){
@@ -1047,7 +1050,7 @@ require([
       order: "numeric",
       type: "string",
       station: "string", 
-      status: "string",
+//      status: "string",
       legType: "string",
 
       startDateTime: "string",
@@ -1164,7 +1167,10 @@ require([
   // -----------------------------------------------
   // calendarStore
   // -----------------------------------------------
-  var TrackableMemory = declare([Memory, Trackable]);
+  var TrackableMemory = declare([Memory, Trackable], {
+    nextPK: 1, 
+    len: 0,
+  });
 
 
   var calendarStore = new TrackableMemory({
@@ -2622,7 +2628,29 @@ require([
         resta: Number(registry.byId("TripRestAfterH").get("value")) * 60 + Number(registry.byId("TripRestAfterM").get("value")),
         restb: Number(registry.byId("TripRestBeforeH").get("value")) * 60 + Number(registry.byId("TripRestBeforeM").get("value")),
       });
-      console.log(activityStore);
+
+      tripDetailStore.sort('order').fetch().then(function (items){
+        var fk_parent = pos;
+        
+        for (var i = 0; i < items.length ; i++) {
+          pos += 1;
+          var width = items[i].dhour * 60 + items[i].dminute;
+          var type = items[i].type;
+          if( type == "leg" ) {
+            type += items[i].legType;
+          }
+
+          activityStore.addSync({
+            type: type.toUpperCase(),
+            pk: pos,
+            fk_parent: fk_parent,
+            fk_cm: crewmemberId,
+            x: x,
+            width: width,
+          });
+          x += width;
+        }           
+      });
     }
   });
 
@@ -3125,15 +3153,22 @@ require([
   fill: blue;
 }
 
-.LEG {
+.LEGA {
   fill: magenta;
 }
-.LAYOVER {
-  fill: yellow;
-}
-.DEADHEAD {
+
+.LEGD {
   fill: white;
 }
+
+.LAY {
+  fill: yellow;
+}
+
+.STA {
+  fill: gray;
+}
+
 .TP {
   fill: pink;
 }
