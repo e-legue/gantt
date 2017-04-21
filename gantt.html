@@ -883,6 +883,43 @@ require([
 
   }
 
+function SVG_drawDetailActivity(activity, line){
+
+    var parentId = svg.getElementById(line.get("ident"));
+
+    var G = document.createElementNS(svgNS, "g");
+    G.setAttributeNS(null, "transform", "translate(" + CompressX(activity.x) + "," + HEIGHT_CM_LINE / 4 +")");
+    G.setAttributeNS(null, "id", activity.get("ident"));
+
+/*
+    on(G, "click", function(evt){
+      PopupDetails(activity.pk);
+    });
+*/       
+    parentId.appendChild(G);
+
+    var Rect = document.createElementNS(svgNS,"rect");
+    Rect.setAttributeNS(null, "class", activity.get("type"));
+    Rect.setAttributeNS(null, "x", 0);
+    Rect.setAttributeNS(null, "y", HEIGHT_CM_LINE / 2);
+    Rect.setAttributeNS(null, "rx", 1);
+    Rect.setAttributeNS(null, "ry", 1);
+    Rect.setAttributeNS(null, "width", CompressX(activity.width));
+    Rect.setAttributeNS(null, "height", HEIGHT_CM_LINE / 6);
+    G.appendChild(Rect);
+
+/*
+    G.appendChild(SVG_drawText("label", 10, 50, activity.get("name")));
+
+    var startActivity = moment(activity.get("lbtStart"));
+    var endActivity   = startActivity.clone();
+    endActivity.add(activity.width, "m");
+    
+    G.appendChild(SVG_drawText("start_hour", 0 , 0, startActivity.format("HH:mm")));
+    G.appendChild(SVG_drawText("end_hour", activity.width , 110, endActivity.format("HH:mm")));
+*/    
+  }
+
   // ===============================================
   // Data MODELs
   // ===============================================
@@ -1033,7 +1070,15 @@ require([
     },
     validateOnSet: false,
     DrawSVG: function(crewmember){ 
-      if( IsDrawingEnable ) SVG_drawActivity(this, crewmember); 
+      console.log(this);
+      if( IsDrawingEnable ) {
+        if( this.fk_parent == undefined ) {
+          SVG_drawActivity(this, crewmember); 
+        }  
+        else {  
+          SVG_drawDetailActivity(this, crewmember); 
+        }
+      }
     },
     ClearSVG: function(){
       var item = svg.getElementById(this.get("ident"));
@@ -1552,8 +1597,10 @@ require([
           var elements = data.getElementsByTagName(property); // [0].textContent;
 
           if( elements.length > 0 ){ 
-            if( type == "numeric" ) def[property] = Number(elements[0].textContent);
-            else if( type == "boolean") def[property] = elements[0].textContent == 'true'
+            if( type == "numeric" ) {
+              if( !isNaN(elements[0].textContent) ) def[property] = Number(elements[0].textContent);
+            }
+            else if( type == "boolean") def[property] = elements[0].textContent == 'true';
             else def[property] = elements[0].textContent;
           }
         }
@@ -3176,8 +3223,6 @@ require([
   fill: purple;
 }
       </style>
-      <title>SVG rule demo</title>
-      <desc>an awesome graph</desc>
 
       <g id="viewport">
         <!--
