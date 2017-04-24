@@ -881,43 +881,33 @@ require([
       G.appendChild(SVG_drawText("end_hour", activity.width + activity.tp + activity.resta, 90, endActivity.format("HH:mm")));
     }
 
-  }
 
-function SVG_drawDetailActivity(activity, line){
+    activityStore.filter({fk_parent: activity.pk}).fetch().then(function (objects) {
+      if( objects.length < 0 ) { 
+        return; 
+      }
+         
+      var Gdetails = document.createElementNS(svgNS, "g");
+      Gdetails.setAttributeNS(null, "transform", "translate(0," + HEIGHT_CM_LINE / 3 +")");
+      Gdetails.setAttributeNS(null, "class", "details2");
 
-    var parentId = svg.getElementById(line.get("ident"));
-
-    var G = document.createElementNS(svgNS, "g");
-    G.setAttributeNS(null, "transform", "translate(" + CompressX(activity.x) + "," + HEIGHT_CM_LINE / 4 +")");
-    G.setAttributeNS(null, "id", activity.get("ident"));
-
-/*
-    on(G, "click", function(evt){
-      PopupDetails(activity.pk);
-    });
-*/       
-    parentId.appendChild(G);
-
-    var Rect = document.createElementNS(svgNS,"rect");
-    Rect.setAttributeNS(null, "class", activity.get("type"));
-    Rect.setAttributeNS(null, "x", 0);
-    Rect.setAttributeNS(null, "y", HEIGHT_CM_LINE / 2);
-    Rect.setAttributeNS(null, "rx", 1);
-    Rect.setAttributeNS(null, "ry", 1);
-    Rect.setAttributeNS(null, "width", CompressX(activity.width));
-    Rect.setAttributeNS(null, "height", HEIGHT_CM_LINE / 6);
-    G.appendChild(Rect);
-
-/*
-    G.appendChild(SVG_drawText("label", 10, 50, activity.get("name")));
-
-    var startActivity = moment(activity.get("lbtStart"));
-    var endActivity   = startActivity.clone();
-    endActivity.add(activity.width, "m");
+      G.appendChild(Gdetails);
     
-    G.appendChild(SVG_drawText("start_hour", 0 , 0, startActivity.format("HH:mm")));
-    G.appendChild(SVG_drawText("end_hour", activity.width , 110, endActivity.format("HH:mm")));
-*/    
+      for(i = 0; i < objects.length; i++) {
+        var Rect = document.createElementNS(svgNS,"rect");
+        Rect.setAttributeNS(null, "class", objects[i].get("type"));
+        Rect.setAttributeNS(null, "x", CompressX(objects[i].x - activity.x));
+        Rect.setAttributeNS(null, "y", 0);
+        Rect.setAttributeNS(null, "rx", 1);
+        Rect.setAttributeNS(null, "ry", 1);
+        Rect.setAttributeNS(null, "width", CompressX(objects[i].width));
+        Rect.setAttributeNS(null, "height", HEIGHT_CM_LINE / 8);
+        Gdetails.appendChild(Rect);
+      }
+    });
+
+
+
   }
 
   // ===============================================
@@ -1075,9 +1065,6 @@ function SVG_drawDetailActivity(activity, line){
         if( this.fk_parent == undefined ) {
           SVG_drawActivity(this, crewmember); 
         }  
-        else {  
-          SVG_drawDetailActivity(this, crewmember); 
-        }
       }
     },
     ClearSVG: function(){
@@ -1095,7 +1082,6 @@ function SVG_drawDetailActivity(activity, line){
       order: "numeric",
       type: "string",
       station: "string", 
-//      status: "string",
       legType: "string",
 
       startDateTime: "string",
@@ -1212,18 +1198,19 @@ function SVG_drawDetailActivity(activity, line){
   // -----------------------------------------------
   // calendarStore
   // -----------------------------------------------
-  var TrackableMemory = declare([Memory, Trackable], {
-    nextPK: 1, 
-    len: 0,
-  });
+  var TrackableMemory = declare([Memory, Trackable]); 
 
 
   var calendarStore = new TrackableMemory({
     Model: CalendarModel,
     idProperty: "pk",
+    nextPk: 1, 
+    len: 0,
   });
 
   calendarStore.on("add", function(event){
+    calendarStore.len += 1;
+    calendarStore.nextPk += 1;
     event.target.DrawSVG();
   });
 
@@ -1233,6 +1220,7 @@ function SVG_drawDetailActivity(activity, line){
   });
 
   calendarStore.on("delete", function(event){
+    calendarStore.len -= 1;
     event.target.ClearSVG();
   });
 
@@ -1251,18 +1239,24 @@ function SVG_drawDetailActivity(activity, line){
   var crewMemberStore = new TrackableMemory({
     Model: CrewMemberModel,
     idProperty: "pk",
+    nextPk: 1, 
+    len: 0,
   });
 
   crewMemberStore.on("add", function(event){
+    crewMemberStore.len += 1;
+    crewMemberStore.nextPk = Math.max(event.target.pk, crewMemberStore.nextPk) + 1;
     event.target.DrawSVG();
   });
   
   crewMemberStore.on("update", function(event){
+    crewMemberStore.nextPk = Math.max(event.target.pk + 1, crewMemberStore.nextPk);
     event.target.ClearSVG();
     event.target.DrawSVG();
   });
 
   crewMemberStore.on("delete", function(event){
+    crewMemberStore.len -= 1;
     event.target.ClearSVG();
   });
 
@@ -1278,18 +1272,24 @@ function SVG_drawDetailActivity(activity, line){
   var activityStore = new TrackableMemory({
     Model: ActivityModel,
     idProperty: "pk",
+    nextPk: 1, 
+    len: 0,
   });
 
   activityStore.on("add", function(event){
+    activityStore.len += 1;
+    activityStore.nextPk = Math.max(event.target.pk, activityStore.nextPk) + 1;
     event.target.DrawSVG(crewMemberStore.getSync(event.target.fk_cm));
   });
 
   activityStore.on("update", function(event){
+    activityStore.nextPk = Math.max(event.target.pk + 1, activityStore.nextPk); 
     event.target.ClearSVG();
     event.target.DrawSVG(crewMemberStore.getSync(event.target.fk_cm));
   });
 
   activityStore.on("delete", function(event){
+    activityStore.len -= 1;
     event.target.ClearSVG();
   });
 
@@ -1462,6 +1462,7 @@ function SVG_drawDetailActivity(activity, line){
      tripDetailStore.len += 1;
      tripDetailStore.nextPk += 1;
    }); 
+
    tripDetailStore.on('delete', function(event){
      tripDetailStore.len -= 1;
    }); 
@@ -1483,18 +1484,24 @@ function SVG_drawDetailActivity(activity, line){
   var highLightStore = new Memory({
     Model: HighLightModel,
     idProperty: "pk",
+    nextPk: 1, 
+    len: 0,
   });
 
   highLightStore.on("add", function(event){
+    highLightStore.len += 1;
+    highLightStore.nextPk = Math.max(event.target.pk, highLightStore.nextPk) + 1;
     event.target.DrawSVG();
   });
   
   highLightStore.on("update", function(event){
+    highLightStore.nextPk = Math.max(event.target.pk + 1, highLightStore.nextPk);
     event.target.ClearSVG();
     event.target.DrawSVG();
   });
 
   highLightStore.on("delete", function(event){
+    highLightStore.len -= 1;
     event.target.ClearSVG();
   });
 
@@ -2169,18 +2176,11 @@ function SVG_drawDetailActivity(activity, line){
           start.add(1, "minutes");
         }
 
-        var pos = 0;
-
-        // Compute the size of the store.
-        highLightStore.forEach(function(item){
-          pos += 1;
-        }); 
-     
         highLightStore.addSync({
           message: InitialState ? "End DST" : "Start DST",
           type: "specific",
           x: getPositionX(start),
-          pk: pos,
+          pk: highlLighStore.nextPk,
         });
       }
 
@@ -2247,12 +2247,10 @@ function SVG_drawDetailActivity(activity, line){
   // -----------------------------------------------
   registry.byId("CreateCrewMember").on("click", function(){
     var coordY = 100;
-    var pos = 0;
 
     // Compute the position and Y coordinate of the new crewmember based on 
     // existing data.
     crewMemberStore.sort("pk").forEach(function(item){
-      pos += 1;
       coordY += item.get("height");
     }); 
 
@@ -2260,7 +2258,7 @@ function SVG_drawDetailActivity(activity, line){
     crewMemberStore.addSync({
       name: registry.byId("CrewMemberName").get("value"),
       birthdate: registry.byId("CrewMemberBirthDate").get("value").toISOString().substring(0, 10),
-      pk: pos,
+      pk: crewMemberStore.nextPk,
       y: coordY,
       height: HEIGHT_CM_LINE,
     });
@@ -2285,14 +2283,6 @@ function SVG_drawDetailActivity(activity, line){
     // local variables before reseting the form.
     registry.byId("CreateDayOffForm").reset();
     
-    var pos = 0;
-
-    // Compute the position and Y coordinate of the new crewmember based on 
-    // existing data.
-    activityStore.forEach(function(item){
-      pos += 1;
-    }); 
-
     days.forEach(function(day){
       var calendarDay = calendarStore.getSync(day); 
 
@@ -2307,7 +2297,7 @@ function SVG_drawDetailActivity(activity, line){
           name: "DO",
           fullname: crewMemberStore.getSync(crewmemberId).name + " -- " + moment(calendarDay.get("name")).format("YYYY-MM-DD") + " -- DO",  
           type: "DO",
-          pk: pos,
+          pk: activityStore.nextPk,
           fk_cm: crewmemberId,
           x: x,
           lbtStart: moment(calendarDay.get("name")).format("YYYY-MM-DD HH:mm"), 
@@ -2318,7 +2308,6 @@ function SVG_drawDetailActivity(activity, line){
           resta: 0,
           restb: 0,
         });
-        pos += 1;
       }
     });
   });
@@ -2369,14 +2358,6 @@ function SVG_drawDetailActivity(activity, line){
 
     CreateTrainingDialog.hide();
 
-    var pos = 0;
-
-    // Compute the position and Y coordinate of the new crewmember based on 
-    // existing data.
-    activityStore.forEach(function(item){
-      pos += 1;
-    }); 
-
     var lbtStartTraining = registry.byId("TrainingStartDate").get("value");
 
     var mydate = moment(registry.byId("TrainingStartDate").get("value"));
@@ -2401,7 +2382,7 @@ function SVG_drawDetailActivity(activity, line){
         name: registry.byId("TrainingName").get("value"),
         fullname: crewMemberStore.getSync(crewmemberId).name + " -- " + mydate.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TrainingName").get("value"),  
         type: "TRN",
-        pk: pos,
+        pk: activityStore.nextPk,
         fk_cm: crewmemberId,
         x: x,
         lbtStart: mydate.format("YYYY-MM-DD HH:mm"),
@@ -2434,13 +2415,6 @@ function SVG_drawDetailActivity(activity, line){
     // local variables before reseting the form.
     registry.byId("CreateHighlightForm").reset();
 
-    var pos = 0;
-
-    // Compute the size of the store.
-    highLightStore.forEach(function(item){
-      pos += 1;
-    }); 
- 
     if( days.length == 0 ){
       calendarStore.forEach(function(item){
         days.push(item.pk);
@@ -2459,9 +2433,8 @@ function SVG_drawDetailActivity(activity, line){
           message: label,
           type: "specific",
           x: getPositionX(when),
-          pk: pos,
+          pk: highLightStore.nextPk,
         });
-        pos += 1;
       }
     }
   });  
@@ -2502,20 +2475,13 @@ function SVG_drawDetailActivity(activity, line){
     var fromEvent = registry.byId("DistanceFromEventSelect").value;
     var toEvent   = registry.byId("DistanceToEventSelect").value;
 
-    var pos = 0;
-
-    // Compute the size of the store.
-    highLightStore.forEach(function(item){
-      pos += 1;
-    }); 
- 
     highLightStore.addSync({
       type: "distance",
       fk_act1: from,
       act1_event: Number(fromEvent),
       fk_act2: to,
       act2_event: Number(toEvent),
-      pk: pos,
+      pk: highLightStore.nextPk,
     });
   });  
 
@@ -2631,14 +2597,6 @@ function SVG_drawDetailActivity(activity, line){
 
     CreateTripDialog.hide();
 
-    var pos = 0;
-
-    // Compute the position and Y coordinate of the new crewmember based on 
-    // existing data.
-    activityStore.forEach(function(item){
-      pos += 1;
-    }); 
-
     var mydate = moment(registry.byId("TripStartDate").get("value"));
     var mytime = moment(registry.byId("TripStartTime").get("value"));
 
@@ -2660,27 +2618,16 @@ function SVG_drawDetailActivity(activity, line){
       alert("Cannot create Trip because of an overlap with another activity."); 
     }
     else { 
-      activityStore.addSync({
-        name: registry.byId("TripName").get("value"),
-        fullname: crewMemberStore.getSync(crewmemberId).name + " -- " + mydate.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TripName").get("value"),  
-        type: "TRP",
-        pk: pos,
-        fk_cm: crewmemberId,
-        x: x,
-        lbtStart: mydate.format("YYYY-MM-DD HH:mm"),
-        utcStart: startTrip.utc().format("YYYY-MM-DD HH:mm"),
-        utcEnd: endTrip.utc().format("YYYY-MM-DD HH:mm"), 
-        width: width,
-        tp: registry.byId("TripTransportationTime").checked ? Number(config.transportationTime) : 0,  // registry.byId("TransportationTimeDuration").get("value") : 0,
-        resta: Number(registry.byId("TripRestAfterH").get("value")) * 60 + Number(registry.byId("TripRestAfterM").get("value")),
-        restb: Number(registry.byId("TripRestBeforeH").get("value")) * 60 + Number(registry.byId("TripRestBeforeM").get("value")),
-      });
+      // obtain uniq pk for the trip activity.
+      var fk_parent = activityStore.nextPk;
 
+      // to skip to the next uniq id, 
+      activityStore.nextPk +=1;
+      
+      var xDetail = x; 
+      
       tripDetailStore.sort('order').fetch().then(function (items){
-        var fk_parent = pos;
-        
         for (var i = 0; i < items.length ; i++) {
-          pos += 1;
           var width = items[i].dhour * 60 + items[i].dminute;
           var type = items[i].type;
           if( type == "leg" ) {
@@ -2689,15 +2636,35 @@ function SVG_drawDetailActivity(activity, line){
 
           activityStore.addSync({
             type: type.toUpperCase(),
-            pk: pos,
+            pk: activityStore.nextPk,
             fk_parent: fk_parent,
             fk_cm: crewmemberId,
-            x: x,
+            x: xDetail,
             width: width,
           });
-          x += width;
+          xDetail += width;
         }           
       });
+
+      var tmp = activityStore.nextPk;     
+
+      activityStore.addSync({
+        name: registry.byId("TripName").get("value"),
+        fullname: crewMemberStore.getSync(crewmemberId).name + " -- " + mydate.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TripName").get("value"),  
+        type: "TRP",
+        pk: fk_parent,
+        fk_cm: crewmemberId,
+        x: x,
+        lbtStart: mydate.format("YYYY-MM-DD HH:mm"),
+        utcStart: startTrip.utc().format("YYYY-MM-DD HH:mm"),
+        utcEnd: endTrip.utc().format("YYYY-MM-DD HH:mm"), 
+        width: width,
+        tp: registry.byId("TripTransportationTime").checked ? Number(config.transportationTime) : 0,
+        resta: Number(registry.byId("TripRestAfterH").get("value")) * 60 + Number(registry.byId("TripRestAfterM").get("value")),
+        restb: Number(registry.byId("TripRestBeforeH").get("value")) * 60 + Number(registry.byId("TripRestBeforeM").get("value")),
+      });
+
+      activityStore.nextPk = tmp;          
     }
   });
 
