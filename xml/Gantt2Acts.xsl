@@ -27,6 +27,9 @@ extension-element-prefixes="date">
   <xsl:template match="activity">
 
     <xsl:choose>
+      <xsl:when test="type='LAY' or type='LEGA' or type='LEGD' or type='STA'">
+        <!-- nothing to do with this activity -->
+      </xsl:when>
       <xsl:when test="type='DO'">
         <xsl:element name="task">
           <xsl:element name="activity-type">
@@ -36,7 +39,7 @@ extension-element-prefixes="date">
           <xsl:element name="end-date-lbt"><xsl:value-of select="date:add(//calendar[x=current()/x]/name, 'P1D')"/></xsl:element>
         </xsl:element>
       </xsl:when>
-      <xsl:when test="type='TRN'">
+      <xsl:when test="type='TRN' or type='TRP'">
         <xsl:element name="task">
           <xsl:element name="seat-role">
             <xsl:attribute name="ref">CP</xsl:attribute>
@@ -49,7 +52,7 @@ extension-element-prefixes="date">
         </xsl:element>
       </xsl:when>
       <xsl:otherwise>
-        <xsl:comment>not yet supported.</xsl:comment>
+        <xsl:comment><xsl:value-of select="type"/> is not yet supported.</xsl:comment>
       </xsl:otherwise>
     </xsl:choose>
 
