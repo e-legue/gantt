@@ -890,34 +890,34 @@ require([
     endActivity.add(activity.width, "m");
     var hourSize = 9;  // see font-size of class .hour_start.
     
-    G.appendChild(SVG_drawText("start_hour", 0 , hourSize, startActivity.format("HH:mm")));
-    G.appendChild(SVG_drawText("end_hour", activity.width , 14 * unitY, endActivity.format("HH:mm")));
+    G.appendChild(SVG_drawText("act_hour start_hour", 0 , hourSize, startActivity.format("HH:mm")));
+    G.appendChild(SVG_drawText("act_hour end_hour", activity.width , 14 * unitY, endActivity.format("HH:mm")));
 
     // transporation time
     if( activity.tp > 0 ){
       // before.
       G.appendChild(SVG_drawRect("TP", activity.tp * -1, 3 * unitY, activity.tp, 4 * unitY));
       startActivity.subtract(activity.tp, "m");
-      G.appendChild(SVG_drawText("start_hour", activity.tp * -1, 3 * unitY + hourSize, startActivity.format("HH:mm")));
+      G.appendChild(SVG_drawText("act_hour start_hour", activity.tp * -1, 3 * unitY + hourSize, startActivity.format("HH:mm")));
 
       // after.
       G.appendChild(SVG_drawRect("TP", activity.width, 7 * unitY, activity.tp, 4 * unitY));
       endActivity.add(activity.tp, "m");
-      G.appendChild(SVG_drawText("end_hour", activity.width + activity.tp , 11 * unitY, endActivity.format("HH:mm")));
+      G.appendChild(SVG_drawText("act_hour end_hour", activity.width + activity.tp , 11 * unitY, endActivity.format("HH:mm")));
     }
 
     // rest before
     if( activity.restb > 0 ){
       G.appendChild(SVG_drawRect("REST", ( activity.restb + activity.tp ) * -1, 3 * unitY, activity.restb, 4 * unitY));
       startActivity.subtract(activity.restb, "m");
-      G.appendChild(SVG_drawText("start_hour", ( activity.restb + activity.tp ) * -1 , 3 * unitY + hourSize, startActivity.format("HH:mm")));
+      G.appendChild(SVG_drawText("act_hour start_hour", ( activity.restb + activity.tp ) * -1 , 3 * unitY + hourSize, startActivity.format("HH:mm")));
     }
     
     // rest after. 
     if( activity.resta > 0 ){
       G.appendChild(SVG_drawRect("REST", activity.width + activity.tp, 7 * unitY, activity.resta, 4 * unitY));
       endActivity.add(activity.resta, "m");
-      G.appendChild(SVG_drawText("end_hour", activity.width + activity.tp + activity.resta, 11 * unitY, endActivity.format("HH:mm")));
+      G.appendChild(SVG_drawText("act_hour end_hour", activity.width + activity.tp + activity.resta, 11 * unitY, endActivity.format("HH:mm")));
     }
 
 
@@ -930,7 +930,7 @@ require([
 
       var Gdetails = document.createElementNS(svgNS, "g");
       Gdetails.setAttributeNS(null, "transform", "translate(0," + 7 * unitY +")");
-      Gdetails.setAttributeNS(null, "class", "details2");
+      Gdetails.setAttributeNS(null, "class", "details");
 
       G.appendChild(Gdetails);
     
@@ -947,10 +947,10 @@ require([
         Gdetails.appendChild(Rect);
 
         if( i % 2 == 0 && i != 0 && i != objects.length -1 ) {
-          Gdetails.appendChild(SVG_drawText("station", objects[i].x + objects[i].width / 2 - activity.x, unitY -2, objects[i].station ));
+          Gdetails.appendChild(SVG_drawText("dtl_station", objects[i].x + objects[i].width / 2 - activity.x, unitY -2, objects[i].station ));
         }
         if( i % 2 == 1 ) {
-          Gdetails.appendChild(SVG_drawText("start_hour", objects[i].x - activity.x, unitY + hourSize, endDetailActivity.format("HH:mm")));
+          Gdetails.appendChild(SVG_drawText("dtl_hour start_hour", objects[i].x - activity.x, unitY + hourSize, endDetailActivity.format("HH:mm")));
 // useless since the distance tool allows to measure duration !          
 //          Gdetails.appendChild(SVG_drawText("duration", objects[i].x + objects[i].width / 2 - activity.x, 3 * unitY , "<- " + formatDurationInHoursMinutes(objects[i].width) + " ->"));
         }
@@ -958,7 +958,7 @@ require([
         endDetailActivity.add(objects[i].width, "m");
 
         if( i % 2 == 1 ) {
-          Gdetails.appendChild(SVG_drawText("end_hour" , objects[i].x + objects[i].width - activity.x, 5 * unitY, endDetailActivity.format("HH:mm")));
+          Gdetails.appendChild(SVG_drawText("dtl_hour end_hour" , objects[i].x + objects[i].width - activity.x, 5 * unitY, endDetailActivity.format("HH:mm")));
         }
         
       }
@@ -1013,6 +1013,10 @@ require([
       SHCalendarDayYYYYMMDD: { type: "boolean", default: true, },
       SHCalendarDayBars: { type: "boolean", default: true, },
       XGraphCompression: { type: "numeric", default: 1, },
+      SHActivityHours: { type: "boolean", default: true, },
+      SHActivityDetails: { type: "boolean", default: true, },
+      SHActivityDetailHours: { type: "boolean", default: true, },
+      SHActivityDetailStations: { type: "boolean", default: true, },
     },
     validateOnSet: false,
   });
@@ -2005,7 +2009,41 @@ require([
     RedrawSVG();
   }, true);
 
+  // -----------------------------------------------
+  // Show/Hide activity dialog
+  // -----------------------------------------------
+  registry.byId("SHActivityHours").on("change", function(isChecked){
+    var divs = svg.getElementsByClassName("act_hour");
 
+    for (var i = 0; i < divs.length; i++) {
+      divs[i].setAttribute("display", isChecked ? "block" : "none");
+    }
+  }, true);
+
+   registry.byId("SHActivityDetails").on("change", function(isChecked){
+    var divs = svg.getElementsByClassName("details");
+
+    for (var i = 0; i < divs.length; i++) {
+      divs[i].setAttribute("display", isChecked ? "block" : "none");
+    }
+  }, true);
+
+   registry.byId("SHActivityDetailHours").on("change", function(isChecked){
+    var divs = svg.getElementsByClassName("dtl_hour");
+
+    for (var i = 0; i < divs.length; i++) {
+      divs[i].setAttribute("display", isChecked ? "block" : "none");
+    }
+  }, true);
+ 
+  registry.byId("SHActivityDetailStations").on("change", function(isChecked){
+    var divs = svg.getElementsByClassName("dtl_station");
+
+    for (var i = 0; i < divs.length; i++) {
+      divs[i].setAttribute("display", isChecked ? "block" : "none");
+    }
+  }, true);
+ 
   // -----------------------------------------------
   // Load XML station file dialog
   // -----------------------------------------------
@@ -3156,7 +3194,7 @@ require([
       <span>Graph options</span>
       <div data-dojo-type="dijit/DropDownMenu">
         <div id="MenuGraphOptionCalendarDateHour" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){ShowHideDialog.show();}">Calendar Date/Hours</div>
-        <div id="MenuGraphOptionActivities"       data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){alert('not yet available');}">Activities</div>
+        <div id="MenuGraphOptionActivities"       data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){ShowHideActivityDialog.show();}">Activities</div>
       </div>
     </div>
     <div id="MenuHighLights" data-dojo-type="dijit/PopupMenuBarItem">
@@ -3231,7 +3269,7 @@ require([
   fill: black;
 }
 
-.start_hour, .end_hour, .station, .duration {
+.act_hour, .dtl_hour {
   font-size: 9px;
   fill: black;
 }
@@ -3244,13 +3282,10 @@ require([
   text-anchor: end; 
 }
 
-.station {
+.dtl_station {
+  font-size: 11px;
+  fill: black;
   text-anchor: middle; 
-}
-
-.duration {
-  text-anchor: middle; 
-  font-weight: bold;
 }
 
 .distance {
@@ -3377,8 +3412,8 @@ require([
         <tr>
           <td><label for="restbefore">Rest before</label></td>
           <td>
-            <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="restbefore" id="TrainingRestBeforeH" value="0" data-dojo-props="" required="true">
-            <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="restbefore" id="TrainingRestBeforeM" value="0" data-dojo-props="" required="true">
+            <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="restbefore" id="TrainingRestBeforeH" value="0" data-dojo-props="" required="true">h&nbsp;
+            <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="restbefore" id="TrainingRestBeforeM" value="0" data-dojo-props="" required="true">m
           </td>
         </tr>
         <tr>
@@ -3391,8 +3426,8 @@ require([
         <tr>
           <td><label for="duration">Duration</label></td>
           <td>
-            <input id="TrainingDurationHour"   class="durationHour" data-dojo-type="dijit/form/ComboBox" name="duration" data-dojo-props="placeHolder:'hhh'" required="true" readonly="true">
-            <input id="TrainingDurationMinute" class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="duration" data-dojo-props="placeHolder:'mm'" required="true" readonly="true">
+            <input id="TrainingDurationHour"   class="durationHour" data-dojo-type="dijit/form/ComboBox" name="duration" value="0" required="true" readonly="true">h&nbsp;
+            <input id="TrainingDurationMinute" class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="duration" value="0" required="true" readonly="true">m
           </td>
         </tr>
         <tr>
@@ -3405,8 +3440,8 @@ require([
         <tr>
           <td><label for="restafter">Rest after</label></td>
           <td>
-            <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="restafter" id="TrainingRestAfterH" value="0" data-dojo-props="" required="true">
-            <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="restafter" id="TrainingRestAfterM" value="0" data-dojo-props="" required="true">
+            <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="restafter" id="TrainingRestAfterH" value="0" data-dojo-props="" required="true">h&nbsp;
+            <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="restafter" id="TrainingRestAfterM" value="0" data-dojo-props="" required="true">m
           </td>
         </tr>
       </table>
@@ -3418,6 +3453,33 @@ require([
   </div>
 
 
+
+  <div data-dojo-type="dijit/Dialog" id="ShowHideActivityDialog" data-dojo-id="ShowHideActivityDialog" title="Show/hide activity details" style="display: none;">
+    <div data-dojo-type="dijit/form/Form" id="ShowHideActivityForm" encType="multipart/form-data" action="" method="">
+      <table class="dijitDialogPaneContentArea">
+        <tr>
+          <td><label for="SHActivityHours">Show activity hour label</label></td>
+          <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHActivityHours" id="SHActivityHours" checked></td>
+        </tr>
+        <tr>
+          <td><label for="SHActivityDetails">Show activity details (leg/layover)</label></td>
+          <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHActivityDetails" id="SHActivityDetails" checked></td>
+        </tr>
+        <tr>
+          <td><label for="SHActivityDetailHours">Show activity detail hours</label></td>
+          <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHActivityDetailHours" id="SHActivityDetailHours"></td>
+        </tr>
+        <tr>
+          <td><label for="SHActivityDetailStations">Show activity detail stations</label></td>
+          <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHActivityDetailStations" id="SHActivityDetailStations"></td>
+        </tr>
+      </table>
+
+      <div class="dijitDialogPaneActionBar">
+        <button data-dojo-type="dijit/form/Button" type="button" id="SaveShowHide">Close</button>
+      </div>
+    </div>
+  </div>
 
 
   <div data-dojo-type="dijit/Dialog" id="ShowHideDialog" data-dojo-id="ShowHideDialog" title="Show/hide SVG items" style="display: none;">
@@ -3464,7 +3526,7 @@ require([
       </table>
 
       <div class="dijitDialogPaneActionBar">
-        <button data-dojo-type="dijit/form/Button" type="button" id="SaveShowHide">Save</button>
+        <button data-dojo-type="dijit/form/Button" type="button" id="SaveShowHide">Close</button>
       </div>
     </div>
   </div>
@@ -3729,8 +3791,8 @@ require([
         <tr>
           <td><label for="restbefore">Rest before</label></td>
           <td>
-            <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="restbefore" id="TripRestBeforeH" value="0" data-dojo-props="" required="true">
-            <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="restbefore" id="TripRestBeforeM" value="0" data-dojo-props="" required="true">
+            <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="restbefore" id="TripRestBeforeH" value="0" data-dojo-props="" required="true">h&nbsp;
+            <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="restbefore" id="TripRestBeforeM" value="0" data-dojo-props="" required="true">m
           </td>
         </tr>
         <tr>
@@ -3754,8 +3816,8 @@ require([
         <tr>
           <td><label for="restafter">Rest after</label></td>
           <td>
-            <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="restafter" id="TripRestAfterH" value="0" data-dojo-props="" required="true">
-            <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="restafter" id="TripRestAfterM" value="0" data-dojo-props="" required="true">
+            <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="restafter" id="TripRestAfterH" value="0" data-dojo-props="" required="true">h&nbsp;
+            <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="restafter" id="TripRestAfterM" value="0" data-dojo-props="" required="true">m
           </td>
         </tr>
       </table>
