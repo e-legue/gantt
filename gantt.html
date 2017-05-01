@@ -1000,8 +1000,8 @@ require([
       MenuBusinessObjectCreateActivityTraining: { type: "boolean", default: false, },
       MenuBusinessObjectCreateActivityOtherActivity: { type: "boolean", default: true, },
       MenuGraphOption: { type: "boolean", default: true, },
-      MenuGraphOptionCalendarDateHour: { type: "boolean", default: false, },
-      MenuGraphOptionActivities: { type: "boolean", default: true, },
+      MenuGraphOptionCalendar: { type: "boolean", default: false, },
+      MenuGraphOptionActivity: { type: "boolean", default: false, },
       MenuHighLights: { type: "boolean", default: true, },
       MenuHighLightsSpecificDateTime: { type: "boolean", default: false, },
       MenuHighLightsDistance: { type: "boolean", default: false, },
@@ -1249,7 +1249,9 @@ require([
     var pattern = new RegExp("^Menu");
 
     for(var property in cfg) {
+      console.log(property);
       if( pattern.test(property) ) {
+        console.log(cfg.get(property));
         registry.byId(property).set("disabled", cfg.get(property));
       }
     }
@@ -2132,21 +2134,41 @@ require([
   });
 
   // -----------------------------------------------
-  // Show/Hide dialog
+  // Show/Hide calendar dialog
   // -----------------------------------------------
 
-  registry.byId("ShowHideDialog").on("show", function(){
-    viewInForm(config, dom.byId("ShowHideForm"));
+  registry.byId("ShowHideCalendarDialog").on("show", function(){
+    viewInForm(config, dom.byId("ShowHideCalendarForm"));
   }, true);
 
-  registry.byId("SaveShowHide").on("click", function(){
-    if( !registry.byId("ShowHideForm").validate() ){
+  registry.byId("SaveShowHideCalendar").on("click", function(){
+    if( !registry.byId("ShowHideCalendarForm").validate() ){
       return;
     }
 
-    ShowHideDialog.hide();
+    ShowHideCalendarDialog.hide();
 
-    setFromForm(config, dom.byId("ShowHideForm"));
+    setFromForm(config, dom.byId("ShowHideCalendarForm"));
+
+    configurationStore.putSync(config);
+  });
+
+  // -----------------------------------------------
+  // Show/Hide activity dialog
+  // -----------------------------------------------
+
+  registry.byId("ShowHideActivityDialog").on("show", function(){
+    viewInForm(config, dom.byId("ShowHideActivityForm"));
+  }, true);
+
+  registry.byId("SaveShowHideActivity").on("click", function(){
+    if( !registry.byId("ShowHideActivityForm").validate() ){
+      return;
+    }
+
+    ShowHideActivityDialog.hide();
+
+    setFromForm(config, dom.byId("ShowHideActivityForm"));
 
     configurationStore.putSync(config);
   });
@@ -2734,6 +2756,9 @@ require([
       alert("Cannot create Trip because of an overlap with another activity."); 
     }
     else { 
+      // It is IMPORTANT to create detail items before the trip because to draw trip,
+      // we need the details. And because the drawing is linked with the add event, the 
+      // trip must be added after details.
       // obtain uniq pk for the trip activity.
       var fk_parent = activityStore.nextPk;
 
@@ -3183,8 +3208,8 @@ require([
           <span>Create activity</span>
           <div id="MenuBusinessObjectCreateActivity" data-dojo-type="dijit/DropDownMenu">
             <div id="MenuBusinessObjectCreateActivityDayOff"        data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateDayOffDialog.show();}">Day off</div>
-            <div id="MenuBusinessObjectCreateActivityTrip"          data-dojo-type="dijit/MenuItem" data-dojo-props="">Trip</div>
             <div id="MenuBusinessObjectCreateActivityTraining"      data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateTrainingDialog.show();}">Training</div>
+            <div id="MenuBusinessObjectCreateActivityTrip"          data-dojo-type="dijit/MenuItem" data-dojo-props="">Trip</div>
             <div id="MenuBusinessObjectCreateActivityOtherActivity" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){alert('not yet available');}">Other activity</div>
           </div>
         </div>
@@ -3193,8 +3218,8 @@ require([
     <div id="MenuGraphOption" data-dojo-type="dijit/PopupMenuBarItem">
       <span>Graph options</span>
       <div data-dojo-type="dijit/DropDownMenu">
-        <div id="MenuGraphOptionCalendarDateHour" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){ShowHideDialog.show();}">Calendar Date/Hours</div>
-        <div id="MenuGraphOptionActivities"       data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){ShowHideActivityDialog.show();}">Activities</div>
+        <div id="MenuGraphOptionCalendar" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){ShowHideCalendarDialog.show();}">Calendar Date/Hours</div>
+        <div id="MenuGraphOptionActivity" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){ShowHideActivityDialog.show();}">Activity details</div>
       </div>
     </div>
     <div id="MenuHighLights" data-dojo-type="dijit/PopupMenuBarItem">
@@ -3426,8 +3451,8 @@ require([
         <tr>
           <td><label for="duration">Duration</label></td>
           <td>
-            <input id="TrainingDurationHour"   class="durationHour" data-dojo-type="dijit/form/ComboBox" name="duration" value="0" required="true" readonly="true">h&nbsp;
-            <input id="TrainingDurationMinute" class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="duration" value="0" required="true" readonly="true">m
+            <input id="TrainingDurationHour"   class="durationHour" data-dojo-type="dijit/form/ComboBox" name="duration" data-dojo-props="placeHolder:'0'" required="true" readonly="true" />h&nbsp;
+            <input id="TrainingDurationMinute" class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="duration" data-dojo-props="placeHolder:'0'" required="true" readonly="true" />m
           </td>
         </tr>
         <tr>
@@ -3476,14 +3501,14 @@ require([
       </table>
 
       <div class="dijitDialogPaneActionBar">
-        <button data-dojo-type="dijit/form/Button" type="button" id="SaveShowHide">Close</button>
+        <button data-dojo-type="dijit/form/Button" type="button" id="SaveShowHideActivity">Close</button>
       </div>
     </div>
   </div>
 
 
-  <div data-dojo-type="dijit/Dialog" id="ShowHideDialog" data-dojo-id="ShowHideDialog" title="Show/hide SVG items" style="display: none;">
-    <div data-dojo-type="dijit/form/Form" id="ShowHideForm" encType="multipart/form-data" action="" method="">
+  <div data-dojo-type="dijit/Dialog" id="ShowHideCalendarDialog" data-dojo-id="ShowHideCalendarDialog" title="Show/hide Calendar items" style="display: none;">
+    <div data-dojo-type="dijit/form/Form" id="ShowHideCalendarForm" encType="multipart/form-data" action="" method="">
       <table class="dijitDialogPaneContentArea">
         <tr>
           <td><label for="SHCoordinates">Show coordinates X and Y</label></td>
@@ -3526,7 +3551,7 @@ require([
       </table>
 
       <div class="dijitDialogPaneActionBar">
-        <button data-dojo-type="dijit/form/Button" type="button" id="SaveShowHide">Close</button>
+        <button data-dojo-type="dijit/form/Button" type="button" id="SaveShowHideCalendar">Close</button>
       </div>
     </div>
   </div>
