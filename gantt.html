@@ -226,6 +226,7 @@ require([
   "dijit/MenuBarItem",
   "dijit/DropDownMenu",
   "dijit/CheckedMenuItem",
+  "dijit/ColorPalette",
   "dijit/form/Form",
   "dijit/form/CheckBox",
   "dijit/form/TextBox",
@@ -849,7 +850,7 @@ require([
 
     // scale vertically the calendar to fit the number of crewmember.
     var bar = svg.getElementById("calendar_bar");
-    var y = item.y + item.height;
+    var y = item.y + HEIGHT_CM_LINE; // item.height;
     bar.setAttribute("transform", "scale(1," + y + ")");
   }
 
@@ -877,8 +878,8 @@ require([
     Rect.setAttributeNS(null, "class", activity.get("type"));
     Rect.setAttributeNS(null, "x", 0);
     Rect.setAttributeNS(null, "y", 0);
-    Rect.setAttributeNS(null, "rx", CompressX(2 * unitY));
-    Rect.setAttributeNS(null, "ry", CompressX(2 * unitY));
+    Rect.setAttributeNS(null, "rx", Math.min(CompressX(2 * unitY), 20));
+    Rect.setAttributeNS(null, "ry", Math.min(CompressX(2 * unitY), 20));
     Rect.setAttributeNS(null, "width", CompressX(activity.width));
     Rect.setAttributeNS(null, "height", 14 * unitY);
     G.appendChild(Rect);
@@ -1080,7 +1081,7 @@ require([
         }
       }),
       y: "numeric",
-      height: "numeric",
+//      height: "numeric",
     },
     validateOnSet: false,
     DrawSVG: function(){ 
@@ -2363,6 +2364,9 @@ require([
     calendarStore.forEach(function(item){
       item.set("relative", item.pk - ref);
       if( i < newStarts.length && newStarts[i] == item.pk ) {
+        console.log("SetStartPeriods");
+          console.log(i);
+          console.log(item);
         item.set("startperiod", true);
         i+=1;
       }
@@ -2384,7 +2388,7 @@ require([
     // Compute the position and Y coordinate of the new crewmember based on 
     // existing data.
     crewMemberStore.sort("pk").forEach(function(item){
-      coordY += item.get("height");
+      coordY += HEIGHT_CM_LINE; // item.get("height");
     }); 
 
     // Add the new crew in the store. Event will trigger the drawing.
@@ -2393,7 +2397,7 @@ require([
       birthdate: registry.byId("CrewMemberBirthDate").get("value").toISOString().substring(0, 10),
       pk: crewMemberStore.nextPk,
       y: coordY,
-      height: HEIGHT_CM_LINE,
+//      height: HEIGHT_CM_LINE,
     });
 
     CreateCrewMemberDialog.hide();
@@ -3218,6 +3222,20 @@ require([
     <div id="MenuGraphOption" data-dojo-type="dijit/PopupMenuBarItem">
       <span>Graph options</span>
       <div data-dojo-type="dijit/DropDownMenu">
+        <div data-dojo-type="dijit/PopupMenuItem">
+          <span>Graph factor compression on axe X</span>
+          <select data-dojo-type="dijit/form/Select" name="XGraphCompression" id="XGraphCompression" style="width: 3em;">
+            <option value=".25">0.25</option>
+            <option value=".5">0.5</option>
+            <option value="1" selected="selected">1</option>
+            <option value="2">2</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="8">8</option>
+            <option value="10">10</option>
+          </select>
+        </div>
         <div id="MenuGraphOptionCalendar" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){ShowHideCalendarDialog.show();}">Calendar Date/Hours</div>
         <div id="MenuGraphOptionActivity" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){ShowHideActivityDialog.show();}">Activity details</div>
       </div>
@@ -3533,20 +3551,6 @@ require([
         <tr>
           <td><label for="SHCalendarDayBars">Show calendar day bars</label></td>
           <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarDayBars" id="SHCalendarDayBars"></td>
-        </tr>
-        <tr>
-          <td><label for="XGraphCompression">Graph factor compression on axe X</label></td>
-          <td>
-            <select data-dojo-type="dijit/form/Select" name="XGraphCompression" id="XGraphCompression" style="width: 3em;">
-              <option value="1" selected="selected">1</option>
-              <option value="2">2</option>
-              <option value="4">4</option>
-              <option value="5">5</option>
-              <option value="6">6</option>
-              <option value="8">8</option>
-              <option value="10">10</option>
-            </select>
-          </td>
         </tr>
       </table>
 
