@@ -832,26 +832,22 @@ require([
     var crewMemberBarId = svg.getElementById("crewmember_bar");
 
     var G = document.createElementNS(svgNS, "g");
-    G.setAttributeNS(null,"transform","translate(0, " + item.y + ")");
-    G.setAttributeNS(null,"id", item.get("ident"));
+    var yCoord = yCoordStore.getSync(item.fk_yc);
+    G.setAttributeNS(null,"transform","translate(0, " + yCoord.y + ")");
+    G.setAttributeNS(null,"id", item.ident);
     crewMemberId.appendChild(G);
 
-    G.appendChild(SVG_drawText("crewmember", -50, HEIGHT_CM_LINE / 2, item.get("name")));
+    G.appendChild(SVG_drawText("crewmember", -50, HEIGHT_CM_LINE / 2, item.name));
 
     
     var Gbar = document.createElementNS(svgNS, "g");
-    Gbar.setAttributeNS(null,"transform","translate(0, " + item.y + ")");
-    Gbar.setAttributeNS(null,"id", item.get("barident"));
+    Gbar.setAttributeNS(null,"transform","translate(0, " + yCoord.y + ")");
+    Gbar.setAttributeNS(null,"id", item.barident);
     crewMemberBarId.appendChild(Gbar);
 
     Gbar.appendChild(SVG_drawRect("line", 0,   0, 1, 1));
     Gbar.appendChild(SVG_drawRect("line", 0, HEIGHT_CM_LINE, 1, 1));
-
-
-    // scale vertically the calendar to fit the number of crewmember.
-    var bar = svg.getElementById("calendar_bar");
-    var y = item.y + HEIGHT_CM_LINE; // item.height;
-    bar.setAttribute("transform", "scale(1," + y + ")");
+    
   }
 
   // Draw an activity. As the others, the drawing is embedded into a g node 
@@ -1080,7 +1076,8 @@ require([
           return "bcm" + pk; // bcm stands for Bar CrewMember.
         }
       }),
-      y: "numeric",
+      fk_yc: "numeric",
+//      y: "numeric",
 //      height: "numeric",
     },
     validateOnSet: false,
@@ -1230,14 +1227,25 @@ require([
 
   });
  
+  var YCoordModel = declare(Model, {
+    schema: {
+      pk: "numeric",
+      y: "numeric",
+      fk_hl: "numeric",
+      fk_cm: "numeric",
+    },
+    validateOnSet: false,
+  });
+ 
+
   // ===============================================
   // Data STOREs and events.
   // ===============================================
 
+  var TrackableMemory = declare([Memory, Trackable]); 
   
   // -----------------------------------------------
   // configurationStore
-
   // -----------------------------------------------
   var configurationStore = new Memory({
     Model: ConfigurationModel,
@@ -1263,11 +1271,46 @@ require([
   configurationStore.addSync(config);
 
   // -----------------------------------------------
+  // yCoordStore
+  // -----------------------------------------------
+  var yCoordStore = new TrackableMemory({
+    Model: YCoordModel,
+    idProperty: "pk",
+    nextPk: 1, 
+    nextY: 0,
+    len: 0,
+
+    AdjustSVG: function(){
+      // scale vertically the calendar to fit the number of crewmember.
+      var bar = svg.getElementById("calendar_bar");
+      bar.setAttribute("transform", "scale(1," + yCoordStore.nextY + ")");
+    },
+  });
+
+  yCoordStore.on("add", function(event){
+    yCoordStore.len += 1;
+    yCoordStore.nextPk += 1;
+    if (event.target.fk_cm ) {
+      // add crew at the end.
+      yCoordStore.nextY += HEIGHT_CM_LINE;
+    }
+    yCoordStore.AdjustSVG();
+  });
+
+  yCoordStore.on("update", function(event){
+//    event.target.ClearSVG();
+//    event.target.DrawSVG();
+  });
+
+  yCoordStore.on("delete", function(event){
+    yCoordStore.len -= 1;
+//    event.target.ClearSVG();
+  });
+
+
+  // -----------------------------------------------
   // calendarStore
   // -----------------------------------------------
-  var TrackableMemory = declare([Memory, Trackable]); 
-
-
   var calendarStore = new TrackableMemory({
     Model: CalendarModel,
     idProperty: "pk",
@@ -2383,20 +2426,25 @@ require([
   // Create Crewmember dialog
   // -----------------------------------------------
   registry.byId("CreateCrewMember").on("click", function(){
-    var coordY = 100;
+    var pkY = yCoordStore.nextPk;
+    var pkCM = crewMemberStore.nextPk;
 
-    // Compute the position and Y coordinate of the new crewmember based on 
-    // existing data.
-    crewMemberStore.sort("pk").forEach(function(item){
-      coordY += HEIGHT_CM_LINE; // item.get("height");
-    }); 
+    // Add the new entry in the y coord store.
+    yCoordStore.addSync({
+      pk: pkY,
+      fk_cm: pkCM,
+      y: yCoordStore.nextY,
+//      height: HEIGHT_CM_LINE,
+    });
+
+    
 
     // Add the new crew in the store. Event will trigger the drawing.
     crewMemberStore.addSync({
       name: registry.byId("CrewMemberName").get("value"),
       birthdate: registry.byId("CrewMemberBirthDate").get("value").toISOString().substring(0, 10),
-      pk: crewMemberStore.nextPk,
-      y: coordY,
+      pk: pkCM,
+//      y: coordY,
 //      height: HEIGHT_CM_LINE,
     });
 
