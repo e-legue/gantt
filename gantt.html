@@ -619,6 +619,7 @@ require([
 
   var Xorig          = 0; // unix time of the start of the calendar.
   var HEIGHT_CM_LINE = 200;
+  var HEIGHT_HL_LINE = 40;
   var IsDrawingEnable = true; // flag used to disable the drawing.
 
   // Draw a rectangle.
@@ -665,10 +666,11 @@ require([
     var calendarBarId = svg.getElementById("calendar_bar");
 
     var G       = document.createElementNS(svgNS, "g");
+    G.setAttributeNS(null,"transform","translate(0, " + item.GetYCoord() + ")");
     G.setAttributeNS(null, "id", item.get("ident"));
     calendarId.appendChild(G);
 
-    var lblText = SVG_drawText("highlight_label", item.x, 60, item.get("message"));
+    var lblText = SVG_drawText("highlight_label", item.x + 10, HEIGHT_HL_LINE / 2, item.get("message"));
     on(lblText, "dblclick", function(evt){
       PopupHighLightDetail(item.pk);
     });
@@ -711,10 +713,11 @@ require([
     var x1 = getActivityDistancePosition(item.act1_event, from);
     var x2 = getActivityDistancePosition(item.act2_event, to);
 
-    var y1 = crewMemberStore.getSync(from.fk_cm).y;
-    var y2 = crewMemberStore.getSync(to.fk_cm).y; 
+    var y = item.GetYCoord();
+    var yy = y + HEIGHT_HL_LINE / 2;
 
-    var y = Math.max(y1, y2);
+    var y1 = crewMemberStore.getSync(from.fk_cm).GetYCoord();
+    var y2 = crewMemberStore.getSync(to.fk_cm).GetYCoord(); 
 
     if( x2 < x1 ) {
       var tmp = x1;
@@ -733,37 +736,37 @@ require([
     label += min > 9 ? min : "0" + min;
 
  
-    var lblText = SVG_drawText("distance_label", (x1 + x2) / 2 , y, label);
+    var lblText = SVG_drawText("distance_label", (x1 + x2) / 2 , yy, label);
     on(lblText, "dblclick", function(evt){
       PopupHighLightDetail(item.pk);
     });
     G.appendChild(lblText);
-    G.appendChild(SVG_drawLine("distance", x1, y, x2, y));
+    G.appendChild(SVG_drawLine("distance", x1, yy, x2, yy));
 
     var inc = HEIGHT_CM_LINE / 20;
     var xinc = inc * config.XGraphCompression; 
 
     // draw arrow.
-    G.appendChild(SVG_drawLine("distance", x1, y, x1 + xinc, y + inc));
-    G.appendChild(SVG_drawLine("distance", x1, y, x1 + xinc, y - inc ));
+    G.appendChild(SVG_drawLine("distance", x1, yy, x1 + xinc, yy + inc));
+    G.appendChild(SVG_drawLine("distance", x1, yy, x1 + xinc, yy - inc ));
 
     // draw second arrow.
-    G.appendChild(SVG_drawLine("distance", x2, y, x2 - xinc, y + inc));
-    G.appendChild(SVG_drawLine("distance", x2, y, x2 - xinc, y - inc));
+    G.appendChild(SVG_drawLine("distance", x2, yy, x2 - xinc, yy + inc));
+    G.appendChild(SVG_drawLine("distance", x2, yy, x2 - xinc, yy - inc));
 
     // draw vertical lines.
     if( y1 < y ) {
-      G.appendChild(SVG_drawLine("distance", x1, y1 - HEIGHT_CM_LINE / 2, x1, y + 2 * inc));
+      G.appendChild(SVG_drawLine("distance", x1, y1 - HEIGHT_CM_LINE, x1, yy + 2 * inc));
     }
     else {
-      G.appendChild(SVG_drawLine("distance", x1, y1 + HEIGHT_CM_LINE / 2, x1, y - 2 * inc));
+      G.appendChild(SVG_drawLine("distance", x1, y1 + HEIGHT_CM_LINE, x1, yy - 2 * inc));
     }
 
     if( y2 < y ) {
-      G.appendChild(SVG_drawLine("distance", x2, y2 - HEIGHT_CM_LINE / 2, x2, y + 2 * inc));
+      G.appendChild(SVG_drawLine("distance", x2, y2 - HEIGHT_CM_LINE, x2, yy + 2 * inc));
     }
     else {
-      G.appendChild(SVG_drawLine("distance", x2, y2 + HEIGHT_CM_LINE / 2, x2, y - 2 * inc));
+      G.appendChild(SVG_drawLine("distance", x2, y2 + HEIGHT_CM_LINE, x2, yy - 2 * inc));
     }
 
 
@@ -832,22 +835,21 @@ require([
     var crewMemberBarId = svg.getElementById("crewmember_bar");
 
     var G = document.createElementNS(svgNS, "g");
-    var yCoord = yCoordStore.getSync(item.fk_yc);
-    G.setAttributeNS(null,"transform","translate(0, " + yCoord.y + ")");
-    G.setAttributeNS(null,"id", item.ident);
+    var y = item.GetYCoord();
+    G.setAttributeNS(null,"transform","translate(0, " + y + ")");
+    G.setAttributeNS(null,"id", item.get("ident"));
     crewMemberId.appendChild(G);
 
     G.appendChild(SVG_drawText("crewmember", -50, HEIGHT_CM_LINE / 2, item.name));
 
     
     var Gbar = document.createElementNS(svgNS, "g");
-    Gbar.setAttributeNS(null,"transform","translate(0, " + yCoord.y + ")");
-    Gbar.setAttributeNS(null,"id", item.barident);
+    Gbar.setAttributeNS(null,"transform","translate(0, " + y + ")");
+    Gbar.setAttributeNS(null,"id", item.get("barident"));
     crewMemberBarId.appendChild(Gbar);
 
     Gbar.appendChild(SVG_drawRect("line", 0,   0, 1, 1));
     Gbar.appendChild(SVG_drawRect("line", 0, HEIGHT_CM_LINE, 1, 1));
-    
   }
 
   // Draw an activity. As the others, the drawing is embedded into a g node 
@@ -1091,6 +1093,9 @@ require([
       if( item_lbl) item_lbl.parentNode.removeChild(item_lbl);
       if( item_bar) item_bar.parentNode.removeChild(item_bar);
     },
+    GetYCoord: function(){
+      return yCoordStore.getSync(this.fk_yc).y;
+    },
   });
 
   var ActivityModel = declare(Model, {
@@ -1136,6 +1141,9 @@ require([
       // then the activity is also cleared !  
       if( item ) item.parentNode.removeChild(item);
     },
+    GetYCoord: function(){
+      return crewMemberStore.getSync(this.fk_cm).GetYCoord();
+    }
   });
  
   var TripDetailModel = declare(Model, {
@@ -1198,6 +1206,7 @@ require([
       act1_event: "numeric",
       fk_act2: "numeric",
       act2_event: "numeric",
+      fk_yc: "numeric",
       ident: new ComputedProperty({ 
         dependsOn: ["pk"],
         getValue: function(pk){
@@ -1224,7 +1233,9 @@ require([
       if( item_lbl ) item_lbl.parentNode.removeChild(item_lbl);
       if( item_bar ) item_bar.parentNode.removeChild(item_bar);
     },
-
+    GetYCoord: function(){
+      return yCoordStore.getSync(this.fk_yc).y;
+    },
   });
  
   var YCoordModel = declare(Model, {
@@ -1283,28 +1294,70 @@ require([
     AdjustSVG: function(){
       // scale vertically the calendar to fit the number of crewmember.
       var bar = svg.getElementById("calendar_bar");
-      bar.setAttribute("transform", "scale(1," + yCoordStore.nextY + ")");
+      bar.setAttribute("transform", "scale(1," + this.nextY + ")");
     },
   });
 
   yCoordStore.on("add", function(event){
     yCoordStore.len += 1;
     yCoordStore.nextPk += 1;
-    if (event.target.fk_cm ) {
-      // add crew at the end.
-      yCoordStore.nextY += HEIGHT_CM_LINE;
-    }
+    var inc = event.target.fk_cm ? HEIGHT_CM_LINE : HEIGHT_HL_LINE;
+    console.log("yCoordStore.add");
+    console.log(inc);
+    yCoordStore.nextY += inc;
+
     yCoordStore.AdjustSVG();
+    console.log(yCoordStore);
+   
+    console.log(event.target.y); 
+    yCoordStore.fetch().then(function(items) {
+      for (var i = items.length - 1; i >= 0; i--) {
+        if( items[i].y >= event.target.y && items[i].pk != event.target.pk ) {
+          console.log(items[i]);
+
+          items[i].y += inc;
+          yCoordStore.putSync(items[i]);    
+        }
+      }
+    });    
+
+
   });
 
   yCoordStore.on("update", function(event){
-//    event.target.ClearSVG();
-//    event.target.DrawSVG();
+    if( event.target.fk_cm ) {
+      var id = svg.getElementById(crewMemberStore.getSync(event.target.fk_cm).get("ident")); 
+      id.setAttribute("transform", "translate(0," + event.target.y + ")");
+
+      var bar = svg.getElementById(crewMemberStore.getSync(event.target.fk_cm).get("barident")); 
+      bar.setAttribute("transform", "translate(0," + event.target.y + ")");
+    }
+    else {
+      var id = svg.getElementById(highLightStore.getSync(event.target.fk_hl).get("ident")); 
+      id.setAttribute("transform", "translate(0," + event.target.y + ")");
+    }
   });
 
   yCoordStore.on("delete", function(event){
     yCoordStore.len -= 1;
-//    event.target.ClearSVG();
+    var inc = event.target.fk_cm ? HEIGHT_CM_LINE : HEIGHT_HL_LINE;
+    yCoordStore.nextY -= inc;
+    
+    yCoordStore.AdjustSVG();
+    console.log(yCoordStore);
+   
+    console.log(event.target.y); 
+    yCoordStore.fetch().then(function(items) {
+      for (var i = items.length - 1; i >= 0; i--) {
+        if( items[i].y > event.target.y ) {
+          console.log(items[i]);
+
+          items[i].y -= inc;
+          yCoordStore.putSync(items[i]);    
+        }
+      }
+    });    
+
   });
 
 
@@ -1743,6 +1796,7 @@ require([
    
     SaveStore(configurationStore, "ConfigurationStore", "configuration");
     SaveStore(calendarStore, "CalendarStore", "calendar");
+    SaveStore(yCoordStore, "YCoordStore", "ycoord");
     SaveStore(crewMemberStore, "CrewMemberStore", "crew");
     SaveStore(activityStore, "ActivityStore", "activity");
     SaveStore(highLightStore, "HighLightStore", "highligth");
@@ -1772,6 +1826,7 @@ require([
     });
 
     LoadStore(calendarStore, svgNode.getElementById("CalendarStore"),"calendar");
+    LoadStore(yCoordStore, svgNode.getElementById("YCoordStore"),"ycoord");
     LoadStore(crewMemberStore, svgNode.getElementById("CrewMemberStore"), "crew");
     LoadStore(activityStore, svgNode.getElementById("ActivityStore"), "activity");
     LoadStore(highLightStore, svgNode.getElementById("HighLightStore"), "highligth");
@@ -2353,11 +2408,22 @@ require([
           start.add(1, "minutes");
         }
 
+        var pkY  = yCoordStore.nextPk;
+        var pkHL = highLightStore.nextPk;
+
+        // Add the new entry in the y coord store.
+        yCoordStore.addSync({
+          pk: pkY,
+          fk_hl: pkHL,
+          y: 0,
+        });
+
         highLightStore.addSync({
           message: InitialState ? "End DST" : "Start DST",
           type: "specific",
           x: getPositionX(start),
-          pk: highlLighStore.nextPk,
+          pk: pkHL,
+          fk_yc: pkY,
         });
       }
 
@@ -2434,7 +2500,6 @@ require([
       pk: pkY,
       fk_cm: pkCM,
       y: yCoordStore.nextY,
-//      height: HEIGHT_CM_LINE,
     });
 
     
@@ -2444,8 +2509,7 @@ require([
       name: registry.byId("CrewMemberName").get("value"),
       birthdate: registry.byId("CrewMemberBirthDate").get("value").toISOString().substring(0, 10),
       pk: pkCM,
-//      y: coordY,
-//      height: HEIGHT_CM_LINE,
+      fk_yc: pkY,
     });
 
     CreateCrewMemberDialog.hide();
@@ -2606,6 +2670,16 @@ require([
       }); 
     }
 
+    var pkY  = yCoordStore.nextPk;
+
+    // Add the new entry in the y coord store.
+    yCoordStore.addSync({
+      pk: pkY,
+      fk_hl: highLightStore.nextPk,
+      y: 0,
+    });
+
+
     for(i = 0; i < days.length; i++){
       var calDay = calendarStore.getSync(days[i]);
       
@@ -2619,6 +2693,7 @@ require([
           type: "specific",
           x: getPositionX(when),
           pk: highLightStore.nextPk,
+          fk_yc: pkY,
         });
       }
     }
@@ -2660,13 +2735,27 @@ require([
     var fromEvent = registry.byId("DistanceFromEventSelect").value;
     var toEvent   = registry.byId("DistanceToEventSelect").value;
 
+    var act1 = activityStore.getSync(from);
+    var act2 = activityStore.getSync(to);
+    var pkY  = yCoordStore.nextPk;
+    var pkHL = highLightStore.nextPk;
+
+    // Add the new entry in the y coord store.
+    yCoordStore.addSync({
+      pk: pkY,
+      fk_hl: pkHL,
+      y: Math.min(act1.GetYCoord(), act2.GetYCoord()),
+    });
+
+
     highLightStore.addSync({
       type: "distance",
       fk_act1: from,
       act1_event: Number(fromEvent),
       fk_act2: to,
       act2_event: Number(toEvent),
-      pk: highLightStore.nextPk,
+      pk: pkHL,
+      fk_yc: pkY,
     });
   });  
 
