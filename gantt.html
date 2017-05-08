@@ -661,7 +661,7 @@ require([
 
 
   // Draw a highlight in calendar.
-  function SVG_drawHighlightSpecific(item){
+  function SVG_drawHighlight(item){
     var calendarId    = svg.getElementById("calendar");
     var calendarBarId = svg.getElementById("calendar_bar");
 
@@ -700,7 +700,7 @@ require([
   }
 
   // Draw a distance in calendar.
-  function SVG_drawHighlightDistance(item){
+  function SVG_drawDistance(item) {
     var calendarId    = svg.getElementById("calendar");
 
     var G       = document.createElementNS(svgNS, "g");
@@ -771,16 +771,6 @@ require([
 
 
   }
-
-  function SVG_drawHighlight(item){
-    if( item.type == "specific" ) {
-      SVG_drawHighlightSpecific(item);
-    }
-    else if( item.type == "distance" ) {
-      SVG_drawHighlightDistance(item);
-    }
-  }
-
 
 
   // Draw a calendar date. The drawing belongs to id calendar in the SVG.
@@ -1200,12 +1190,7 @@ require([
     schema: {
       message: "string",
       pk: "numeric",
-      type: "string",
       x: "numeric",
-      fk_act1: "numeric",
-      act1_event: "numeric",
-      fk_act2: "numeric",
-      act2_event: "numeric",
       fk_yc: "numeric",
       ident: new ComputedProperty({ 
         dependsOn: ["pk"],
@@ -1238,11 +1223,41 @@ require([
     },
   });
  
+  var DistanceModel = declare(Model, {
+    schema: {
+      pk: "numeric",
+      fk_act1: "numeric",
+      act1_event: "numeric",
+      fk_act2: "numeric",
+      act2_event: "numeric",
+      fk_yc: "numeric",
+      ident: new ComputedProperty({ 
+        dependsOn: ["pk"],
+        getValue: function(pk){
+          return "dst" + pk;  // hl stands for HighLight
+        }
+      }),
+    },
+    validateOnSet: false,
+    DrawSVG: function(){ 
+      if( IsDrawingEnable ) SVG_drawDistance(this); 
+    },
+    ClearSVG: function(){
+      var item_lbl = svg.getElementById(this.get("ident"));
+      
+      if( item_lbl ) item_lbl.parentNode.removeChild(item_lbl);
+    },
+    GetYCoord: function(){
+      return yCoordStore.getSync(this.fk_yc).y;
+    },
+  });
+
   var YCoordModel = declare(Model, {
     schema: {
       pk: "numeric",
       y: "numeric",
       fk_hl: "numeric",
+      fk_dst: "numeric",
       fk_cm: "numeric",
     },
     validateOnSet: false,
@@ -1332,9 +1347,19 @@ require([
       var bar = svg.getElementById(crewMemberStore.getSync(event.target.fk_cm).get("barident")); 
       bar.setAttribute("transform", "translate(0," + event.target.y + ")");
     }
+    else if( event.target.fk_dst ) {
+      // due to some translation, the distances must be redrawn. This is mandatory because there
+      // is no way to build some floating anchor to reference to in SVG.
+      var distance = distanceStore.getSync(event.target.fk_dst); 
+
+      distance.ClearSVG();
+      distance.DrawSVG();
+    }
     else {
-      var id = svg.getElementById(highLightStore.getSync(event.target.fk_hl).get("ident")); 
-      id.setAttribute("transform", "translate(0," + event.target.y + ")");
+      var highlight = highLightStore.getSync(event.target.fk_hl); 
+
+      highlight.ClearSVG();
+      highlight.DrawSVG();
     }
   });
 
@@ -1681,6 +1706,33 @@ require([
     event.target.ClearSVG();
   });
 
+  // -----------------------------------------------
+  // distanceStore
+  // -----------------------------------------------
+  var distanceStore = new Memory({
+    Model: DistanceModel,
+    idProperty: "pk",
+    nextPk: 1, 
+    len: 0,
+  });
+
+  distanceStore.on("add", function(event){
+    distanceStore.len += 1;
+    distanceStore.nextPk = Math.max(event.target.pk, distanceStore.nextPk) + 1;
+    event.target.DrawSVG();
+  });
+  
+  distanceStore.on("update", function(event){
+    distanceStore.nextPk = Math.max(event.target.pk + 1, distanceStore.nextPk);
+    event.target.ClearSVG();
+    event.target.DrawSVG();
+  });
+
+  distanceStore.on("delete", function(event){
+    distanceStore.len -= 1;
+    event.target.ClearSVG();
+  });
+
 
 
 
@@ -1714,6 +1766,10 @@ require([
     AdjustCrewmemberBarScaleX(x);
 
     highLightStore.forEach(function(item){
+      item.ClearSVG();
+      item.DrawSVG();
+    });
+    distanceStore.forEach(function(item){
       item.ClearSVG();
       item.DrawSVG();
     });
@@ -1800,6 +1856,7 @@ require([
     SaveStore(crewMemberStore, "CrewMemberStore", "crew");
     SaveStore(activityStore, "ActivityStore", "activity");
     SaveStore(highLightStore, "HighLightStore", "highligth");
+    SaveStore(distanceStore, "DistanceStore", "distance");
     SaveStore(stationStore, "StationStore" , "station"); 
   }
 
@@ -1830,6 +1887,7 @@ require([
     LoadStore(crewMemberStore, svgNode.getElementById("CrewMemberStore"), "crew");
     LoadStore(activityStore, svgNode.getElementById("ActivityStore"), "activity");
     LoadStore(highLightStore, svgNode.getElementById("HighLightStore"), "highligth");
+    LoadStore(distanceStore, svgNode.getElementById("DistanceStore"), "distance");
     LoadStationStore(svgNode.getElementById("StationStore"), MODE_SVG);
 
     stationStore.filter({name: config.station}).fetchRange({start: 0, end: 1}).then(function(results){
@@ -2420,10 +2478,8 @@ require([
 
         highLightStore.addSync({
           message: InitialState ? "End DST" : "Start DST",
-          type: "specific",
           x: getPositionX(start),
           pk: pkHL,
-          fk_yc: pkY,
         });
       }
 
@@ -2690,7 +2746,6 @@ require([
       if( when.isValid() ){   
         highLightStore.addSync({
           message: label,
-          type: "specific",
           x: getPositionX(when),
           pk: highLightStore.nextPk,
           fk_yc: pkY,
@@ -2735,26 +2790,25 @@ require([
     var fromEvent = registry.byId("DistanceFromEventSelect").value;
     var toEvent   = registry.byId("DistanceToEventSelect").value;
 
-    var act1 = activityStore.getSync(from);
-    var act2 = activityStore.getSync(to);
-    var pkY  = yCoordStore.nextPk;
-    var pkHL = highLightStore.nextPk;
+    var act1  = activityStore.getSync(from);
+    var act2  = activityStore.getSync(to);
+    var pkY   = yCoordStore.nextPk;
+    var pkDST = distanceStore.nextPk;
 
     // Add the new entry in the y coord store.
     yCoordStore.addSync({
       pk: pkY,
-      fk_hl: pkHL,
+      fk_dst: pkDST,
       y: Math.min(act1.GetYCoord(), act2.GetYCoord()),
     });
 
 
-    highLightStore.addSync({
-      type: "distance",
+    distanceStore.addSync({
       fk_act1: from,
       act1_event: Number(fromEvent),
       fk_act2: to,
       act2_event: Number(toEvent),
-      pk: pkHL,
+      pk: pkDST,
       fk_yc: pkY,
     });
   });  
@@ -3566,11 +3620,12 @@ require([
        <!-- Those stores are managed automatically by the graph editor. -->
        <g id="ConfigurationStore"></g>
        <g id="CalendarStore"></g>
+       <g id="YCoordStore"></g>
+       <g id="HighLightStore"></g>
+       <g id="DistanceStore"></g>
        <g id="CrewMemberStore"></g>
        <g id="ActivityStore"></g>
-       <g id="HighLightStore"></g>
        <g id="StationStore"></g>
-      </g>
     </svg>
   </div>
   
