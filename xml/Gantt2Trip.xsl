@@ -103,9 +103,19 @@ extension-element-prefixes="date xs fn">
             <xsl:with-param name="valueInMinutes" select="width" />
           </xsl:call-template>
         </xsl:element>
+        <xsl:element name="tafb-in-period">
+          <xsl:call-template name="convertInHoursMinutes">
+            <xsl:with-param name="valueInMinutes" select="tafbInPeriod" />
+          </xsl:call-template>
+        </xsl:element>
         <xsl:element name="credit-total">
           <xsl:call-template name="convertInHoursMinutes">
             <xsl:with-param name="valueInMinutes" select="credit" />
+          </xsl:call-template>
+        </xsl:element>
+        <xsl:element name="credit-in-period">
+          <xsl:call-template name="convertInHoursMinutes">
+            <xsl:with-param name="valueInMinutes" select="creditInPeriod" />
           </xsl:call-template>
         </xsl:element>
         <xsl:element name="block-total">
@@ -113,9 +123,19 @@ extension-element-prefixes="date xs fn">
             <xsl:with-param name="valueInMinutes" select="block" />
           </xsl:call-template>
         </xsl:element>
+        <xsl:element name="block-in-period">
+          <xsl:call-template name="convertInHoursMinutes">
+            <xsl:with-param name="valueInMinutes" select="blockInPeriod" />
+          </xsl:call-template>
+        </xsl:element>
         <xsl:element name="duty-total">
           <xsl:call-template name="convertInHoursMinutes">
             <xsl:with-param name="valueInMinutes" select="duty" />
+          </xsl:call-template>
+        </xsl:element>
+        <xsl:element name="duty-in-period">
+          <xsl:call-template name="convertInHoursMinutes">
+            <xsl:with-param name="valueInMinutes" select="dutyInPeriod" />
           </xsl:call-template>
         </xsl:element>
         <xsl:element name="pre-rest">
