@@ -1358,11 +1358,7 @@ require([
       distance.DrawSVG();
     }
     else {
-      console.log("je passe la");
-      console.log(event.target.pk);
       highLightStore.filter({fk_yc: event.target.pk}).forEach(function(item){
-
-        console.log(item);
         item.ClearSVG();
         item.DrawSVG();
       });
@@ -1710,6 +1706,14 @@ require([
   });
 
   highLightStore.on("delete", function(event){
+    // Remove coords that reference this highlight.
+    yCoordStore.filter({fk_hl: event.target.pk}).fetch().then( function(items) {
+      // remove only if it remains only one item.    
+      if( items.length == 1 ) {
+        yCoordStore.removeSync(items[0].pk);
+      }
+    });
+
     highLightStore.len -= 1;
     event.target.ClearSVG();
   });
@@ -1737,6 +1741,11 @@ require([
   });
 
   distanceStore.on("delete", function(event){
+    // Remove coords that reference this distance.
+    yCoordStore.filter({fk_dst: event.target.pk}).forEach(function(item) {
+      yCoordStore.removeSync(item.pk);
+    });
+ 
     distanceStore.len -= 1;
     event.target.ClearSVG();
   });
