@@ -2670,11 +2670,17 @@ require([
     TryEnableDuration();          
   });
 
-  registry.byId("TrainingDurationHour").on("click,change", function(){
+  registry.byId("TrainingDurationHour").on("click", function(){
+    UpdateEndDateTime("Training");
+  });
+  registry.byId("TrainingDurationHour").on("change", function(val){
     UpdateEndDateTime("Training");
   });
   
-  registry.byId("TrainingDurationMinute").on("click,change", function(){
+  registry.byId("TrainingDurationMinute").on("click", function(){
+    UpdateEndDateTime("Training");
+  });
+  registry.byId("TrainingDurationMinute").on("change", function(val){
     UpdateEndDateTime("Training");
   });
 
@@ -2700,7 +2706,7 @@ require([
 
     var endTraining = startTraining.clone().add(width, 'm');
     var crewmemberId = Number(registry.byId("TrainingCrewMemberSelect").get("value"));
-
+    
     if( IsActivityOverlap(crewmemberId, x, width) ){
       alert("Cannot create training because of an overlap with another activity."); 
     }
@@ -3682,7 +3688,7 @@ require([
         </tr>
         <tr>
           <td><label for="TrnCm">Crew member</label></td>
-          <td><select data-dojo-type="dijit/form/FilteringSelect" name="TrnCm" id="TrainingCrewMemberSelect" required="true"></td>
+          <td><select data-dojo-type="dijit/form/FilteringSelect" name="TrnCm" id="TrainingCrewMemberSelect" required="false"></td>
         </tr>
         <tr>
           <td><label for="transportationtime">Transportation time apply</label></td>
