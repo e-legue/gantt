@@ -621,8 +621,10 @@ require([
   var xlinkNS = "http://www.w3.org/1999/xlink";
 
   var Xorig          = 0; // unix time of the start of the calendar.
-  var HEIGHT_CM_LINE = 200;
-  var HEIGHT_HL_LINE = 40;
+  var MARGIN_TOP_CM     = 20;
+  var HEIGHT_LINE_CM    = 140;
+  var MARGIN_BOTTOM_CM  = 20;
+  var HEIGHT_LINE_HL    = 40;
   var IsDrawingEnable = true; // flag used to disable the drawing.
 
   // Draw a rectangle.
@@ -673,7 +675,7 @@ require([
     G.setAttributeNS(null, "id", item.get("ident"));
     calendarId.appendChild(G);
 
-    var lblText = SVG_drawText("highlight_label", item.x + 10, HEIGHT_HL_LINE / 2, item.get("message"));
+    var lblText = SVG_drawText("highlight_label", item.x + 10, HEIGHT_LINE_HL / 2, item.get("message"));
     on(lblText, "dblclick", function(evt){
       PopupHighLightDetail(item.pk);
     });
@@ -702,6 +704,12 @@ require([
     return x;
   }
 
+  function getNbLines() {
+    return 1;
+  }
+
+
+
   // Draw a distance in calendar.
   function SVG_drawDistance(item) {
     var calendarId    = svg.getElementById("calendar");
@@ -717,7 +725,7 @@ require([
     var x2 = getActivityDistancePosition(item.act2_event, to);
 
     var y = item.GetYCoord();
-    var yy = y + HEIGHT_HL_LINE / 2;
+    var yy = y + HEIGHT_LINE_HL / 2;
 
     var y1 = crewMemberStore.getSync(from.fk_cm).GetYCoord();
     var y2 = crewMemberStore.getSync(to.fk_cm).GetYCoord(); 
@@ -746,7 +754,7 @@ require([
     G.appendChild(lblText);
     G.appendChild(SVG_drawLine("distance", x1, yy, x2, yy));
 
-    var inc = HEIGHT_CM_LINE / 20;
+    var inc = HEIGHT_LINE_CM / 10;
     var xinc = inc * config.XGraphCompression; 
 
     // draw arrow.
@@ -758,20 +766,10 @@ require([
     G.appendChild(SVG_drawLine("distance", x2, yy, x2 - xinc, yy - inc));
 
     // draw vertical lines.
-    if( y1 < y ) {
-      G.appendChild(SVG_drawLine("distance", x1, y1 - HEIGHT_CM_LINE, x1, yy + 2 * inc));
-    }
-    else {
-      G.appendChild(SVG_drawLine("distance", x1, y1 + HEIGHT_CM_LINE, x1, yy - 2 * inc));
-    }
-
-    if( y2 < y ) {
-      G.appendChild(SVG_drawLine("distance", x2, y2 - HEIGHT_CM_LINE, x2, yy + 2 * inc));
-    }
-    else {
-      G.appendChild(SVG_drawLine("distance", x2, y2 + HEIGHT_CM_LINE, x2, yy - 2 * inc));
-    }
-
+    var Y = MARGIN_TOP_CM + HEIGHT_LINE_CM * getNbLines() + MARGIN_BOTTOM_CM; 
+     
+    G.appendChild(SVG_drawLine("distance", x1, y1 < y ? y1 - Y : y1 + Y, x1, y1 < y ? yy + 2 * inc : yy - 2 * inc));
+    G.appendChild(SVG_drawLine("distance", x2, y2 < y ? y2 - Y : y2 + Y, x2, y2 < y ? yy + 2 * inc : yy - 2 * inc));
 
   }
 
@@ -833,7 +831,7 @@ require([
     G.setAttributeNS(null,"id", item.get("ident"));
     crewMemberId.appendChild(G);
 
-    G.appendChild(SVG_drawText("crewmember", -50, HEIGHT_CM_LINE / 2, item.name));
+    G.appendChild(SVG_drawText("crewmember", -50, MARGIN_TOP_CM + HEIGHT_LINE_CM / 2, item.name));
 
     
     var Gbar = document.createElementNS(svgNS, "g");
@@ -842,7 +840,7 @@ require([
     crewMemberBarId.appendChild(Gbar);
 
     Gbar.appendChild(SVG_drawRect("line", 0,   0, 1, 1));
-    Gbar.appendChild(SVG_drawRect("line", 0, HEIGHT_CM_LINE, 1, 1));
+    Gbar.appendChild(SVG_drawRect("line", 0, MARGIN_TOP_CM + HEIGHT_LINE_CM * getNbLines() + MARGIN_BOTTOM_CM, 1, 1));
   }
 
   // Draw an activity. As the others, the drawing is embedded into a g node 
@@ -851,12 +849,13 @@ require([
   // the rigth place in the calendar.
   function SVG_drawActivity(activity, line){
 
-    var unitY = HEIGHT_CM_LINE / 20; 
+    var unitY = HEIGHT_LINE_CM / 14; 
 
     var parentId = svg.getElementById(line.get("ident"));
 
     var G = document.createElementNS(svgNS, "g");
-    G.setAttributeNS(null, "transform", "translate(" + CompressX(activity.x) + "," + 3 * unitY +")");
+    var Y = MARGIN_TOP_CM + HEIGHT_LINE_CM * (getNbLines() -1 );
+    G.setAttributeNS(null, "transform", "translate(" + CompressX(activity.x) + "," + Y +")");
     G.setAttributeNS(null, "id", activity.get("ident"));
 
     on(G, "dblclick", function(evt){
@@ -872,7 +871,7 @@ require([
     Rect.setAttributeNS(null, "rx", Math.min(CompressX(2 * unitY), 20));
     Rect.setAttributeNS(null, "ry", Math.min(CompressX(2 * unitY), 20));
     Rect.setAttributeNS(null, "width", CompressX(activity.width));
-    Rect.setAttributeNS(null, "height", 14 * unitY);
+    Rect.setAttributeNS(null, "height", HEIGHT_LINE_CM);
     G.appendChild(Rect);
 
     G.appendChild(SVG_drawText("label", 10, 5 * unitY, activity.get("name")));
@@ -1321,7 +1320,7 @@ require([
   yCoordStore.on("add", function(event){
     yCoordStore.len += 1;
     yCoordStore.nextPk += 1;
-    var inc = event.target.fk_cm ? HEIGHT_CM_LINE : HEIGHT_HL_LINE;
+    var inc = event.target.fk_cm ? MARGIN_TOP_CM + HEIGHT_LINE_CM * getNbLines() + MARGIN_BOTTOM_CM : HEIGHT_LINE_HL;
     yCoordStore.nextY += inc;
 
     yCoordStore.StretchSVGHeight();
@@ -1371,7 +1370,7 @@ require([
     console.log(event.target);
     console.log(yCoordStore);
     console.log(event.target.y); 
-    var inc = event.target.fk_cm ? HEIGHT_CM_LINE : HEIGHT_HL_LINE;
+    var inc = event.target.fk_cm ? MARGIN_TOP_CM + HEIGHT_LINE_CM * getNbLines() + MARGIN_BOTTOM_CM : HEIGHT_LINE_HL;
     yCoordStore.nextY -= inc;
     
     yCoordStore.StretchSVGHeight();
