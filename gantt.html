@@ -286,8 +286,10 @@ require([
 //  ganttSVG
   ){
 
+
   var XStartPeriod = -1;
   var XStartNextPeriod = -1; 
+  var OpenTimeLineCount = 0;
 
   // ===============================================
   // Resize graph size
@@ -559,6 +561,24 @@ require([
     myDialog.show();
   }
 
+  function PopupCrewMemberDetail(crewMemberId) {
+    var myDialog = new Dialog({
+        title: "Detail crew member",
+        style: "width: 300px",
+        content: "Crewmember id: " + crewMemberId + "<br/>name: " + crewMemberStore.getSync(crewMemberId).name + "<br/>",
+    });
+
+    var myButton = new Button({
+        label: "Delete this crew member",
+        onClick: function(){
+          crewMemberStore.removeSync(crewMemberId);
+          myDialog.hide();
+        }
+    }).placeAt(myDialog);
+
+    myDialog.show();
+  }
+
 
 
   // ===============================================
@@ -704,11 +724,6 @@ require([
     return x;
   }
 
-  function getNbLines() {
-    return 1;
-  }
-
-
 
   // Draw a distance in calendar.
   function SVG_drawDistance(item) {
@@ -727,8 +742,11 @@ require([
     var y = item.GetYCoord();
     var yy = y + HEIGHT_LINE_HL / 2;
 
-    var y1 = crewMemberStore.getSync(from.fk_cm).GetYCoord();
-    var y2 = crewMemberStore.getSync(to.fk_cm).GetYCoord(); 
+    var cm1 = crewMemberStore.getSync(from.fk_cm);
+    var cm2 = crewMemberStore.getSync(to.fk_cm);
+
+    var y1 = cm1.GetYCoord();
+    var y2 = cm2.GetYCoord(); 
 
     if( x2 < x1 ) {
       var tmp = x1;
@@ -766,10 +784,11 @@ require([
     G.appendChild(SVG_drawLine("distance", x2, yy, x2 - xinc, yy - inc));
 
     // draw vertical lines.
-    var Y = MARGIN_TOP_CM + HEIGHT_LINE_CM * getNbLines() + MARGIN_BOTTOM_CM; 
+    var Y1 = MARGIN_TOP_CM + HEIGHT_LINE_CM * cm1.lineCount + MARGIN_BOTTOM_CM; 
+    var Y2 = MARGIN_TOP_CM + HEIGHT_LINE_CM * cm2.lineCount + MARGIN_BOTTOM_CM; 
      
-    G.appendChild(SVG_drawLine("distance", x1, y1 < y ? y1 - Y : y1 + Y, x1, y1 < y ? yy + 2 * inc : yy - 2 * inc));
-    G.appendChild(SVG_drawLine("distance", x2, y2 < y ? y2 - Y : y2 + Y, x2, y2 < y ? yy + 2 * inc : yy - 2 * inc));
+    G.appendChild(SVG_drawLine("distance", x1, y1 < y ? y1 - Y1 : y1 + Y1, x1, y1 < y ? yy + 2 * inc : yy - 2 * inc));
+    G.appendChild(SVG_drawLine("distance", x2, y2 < y ? y2 - Y2 : y2 + Y2, x2, y2 < y ? yy + 2 * inc : yy - 2 * inc));
 
   }
 
@@ -825,22 +844,28 @@ require([
     var crewMemberId    = svg.getElementById("crewmembers");
     var crewMemberBarId = svg.getElementById("crewmember_bar");
 
+    console.log(item);
+
     var G = document.createElementNS(svgNS, "g");
     var y = item.GetYCoord();
     G.setAttributeNS(null,"transform","translate(0, " + y + ")");
     G.setAttributeNS(null,"id", item.get("ident"));
     crewMemberId.appendChild(G);
 
-    G.appendChild(SVG_drawText("crewmember", -50, MARGIN_TOP_CM + HEIGHT_LINE_CM / 2, item.name));
+    var crewText = SVG_drawText("crewmember", -50, MARGIN_TOP_CM + HEIGHT_LINE_CM / 2, item.name);
 
+    on(crewText, "dblclick", function(evt){
+      PopupCrewMemberDetail(item.pk);
+    });
+    G.appendChild(crewText);
     
     var Gbar = document.createElementNS(svgNS, "g");
     Gbar.setAttributeNS(null,"transform","translate(0, " + y + ")");
     Gbar.setAttributeNS(null,"id", item.get("barident"));
     crewMemberBarId.appendChild(Gbar);
 
-    Gbar.appendChild(SVG_drawRect("line", 0,   0, 1, 1));
-    Gbar.appendChild(SVG_drawRect("line", 0, MARGIN_TOP_CM + HEIGHT_LINE_CM * getNbLines() + MARGIN_BOTTOM_CM, 1, 1));
+    Gbar.appendChild(SVG_drawRect("line", 0, 0, 1, 1));
+    Gbar.appendChild(SVG_drawRect("line", 0, MARGIN_TOP_CM + HEIGHT_LINE_CM * item.lineCount + MARGIN_BOTTOM_CM, 1, 1));
   }
 
   // Draw an activity. As the others, the drawing is embedded into a g node 
@@ -854,7 +879,7 @@ require([
     var parentId = svg.getElementById(line.get("ident"));
 
     var G = document.createElementNS(svgNS, "g");
-    var Y = MARGIN_TOP_CM + HEIGHT_LINE_CM * (getNbLines() -1 );
+    var Y = MARGIN_TOP_CM + HEIGHT_LINE_CM * ( activity.lineNb - 1 );
     G.setAttributeNS(null, "transform", "translate(" + CompressX(activity.x) + "," + Y +")");
     G.setAttributeNS(null, "id", activity.get("ident"));
 
@@ -954,9 +979,6 @@ require([
         
       }
     });
-
-
-
   }
 
   // ===============================================
@@ -1058,6 +1080,8 @@ require([
       name: "string",
       birthdate: "string",
       pk: "numeric",
+      fk_yc: "numeric",
+      lineCount: "numeric",
       ident: new ComputedProperty({ 
         dependsOn: ["pk"],
         getValue: function(pk){
@@ -1070,7 +1094,6 @@ require([
           return "bcm" + pk; // bcm stands for Bar CrewMember.
         }
       }),
-      fk_yc: "numeric",
     },
     validateOnSet: false,
     DrawSVG: function(){ 
@@ -1112,6 +1135,7 @@ require([
       creditInPeriod: "numeric",
       dutyInPeriod: "numeric",
       station: "string",
+      lineNb: "numeric",
 
       ident: new ComputedProperty({ 
         dependsOn: ["pk", "type"],
@@ -1260,6 +1284,7 @@ require([
     schema: {
       pk: "numeric",
       y: "numeric",
+      height: "numeric",
       fk_hl: "numeric",
       fk_dst: "numeric",
       fk_cm: "numeric",
@@ -1313,14 +1338,22 @@ require([
     StretchSVGHeight: function(){
       // scale vertically the calendar to fit the number of crewmember.
       var bar = svg.getElementById("calendar_bar");
-      bar.setAttribute("transform", "scale(1," + this.nextY + ")");
+      var height = this.nextY;
+      if( OpenTimeLineCount > 0 ) {
+        height += MARGIN_TOP_CM + HEIGHT_LINE_CM * OpenTimeLineCount + MARGIN_BOTTOM_CM;
+      }
+
+      bar.setAttribute("transform", "scale(1," + height + ")");
     },
   });
 
   yCoordStore.on("add", function(event){
     yCoordStore.len += 1;
     yCoordStore.nextPk += 1;
-    var inc = event.target.fk_cm ? MARGIN_TOP_CM + HEIGHT_LINE_CM * getNbLines() + MARGIN_BOTTOM_CM : HEIGHT_LINE_HL;
+    var inc = HEIGHT_LINE_HL;
+    if( event.target.fk_cm ) {
+      inc = MARGIN_TOP_CM + HEIGHT_LINE_CM + MARGIN_BOTTOM_CM;
+    }
     yCoordStore.nextY += inc;
 
     yCoordStore.StretchSVGHeight();
@@ -1336,12 +1369,30 @@ require([
         }
       }
     });    
-
-
   });
 
   yCoordStore.on("update", function(event){
     if( event.target.fk_cm ) {
+
+    var inc = HEIGHT_LINE_CM;
+    yCoordStore.nextY += inc;
+    
+    yCoordStore.StretchSVGHeight();
+
+    yCoordStore.fetch().then(function(items) {
+      for (var i = items.length - 1; i >= 0; i--) {
+        if( items[i].y >= event.target.y && items[i].pk != event.target.pk ) {
+          console.log(items[i]);
+
+          items[i].y += inc;
+          yCoordStore.putSync(items[i]);    
+        }
+      }
+    });    
+
+
+
+
       var id = svg.getElementById(crewMemberStore.getSync(event.target.fk_cm).get("ident")); 
       id.setAttribute("transform", "translate(0," + event.target.y + ")");
 
@@ -1366,11 +1417,11 @@ require([
 
   yCoordStore.on("delete", function(event){
     yCoordStore.len -= 1;
-    console.log("je passe ici");
-    console.log(event.target);
-    console.log(yCoordStore);
-    console.log(event.target.y); 
-    var inc = event.target.fk_cm ? MARGIN_TOP_CM + HEIGHT_LINE_CM * getNbLines() + MARGIN_BOTTOM_CM : HEIGHT_LINE_HL;
+    var inc = HEIGHT_LINE_HL;
+    if( event.target.fk_cm ) {
+      var cm = crewMemberStore.getSync(event.target.fk_cm);
+      inc = MARGIN_TOP_CM + HEIGHT_LINE_CM * cm.lineCount + MARGIN_BOTTOM_CM;
+    }
     yCoordStore.nextY -= inc;
     
     yCoordStore.StretchSVGHeight();
@@ -1427,6 +1478,7 @@ require([
   // -----------------------------------------------
   // crewMemberStore
   // -----------------------------------------------
+
   var crewMemberStore = new TrackableMemory({
     Model: CrewMemberModel,
     idProperty: "pk",
@@ -1442,6 +1494,8 @@ require([
   
   crewMemberStore.on("update", function(event){
     crewMemberStore.nextPk = Math.max(event.target.pk + 1, crewMemberStore.nextPk);
+    console.log(event);
+
     event.target.ClearSVG();
     event.target.DrawSVG();
   });
@@ -1449,6 +1503,18 @@ require([
   crewMemberStore.on("delete", function(event){
     crewMemberStore.len -= 1;
     event.target.ClearSVG();
+
+    // Remove 
+    activityStore.filter({fk_cm: event.target.pk}).forEach(function(item) {
+      activityStore.removeSync(item.pk);
+    });
+
+    // Remove coords that reference this distance.
+    yCoordStore.filter({fk_cm: event.target.pk}).forEach(function(item) {
+      yCoordStore.removeSync(item.pk);
+    });
+
+
   });
 
   var crewMemberStoreAdapter = new DstoreAdapter(crewMemberStore);
@@ -1499,6 +1565,7 @@ require([
 
   function IsActivityOverlap(crewmember, x , width){
     var isOverlap = false;
+    var lineNb = 1;
     
     activityStore.filter({fk_cm: crewmember}).forEach(function(object){
       var A = x;
@@ -1509,10 +1576,19 @@ require([
 
       if( !(( B <= C ) || ( A >= D ))) {    
         isOverlap = true;
+        lineNb += 1;
       }
     });
 
-    return isOverlap;
+    var cm = crewMemberStore.getSync(crewmember);
+
+    if ( cm.lineCount < lineNb ) {
+      cm.lineCount = lineNb;
+      crewMemberStore.putSync(cm);
+    }
+
+    // return isOverlap;
+    return lineNb;
   }
 
   var activityStoreAdapter = new DstoreAdapter(activityStore);
@@ -2587,6 +2663,7 @@ require([
       birthdate: registry.byId("CrewMemberBirthDate").get("value").toISOString().substring(0, 10),
       pk: pkCM,
       fk_yc: pkY,
+      lineCount: 1,    
     });
 
     CreateCrewMemberDialog.hide();
@@ -2615,26 +2692,27 @@ require([
       var x     = calendarDay.get("x");
       var width = calendarDay.get("width") + 1;
 
-      if( IsActivityOverlap(crewmemberId, x, width) ){
-        alert("Cannot create activity starting " + calendarDay.get("name") + " because of an overlap with another activity."); 
+      var lineNb = IsActivityOverlap(crewmemberId, x, width);
+          
+      if( lineNb > 1 ) {  
+        alert("DO starting " + calendarDay.get("name") + " is overlapping with another activity."); 
       }
-      else { 
-        activityStore.addSync({
-          name: "DO",
-          fullname: crewMemberStore.getSync(crewmemberId).name + " -- " + moment(calendarDay.get("name")).format("YYYY-MM-DD") + " -- DO",  
-          type: "DO",
-          pk: activityStore.nextPk,
-          fk_cm: crewmemberId,
-          x: x,
-          lbtStart: moment(calendarDay.get("name")).format("YYYY-MM-DD HH:mm"), 
-          utcStart: moment(calendarDay.get("name")).utc().format("YYYY-MM-DD HH:mm"), 
-          utcEnd: moment(calendarDay.get("name")).add(width, 'm').utc().format("YYYY-MM-DD HH:mm"), 
-          width: width,
-          tp: 0,
-          resta: 0,
-          restb: 0,
-        });
-      }
+      activityStore.addSync({
+        name: "DO",
+        fullname: crewMemberStore.getSync(crewmemberId).name + " -- " + moment(calendarDay.get("name")).format("YYYY-MM-DD") + " -- DO",  
+        type: "DO",
+        pk: activityStore.nextPk,
+        fk_cm: crewmemberId,
+        x: x,
+        lbtStart: moment(calendarDay.get("name")).format("YYYY-MM-DD HH:mm"), 
+        utcStart: moment(calendarDay.get("name")).utc().format("YYYY-MM-DD HH:mm"), 
+        utcEnd: moment(calendarDay.get("name")).add(width, 'm').utc().format("YYYY-MM-DD HH:mm"), 
+        width: width,
+        tp: 0,
+        resta: 0,
+        restb: 0,
+        lineNb: lineNb,
+      });
     });
   });
 
@@ -2724,6 +2802,7 @@ require([
         tp: registry.byId("TrainingTransportationTime").checked ? Number(config.transportationTime) : 0,  // registry.byId("TransportationTimeDuration").get("value") : 0,
         resta: Number(registry.byId("TrainingRestAfterH").get("value")) * 60 + Number(registry.byId("TrainingRestAfterM").get("value")),
         restb: Number(registry.byId("TrainingRestBeforeH").get("value")) * 60 + Number(registry.byId("TrainingRestBeforeM").get("value")),
+        lineNb: 1,
       });
     }
   });
@@ -3066,6 +3145,7 @@ require([
         blockInPeriod: blockInPeriod,
         creditInPeriod: creditInPeriod,
         dutyInPeriod: dutyInPeriod,
+        lineNb: 1,
       });
      console.log(activityStore);
       activityStore.nextPk = tmp;          
@@ -3631,7 +3711,7 @@ require([
             <text x="420" y="120" style="fill:black;font-size:20px;">- Use File menu to load an XML station file and then Calendar menu to set a period or</text>
             <text x="420" y="150" style="fill:black;font-size:20px;">- Use File menu to load a SVG file.</text>
           </g>
-          <g id="calendar_bar" transform="scale(1,100)"></g>
+          <g id="calendar_bar" transform="scale(1,1)"></g>
         </g>
 
         <!--
