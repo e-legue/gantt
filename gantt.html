@@ -1371,14 +1371,17 @@ require([
        len        : 0,
      });
 
+
      eventActivityStore.on("add", function(event) {
        eventActivityStore.len += 1;
        eventActivityStore.nextPk = Math.max(event.target.pk + 1, eventActivityStore.nextPk); 
      });
 
+
      eventActivityStore.on("update", function(event) {
        eventActivityStore.nextPk = Math.max(event.target.pk + 1, eventActivityStore.nextPk); 
      });
+
 
      eventActivityStore.on("delete", function(event) {
        eventActivityStore.len -= 1;
@@ -1397,15 +1400,16 @@ require([
        StretchSVGHeight : function() {
                             // scale vertically the calendar to fit the number of crewmember.
                             var height = this.nextY;
+
                             if( OpenTimeLineCount > 0 ) {
                               height += MARGIN_TOP_CM + HEIGHT_LINE_CM * OpenTimeLineCount + MARGIN_BOTTOM_CM;
                             }
 
                             svg.getElementById("calendar_bar").setAttribute("transform", "scale(1," + height + ")");
-
                             svg.getElementById("opentime").setAttribute("transform","translate(0, " + this.nextY + ")");
                           },
      });
+
 
      yCoordStore.on("add", function(event) {
        yCoordStore.len += 1;
@@ -1425,6 +1429,7 @@ require([
        console.log(yCoordStore);
      });
 
+
      yCoordStore.on("update", function(event) {
        yCoordStore.nextPk = Math.max(event.target.pk + 1, yCoordStore.nextPk); 
 
@@ -1443,6 +1448,7 @@ require([
 
        topic.publish("refreshGraph");
      });
+
 
      yCoordStore.on("delete", function(event) {
        yCoordStore.len -= 1;
@@ -1471,21 +1477,25 @@ require([
        len        : 0,
      });
 
+
      calendarStore.on("add", function(event) {
        calendarStore.len += 1;
        calendarStore.nextPk += 1;
        event.target.DrawSVG();
      });
 
+
      calendarStore.on("update", function(event) {
        event.target.ClearSVG();
        event.target.DrawSVG();
      });
 
+
      calendarStore.on("delete", function(event) {
        calendarStore.len -= 1;
        event.target.ClearSVG();
      });
+
 
      var calendarStoreAdapter = new DstoreAdapter(calendarStore);
      registry.byId("CalendarStartPeriods").set("labelAttr", "name");
@@ -1499,7 +1509,6 @@ require([
      // -----------------------------------------------
      // crewMemberStore
      // -----------------------------------------------
-
      var crewMemberStore = new TrackableMemory({
        Model      : CrewMemberModel,
        idProperty : "pk",
@@ -1507,11 +1516,13 @@ require([
        len        : 0,
      });
 
+
      crewMemberStore.on("add", function(event) {
        crewMemberStore.len += 1;
        crewMemberStore.nextPk = Math.max(event.target.pk, crewMemberStore.nextPk) + 1;
        event.target.DrawSVG();
      });
+
 
      crewMemberStore.on("update", function(event) {
        crewMemberStore.nextPk = Math.max(event.target.pk + 1, crewMemberStore.nextPk);
@@ -1536,6 +1547,7 @@ require([
        });
      });
 
+
      crewMemberStore.on("delete", function(event) {
        crewMemberStore.len -= 1;
        event.target.ClearSVG();
@@ -1551,589 +1563,599 @@ require([
        });
      });
 
+
      var crewMemberStoreAdapter = new DstoreAdapter(crewMemberStore);
+
      registry.byId("DayOffCrewMemberSelect").set("store", crewMemberStoreAdapter);
      registry.byId("TrainingCrewMemberSelect").set("store", crewMemberStoreAdapter);
      registry.byId("TripCrewMemberSelect").set("store", crewMemberStoreAdapter);
 
 
-  // -----------------------------------------------
-  // activityStore
-  // -----------------------------------------------
-  var activityStore = new TrackableMemory({
-    Model: ActivityModel,
-    idProperty: "pk",
-    nextPk: 1, 
-    len: 0,
-  });
-
-  activityStore.on("add", function(event) {
-    activityStore.len += 1;
-    activityStore.nextPk = Math.max(event.target.pk, activityStore.nextPk) + 1;
-    event.target.DrawSVG(); // crewMemberStore.getSync(event.target.fk_cm));
-  });
-
-  activityStore.on("update", function(event) {
-    activityStore.nextPk = Math.max(event.target.pk + 1, activityStore.nextPk); 
-    event.target.ClearSVG();
-    event.target.DrawSVG(); //crewMemberStore.getSync(event.target.fk_cm));
-  });
-
-  activityStore.on("delete", function(event) {
-    // Remove distance highlight that reference this activity.
-    distanceStore.filter({fk_act1: event.target.pk}).forEach(function(item) {
-      distanceStore.removeSync(item.pk);
-    });
-    distanceStore.filter({fk_act2: event.target.pk}).forEach(function(item) {
-      distanceStore.removeSync(item.pk);
-    });
-
-    // Remove details (legs, layovers and stations) in case of trip.
-    activityStore.filter({fk_parent: event.target.pk}).forEach(function(item) {
-      activityStore.removeSync(item.pk);
-    });
-
-    activityStore.len -= 1;
-    event.target.ClearSVG();
-  });
-
-
-
-/* 
- * Determine if the new activity is overlapping with other activities
- * related to a specific crewmember. If there is a collision, then
- * the new activity will be assigned a new line. 
- * @param crewMemberPk crew member primary key. if 0, that's opentime.
- * @param x            new activity starting datetime.
- * @param width        new activity length.
- * @return The line number where the new activity will be drawn.
- */
-  function GetActivityLineNumber(crewMemberPk, x , width) {
-    var lineNb = 1;
-console.log("GetActivityLineNumber: crewMemberPk: ");
-console.log(crewMemberPk);
-    
-    activityStore.filter({fk_cm: crewMemberPk}).forEach(function(object) {
-console.log("GetActivityLineNumber: loop into activities");
-      var A = x;
-      var B = x + width;
-
-      var C = object.x;
-      var D = object.x + object.width;
-
-      if( !(( B <= C ) || ( A >= D ))) {    
-        lineNb = Math.max(lineNb, object.lineNb + 1);
-      }
-    });
-
-    if ( crewMemberPk ) { // a true crewMember.
-      var cm = crewMemberStore.getSync(crewMemberPk);
-      if( cm.lineCount < lineNb ) {
-console.log("GetActivityLineNumber: je passe la");
-        cm.lineCount = lineNb;
-        crewMemberStore.putSync(cm);
-      }
-    }
-    else { // opentime
-      if( OpenTimeLineCount < lineNb ) {    
-        OpenTimeLineCount = lineNb;          
-        topic.publish("refreshGraph");
-      }  
-    }
-
-    return lineNb;
-  }
-
-  var activityStoreAdapter = new DstoreAdapter(activityStore.filter({fk_parent: undefined}));
-
-  registry.byId("DistanceFromSelect").set("labelAttr", "fullname");
-  registry.byId("DistanceFromSelect").set("searchAttr", "fullname");
-  registry.byId("DistanceFromSelect").set("store", activityStoreAdapter);
-  registry.byId("DistanceToSelect").set("labelAttr", "fullname");
-  registry.byId("DistanceToSelect").set("searchAttr", "fullname");
-  registry.byId("DistanceToSelect").set("store", activityStoreAdapter);
-
-
-  // -----------------------------------------------
-  // tripDetailStore
-  // -----------------------------------------------
- 
-   var tripDetailStore = new TrackableMemory({
-    Model: TripDetailModel,
-    idProperty: "pk",
-    len: 0,
-    nextPk: 1,
-    reportTime: 20,
-    releaseTime: 15,
-    startDateTime: new moment(),
-
-    _updDur: function(array) {
-      var self = this;
-
-      var currentDate = moment(self.startDateTime);
-      for( i = 0; i < array.length ; ++i ) {
-        array[i].startDateTime = currentDate.format("YYYY-MM-DD HH:mm");
-        currentDate.add(array[i].dminute, "m");
-        currentDate.add(array[i].dhour  , "h");
-        array[i].endDateTime = currentDate.format("YYYY-MM-DD HH:mm");
-      }
-
-      registry.byId("TripEndDate").set("value", currentDate.toDate());
-      registry.byId("TripEndTime").set("value", currentDate.toDate());
-    },
- 
-    updateDuration : function() {
-      var self = this; 
-      // based on the assumption that the store will have a reasonable size,
-      // there is no need to re 
-      self.sort('order').fetch().then(function (objects) {
-        self._updDur(objects);
-
-        for( i = 0; i < objects.length ; ++i ) {
-          self.putSync(objects[i]);
-        }
-      });
-    },
-
-    process : function() {
-      // based on the assumption that the store will have a reasonable size,
-      // there is no need to re 
-      var self = this; 
-
-      self.sort('order').fetch().then(function (objects) {
-        for( i = 0; i < objects.length ; ++i ) {
-          objects[i].newLegButton   = 1;
-          objects[i].newLayButton   = 1;
-          objects[i].deleteButton   = 1;
-          objects[i].stationSelect  = 1;
-          objects[i].durationSelect = 1;
-          objects[i].legTypeSelect  = 1;
-
-          objects[i].order = i + 1;
-        }
-
-        for( i = 0; i < objects.length ; ++i ) {
-          if( i == 0 ) { // first station
-            objects[i].newLayButton   = 0;
-            objects[i].deleteButton   = 0;
-            objects[i].stationSelect  = 0;
-            objects[i].durationSelect = 0;
-            objects[i].legTypeSelect  = 0;
-
-            objects[i].lblType        = "Report time";
-            objects[i].dhour          = parseInt(self.reportTime / 60);
-            objects[i].dminute        = self.reportTime % 60;
-          } 
-          else if( i == objects.length - 1) { // last station
-            objects[i].newLegButton   = 0;
-            objects[i].newLayButton   = 0;
-            objects[i].deleteButton   = 0;
-            objects[i].stationSelect  = 0;
-            objects[i].durationSelect = 0;
-            objects[i].legTypeSelect  = 0;
-
-            objects[i].lblType        = "Release time";
-            objects[i].dhour          = parseInt(self.releaseTime / 60);
-            objects[i].dminute        = self.releaseTime % 60;
-          }
-          else if( i % 2 == 0 ) { // a station
-            objects[i].deleteButton   = 0;
-            objects[i].legTypeSelect  = 0;
-
-            objects[i].lblType = "Ground time";
-
-            if( objects[i+1].type == "lay" ) {
-              objects[i].durationSelect = 0;
-              objects[i].newLayButton   = 0;
-
-              objects[i].lblType = "Release time";
-              objects[i].dhour   = parseInt(self.releaseTime / 60);
-              objects[i].dminute = self.releaseTime % 60;
-            }
-            if( objects[i-1].type == "lay" ) {
-              objects[i].durationSelect = 0;
-              objects[i].stationSelect  = 0;
-              objects[i].newLayButton   = 0;
-
-              objects[i].lblType = "Report time";
-              objects[i].dhour   = parseInt(self.reportTime / 60);
-              objects[i].dminute = self.reportTime % 60;
-            }
-
-          }
-          else { // a leg or a lay.
-            objects[i].newLegButton  = 0;
-            objects[i].newLayButton  = 0;
-            objects[i].stationSelect = 0;
-
-            objects[i].lblType = objects[i].type == "leg" ? "Leg" : "Lay over";
-
-            if( objects.length <= 3 ) {
-              objects[i].deleteButton = 0; 
-            }
-
-            // can not delete a leg when it is the first, and it is followed by a lay.
-            if( i == 1 && i + 2 < objects.length && objects[i+2].type == "lay" ) {
-              objects[i].deleteButton = 0; 
-            }
-            // can not delete a leg when it is the last, and it is preceded by a lay.
-            if( i == objects.length - 2 && i > 2 && objects[i-2].type == "lay" ) {
-              objects[i].deleteButton = 0; 
-            }
-          }
-        }
-        self._updDur(objects);
-
-        for( i = 0; i < objects.length ; ++i ) {
-          self.putSync(objects[i]);
-        }
-      });
-    }
-  });
-
-  tripDetailStore.on('add', function(event) {
-     tripDetailStore.len += 1;
-     tripDetailStore.nextPk += 1;
-   }); 
-
-   tripDetailStore.on('delete', function(event) {
-     tripDetailStore.len -= 1;
-   }); 
-
-
-
-
-  // -----------------------------------------------
-  // stationStore
-  // -----------------------------------------------
-  var stationStore = new Memory({
-    Model: StationModel,
-    idProperty: "id",
-  });
-
-  // -----------------------------------------------
-  // highLightStore
-  // -----------------------------------------------
-  var highLightStore = new Memory({
-    Model: HighLightModel,
-    idProperty: "pk",
-    nextPk: 1, 
-    len: 0,
-  });
-
-  highLightStore.on("add", function(event) {
-    highLightStore.len += 1;
-    highLightStore.nextPk = Math.max(event.target.pk, highLightStore.nextPk) + 1;
-    event.target.DrawSVG();
-  });
-  
-  highLightStore.on("update", function(event) {
-    highLightStore.nextPk = Math.max(event.target.pk + 1, highLightStore.nextPk);
-    event.target.ClearSVG();
-    event.target.DrawSVG();
-  });
-
-  highLightStore.on("delete", function(event) {
-    // Remove coords that reference this highlight.
-    yCoordStore.filter({fk_hl: event.target.pk}).fetch().then( function(items) {
-      // remove only if it remains only one item.    
-      if( items.length == 1 ) {
-        yCoordStore.removeSync(items[0].pk);
-      }
-    });
-
-    highLightStore.len -= 1;
-    event.target.ClearSVG();
-  });
-
-  // -----------------------------------------------
-  // distanceStore
-  // -----------------------------------------------
-  var distanceStore = new Memory({
-    Model: DistanceModel,
-    idProperty: "pk",
-    nextPk: 1, 
-    len: 0,
-  });
-
-  distanceStore.on("add", function(event) {
-    distanceStore.len += 1;
-    distanceStore.nextPk = Math.max(event.target.pk, distanceStore.nextPk) + 1;
-    event.target.DrawSVG();
-  });
-  
-  distanceStore.on("update", function(event) {
-    distanceStore.nextPk = Math.max(event.target.pk + 1, distanceStore.nextPk);
-    event.target.ClearSVG();
-    event.target.DrawSVG();
-  });
-
-  distanceStore.on("delete", function(event) {
-    // Remove coords that reference this distance.
-    yCoordStore.filter({fk_dst: event.target.pk}).forEach(function(item) {
-      yCoordStore.removeSync(item.pk);
-    });
- 
-    distanceStore.len -= 1;
-    event.target.ClearSVG();
-  });
-
-
-
-
-  // ===============================================
-  // Redraw SVG
-  // ===============================================
-  function RemoveIntroMessage() {
-    var intro = svg.getElementById("intro");
-    if(intro) {
-      intro.parentNode.removeChild(intro);
-    } 
-  }
-
-  function AdjustCrewmemberBarScaleX(x) {
-    var bar = svg.getElementById("crewmember_bar");
-    bar.setAttribute("transform", "scale(" + x + ",1)");
-  }
-
-
-  topic.subscribe("refreshGraph", function() {
-  // function RedrawSVG() {
-    console.log("refreshGraph");          
-    IsDrawingEnable = true;
-
-    RemoveIntroMessage();
-
-    var x = 0;
-    calendarStore.forEach(function(item) {
-      // on.emit(item, "update", { bubbles: true, cancelable: true });
-      item.ClearSVG();
-      item.DrawSVG();
-      x = Math.max(x, item.get("x") + item.get("width")); 
-    });
-    AdjustCrewmemberBarScaleX(x);
-
-    highLightStore.forEach(function(item) {
-      item.ClearSVG();
-      item.DrawSVG();
-    });
-    distanceStore.forEach(function(item) {
-      item.ClearSVG();
-      item.DrawSVG();
-    });
-    crewMemberStore.forEach(function(item) {
-      item.ClearSVG();
-      item.DrawSVG();
-    });
-    activityStore.forEach(function(item) {
-      item.ClearSVG();
-      item.DrawSVG(crewMemberStore.getSync(item.fk_cm));
-    });
-  });
-
-  // ===============================================
-  // SAVING STORES TO SVG
-  // ===============================================
-  function SaveStore(store, id, obj_name) {
-    var InsertionPointId = svg.getElementById(id);
-    var schema           = store.Model().schema;
-
-    store.forEach(function(item) {
-      var objNode = document.createElementNS("", obj_name);
-
-      InsertionPointId.appendChild(objNode);
-
-      for(var property in schema) {
-        if( schema.hasOwnProperty(property) ) {
-          
-          var node = document.createElementNS("", property);
-          var data = item.get(property);
-
-          if( data instanceof Array ) {
-
-            data = item.get(property).slice();
-
-            for(var j = 0; j < data.length; j++) {
-              var item = document.createElementNS("", "item");
-              var t = document.createTextNode(data[j]); 
-              item.appendChild(t);
-              node.appendChild(item);
-            }
-          }
-          else {
-            var t = document.createTextNode(data);
-            node.appendChild(t);
-          }
-          objNode.appendChild(node);
-        }
-      }    
-    });
-  }
-
-  function LoadStore(store, svgNode, nodeName) {
-    var childrenNodes = svgNode.childNodes; // getElementsByTagName(nodeName);
-    var schema = store.Model().schema;
-
-    for(var i = 0; i < childrenNodes.length; i ++) {
-      var data = childrenNodes[i];
-      var def = {};
-
-      for(var property in schema) {
-        if( schema.hasOwnProperty(property) ) {
-          var type = typeof(schema[property]) == "object" ? schema[property].type : schema[property];
-          var elements = data.getElementsByTagName(property); // [0].textContent;
-
-          if( elements.length > 0 ) { 
-            if( type == "numeric" ) {
-              if( !isNaN(elements[0].textContent) ) def[property] = Number(elements[0].textContent);
-            }
-            else if( type == "boolean") def[property] = elements[0].textContent == 'true';
-            else def[property] = elements[0].textContent;
-          }
-        }
-      }
-      store.putSync(def);
-    }
-  }
-
-  function SaveStores() {
-   
-    SaveStore(configurationStore, "ConfigurationStore", "configuration");
-    SaveStore(calendarStore, "CalendarStore", "calendar");
-    SaveStore(yCoordStore, "YCoordStore", "ycoord");
-    SaveStore(crewMemberStore, "CrewMemberStore", "crew");
-    SaveStore(activityStore, "ActivityStore", "activity");
-    SaveStore(highLightStore, "HighLightStore", "highligth");
-    SaveStore(distanceStore, "DistanceStore", "distance");
-    SaveStore(stationStore, "StationStore" , "station"); 
-  }
-
-  function LoadSvgStores(svgNode) {
-    RemoveIntroMessage();
-
-    IsDrawingEnable = false;
-
-    LoadStore(configurationStore, svgNode.getElementById("ConfigurationStore"),"configuration");
-    // load single object (id 0) in config.
-    config = configurationStore.getSync(0);
-    console.log(config);          
-    
-    registry.byId("CalendarStart").set("value", config.calendarStart);
-    registry.byId("CalendarEnd").set("value", config.calendarEnd);
-
-    var start = moment(config.calendarStart);
-    Xorig = start.unix();
-
-    timezoneStore.filter({name: config.timezone}).fetchRange({start: 0, end: 1}).then(function(results) {
-      if( results.length > 0 ) {
-        registry.byId("CalendarTimezone").set("value", results[0].id);
-      }
-    });
-
-    LoadStore(calendarStore, svgNode.getElementById("CalendarStore"),"calendar");
-    LoadStore(yCoordStore, svgNode.getElementById("YCoordStore"),"ycoord");
-    LoadStore(crewMemberStore, svgNode.getElementById("CrewMemberStore"), "crew");
-    LoadStore(activityStore, svgNode.getElementById("ActivityStore"), "activity");
-    LoadStore(highLightStore, svgNode.getElementById("HighLightStore"), "highligth");
-    LoadStore(distanceStore, svgNode.getElementById("DistanceStore"), "distance");
-    LoadStationStore(svgNode.getElementById("StationStore"), MODE_SVG);
-
-    stationStore.filter({name: config.station}).fetchRange({start: 0, end: 1}).then(function(results) {
-      if( results.length > 0 ) {
-        registry.byId("CalendarStation").set("value", results[0].id);
-      }
-    });
-
-    topic.publish("refreshGraph");
-    //    RedrawSVG();
-  }
-
-
-  // ===============================================
-  // LOADING STORES FROM SVG
-  // ===============================================
-
-  mappingStationSvgXml = { 
-    "id": "id",
-    "code": "code",
-    "name": "name",
-    "dstShift": "dst-shift",
-    "dstStartLst": "dst-start-lst",
-    "dstEndLst": "dst-end-lst",
-    "utcOffset": "utc-offset",
-    "regionList": "region-list", 
-    "item": "region"
-  };
-
-  MODE_SVG = 0;
-  MODE_XML = 1;
-  
-  // Some tags are not exactly the same in svg def and xml def of a station.
-  // The xml introduce some dash character in word which is not compliant with 
-  // variable name.
-  function convertionSvgXml(key, mode) {
-    return mode == MODE_SVG ? key : mappingStationSvgXml[key];
-  }
-
-  function LoadStationStore(parentNode, mode) {
-    var rootStationStoreChildren = parentNode.getElementsByTagName("station");
-    var offsetRegex = /^(-?\d{2})h(\d{2})$/;
- 
-    for(var i = 0; i < rootStationStoreChildren.length; i ++) {
-      var obj = rootStationStoreChildren[i];
-
-      var data = offsetRegex.exec(obj.getElementsByTagName(convertionSvgXml("utcOffset", mode))[0].textContent);
-      var offset = moment.duration({hours: data[1], minutes: data[2]}).asMinutes() * -1;
-  
-      var id = mode == MODE_SVG ? obj.getElementsByTagName("id")[0].textContent : obj.getAttribute("id"); 
-
-      var regionList = obj.getElementsByTagName(convertionSvgXml("item", mode)); 
-
-      var regions = [];
-      for(var j = 0; j < regionList.length; j++) {
-        regions.push(regionList[j].textContent);
-      }
-
-      console.log("station code:   " + obj.getElementsByTagName(convertionSvgXml("code", mode))[0].textContent ); 
-      console.log("station name:   " + obj.getElementsByTagName(convertionSvgXml("name", mode))[0].textContent );          
-      console.log("station offset: " + offset );          
-      
-      stationStore.addSync({
-        id: id,
-        code: obj.getElementsByTagName(convertionSvgXml("code", mode))[0].textContent,
-        name: obj.getElementsByTagName(convertionSvgXml("name", mode))[0].textContent,
-        dstShift: obj.getElementsByTagName(convertionSvgXml("dstShift", mode))[0].textContent, 
-        dstStartLst: obj.getElementsByTagName(convertionSvgXml("dstStartLst", mode))[0].textContent,
-        dstEndLst: obj.getElementsByTagName(convertionSvgXml("dstEndLst", mode))[0].textContent,
-        utcOffset: obj.getElementsByTagName(convertionSvgXml("utcOffset", mode))[0].textContent,
-        offset: offset,
-        regionList: regions,
-      });
-    }
-  }
-
-
-  var stationStoreAdapter = new DstoreAdapter(stationStore);
-  registry.byId("CalendarStation").set("store", stationStoreAdapter);
-
-
-
-  // ===============================================
-  // 
-  // ===============================================
-
-  var grid = new (declare([OnDemandGrid, Selection, Keyboard, Editor, CompoundColumns]))(
-                     { collection: tripDetailStore,
-                       showHeader: true,
-                       noDataMessage: 'Please fill in the "Start date time" field first.',
-                     },
-                     'TripGrid'
-                   );
-
-     
+     // -----------------------------------------------
+     // activityStore
+     // -----------------------------------------------
+     var activityStore = new TrackableMemory({
+       Model      : ActivityModel,
+       idProperty : "pk",
+       nextPk     : 1,
+       len        : 0,
+     });
+
+
+     activityStore.on("add", function(event) {
+       activityStore.len += 1;
+       activityStore.nextPk = Math.max(event.target.pk, activityStore.nextPk) + 1;
+       event.target.DrawSVG(); 
+     });
+
+
+     activityStore.on("update", function(event) {
+       activityStore.nextPk = Math.max(event.target.pk + 1, activityStore.nextPk); 
+       event.target.ClearSVG();
+       event.target.DrawSVG();
+     });
+
+
+     activityStore.on("delete", function(event) {
+       // Remove distance highlight that reference this activity.
+       distanceStore.filter({fk_act1: event.target.pk}).forEach(function(item) {
+         distanceStore.removeSync(item.pk);
+       });
+       distanceStore.filter({fk_act2: event.target.pk}).forEach(function(item) {
+         distanceStore.removeSync(item.pk);
+       });
+
+       // Remove details (legs, layovers and stations) in case of trip.
+       activityStore.filter({fk_parent: event.target.pk}).forEach(function(item) {
+         activityStore.removeSync(item.pk);
+       });
+
+       activityStore.len -= 1;
+       event.target.ClearSVG();
+     });
+
+
+     /* 
+      * Determine if the new activity is overlapping with other activities
+      * related to a specific crewmember. If there is a collision, then
+      * the new activity will be assigned a new line. 
+      * @param crewMemberPk crew member primary key. if 0, that's opentime.
+      * @param x            new activity starting datetime.
+      * @param width        new activity length.
+      * @return The line number where the new activity will be drawn.
+      */
+     function GetActivityLineNumber(crewMemberPk, x , width) {
+       var lineNb = 1;
+       console.log("GetActivityLineNumber: crewMemberPk: ");
+       console.log(crewMemberPk);
+
+       activityStore.filter({fk_cm: crewMemberPk}).forEach(function(object) {
+         console.log("GetActivityLineNumber: loop into activities");
+         var A = x;
+         var B = x + width;
+
+         var C = object.x;
+         var D = object.x + object.width;
+
+         if( !(( B <= C ) || ( A >= D ))) {    
+           lineNb = Math.max(lineNb, object.lineNb + 1);
+         }
+       });
+
+       if ( crewMemberPk ) { // a true crewMember.
+         var cm = crewMemberStore.getSync(crewMemberPk);
+         if( cm.lineCount < lineNb ) {
+           console.log("GetActivityLineNumber: je passe la");
+           cm.lineCount = lineNb;
+           crewMemberStore.putSync(cm);
+         }
+       }
+       else { // opentime
+         if( OpenTimeLineCount < lineNb ) {    
+           OpenTimeLineCount = lineNb;          
+           topic.publish("refreshGraph");
+         }  
+       }
+
+       return lineNb;
+     }
+
+
+     var activityStoreAdapter = new DstoreAdapter(activityStore.filter({fk_parent: undefined}));
+
+     registry.byId("DistanceFromSelect").set("labelAttr", "fullname");
+     registry.byId("DistanceFromSelect").set("searchAttr", "fullname");
+     registry.byId("DistanceFromSelect").set("store", activityStoreAdapter);
+     registry.byId("DistanceToSelect").set("labelAttr", "fullname");
+     registry.byId("DistanceToSelect").set("searchAttr", "fullname");
+     registry.byId("DistanceToSelect").set("store", activityStoreAdapter);
+
+
+     // -----------------------------------------------
+     // tripDetailStore
+     // -----------------------------------------------
+
+     var tripDetailStore = new TrackableMemory({
+       Model           : TripDetailModel,
+       idProperty      : "pk",
+       len             : 0,
+       nextPk          : 1,
+       reportTime      : 20,
+       releaseTime     : 15,
+       startDateTime   : new moment(),
+       _updDur         : function(array) {
+                           var self = this;
+                       
+                           var currentDate = moment(self.startDateTime);
+                           for( i = 0; i < array.length ; ++i ) {
+                             array[i].startDateTime = currentDate.format("YYYY-MM-DD HH:mm");
+                             currentDate.add(array[i].dminute, "m");
+                             currentDate.add(array[i].dhour  , "h");
+                             array[i].endDateTime = currentDate.format("YYYY-MM-DD HH:mm");
+                           }
+                       
+                           registry.byId("TripEndDate").set("value", currentDate.toDate());
+                           registry.byId("TripEndTime").set("value", currentDate.toDate());
+                         },
+       updateDuration  : function() {
+                           var self = this; 
+                           // based on the assumption that the store will have a reasonable size,
+                           // there is no need to re 
+                           self.sort('order').fetch().then(function (objects) {
+                             self._updDur(objects);
+
+                             for( i = 0; i < objects.length ; ++i ) {
+                               self.putSync(objects[i]);
+                             }
+                           });
+                         },
+       process         : function() {
+                           // based on the assumption that the store will have a reasonable size,
+                           // there is no need to re 
+                           var self = this; 
+
+                           self.sort('order').fetch().then(function (objects) {
+                             for( i = 0; i < objects.length ; ++i ) {
+                               objects[i].newLegButton   = 1;
+                               objects[i].newLayButton   = 1;
+                               objects[i].deleteButton   = 1;
+                               objects[i].stationSelect  = 1;
+                               objects[i].durationSelect = 1;
+                               objects[i].legTypeSelect  = 1;
+
+                               objects[i].order = i + 1;
+                             }
+
+                             for( i = 0; i < objects.length ; ++i ) {
+                               if( i == 0 ) { // first station
+                                 objects[i].newLayButton   = 0;
+                                 objects[i].deleteButton   = 0;
+                                 objects[i].stationSelect  = 0;
+                                 objects[i].durationSelect = 0;
+                                 objects[i].legTypeSelect  = 0;
+
+                                 objects[i].lblType        = "Report time";
+                                 objects[i].dhour          = parseInt(self.reportTime / 60);
+                                 objects[i].dminute        = self.reportTime % 60;
+                               } 
+                               else if( i == objects.length - 1) { // last station
+                                 objects[i].newLegButton   = 0;
+                                 objects[i].newLayButton   = 0;
+                                 objects[i].deleteButton   = 0;
+                                 objects[i].stationSelect  = 0;
+                                 objects[i].durationSelect = 0;
+                                 objects[i].legTypeSelect  = 0;
+
+                                 objects[i].lblType        = "Release time";
+                                 objects[i].dhour          = parseInt(self.releaseTime / 60);
+                                 objects[i].dminute        = self.releaseTime % 60;
+                               }
+                               else if( i % 2 == 0 ) { // a station
+                                 objects[i].deleteButton   = 0;
+                                 objects[i].legTypeSelect  = 0;
+
+                                 objects[i].lblType = "Ground time";
+
+                                 if( objects[i+1].type == "lay" ) {
+                                   objects[i].durationSelect = 0;
+                                   objects[i].newLayButton   = 0;
+
+                                   objects[i].lblType = "Release time";
+                                   objects[i].dhour   = parseInt(self.releaseTime / 60);
+                                   objects[i].dminute = self.releaseTime % 60;
+                                 }
+                                 if( objects[i-1].type == "lay" ) {
+                                   objects[i].durationSelect = 0;
+                                   objects[i].stationSelect  = 0;
+                                   objects[i].newLayButton   = 0;
+
+                                   objects[i].lblType = "Report time";
+                                   objects[i].dhour   = parseInt(self.reportTime / 60);
+                                   objects[i].dminute = self.reportTime % 60;
+                                 }
+
+                               }
+                               else { // a leg or a lay.
+                                 objects[i].newLegButton  = 0;
+                                 objects[i].newLayButton  = 0;
+                                 objects[i].stationSelect = 0;
+
+                                 objects[i].lblType = objects[i].type == "leg" ? "Leg" : "Lay over";
+
+                                 if( objects.length <= 3 ) {
+                                   objects[i].deleteButton = 0; 
+                                 }
+
+                                 // can not delete a leg when it is the first, and it is followed by a lay.
+                                 if( i == 1 && i + 2 < objects.length && objects[i+2].type == "lay" ) {
+                                   objects[i].deleteButton = 0; 
+                                 }
+                                 // can not delete a leg when it is the last, and it is preceded by a lay.
+                                 if( i == objects.length - 2 && i > 2 && objects[i-2].type == "lay" ) {
+                                   objects[i].deleteButton = 0; 
+                                 }
+                               }
+                             }
+                             self._updDur(objects);
+
+                             for( i = 0; i < objects.length ; ++i ) {
+                               self.putSync(objects[i]);
+                             }
+                           });
+                         },
+     });
+
+     tripDetailStore.on('add', function(event) {
+       tripDetailStore.len += 1;
+       tripDetailStore.nextPk += 1;
+     }); 
+
+     tripDetailStore.on('delete', function(event) {
+       tripDetailStore.len -= 1;
+     }); 
+
+
+     // -----------------------------------------------
+     // stationStore
+     // -----------------------------------------------
+     var stationStore = new Memory({
+       Model      : StationModel,
+       idProperty : "id",
+     });
+
+
+     // -----------------------------------------------
+     // highLightStore
+     // -----------------------------------------------
+     var highLightStore = new Memory({
+       Model      : HighLightModel,
+       idProperty : "pk",
+       nextPk     : 1,
+       len        : 0,
+     });
+
+
+     highLightStore.on("add", function(event) {
+       highLightStore.len += 1;
+       highLightStore.nextPk = Math.max(event.target.pk, highLightStore.nextPk) + 1;
+       event.target.DrawSVG();
+     });
+
+
+     highLightStore.on("update", function(event) {
+       highLightStore.nextPk = Math.max(event.target.pk + 1, highLightStore.nextPk);
+       event.target.ClearSVG();
+       event.target.DrawSVG();
+     });
+
+
+     highLightStore.on("delete", function(event) {
+       // Remove coords that reference this highlight.
+       yCoordStore.filter({fk_hl: event.target.pk}).fetch().then( function(items) {
+         // remove only if it remains only one item.    
+         if( items.length == 1 ) {
+           yCoordStore.removeSync(items[0].pk);
+         }
+       });
+
+       highLightStore.len -= 1;
+       event.target.ClearSVG();
+     });
+
+
+     // -----------------------------------------------
+     // distanceStore
+     // -----------------------------------------------
+     var distanceStore = new Memory({
+       Model      : DistanceModel,
+       idProperty : "pk",
+       nextPk     : 1,
+       len        : 0,
+     });
+
+
+     distanceStore.on("add", function(event) {
+       distanceStore.len += 1;
+       distanceStore.nextPk = Math.max(event.target.pk, distanceStore.nextPk) + 1;
+       event.target.DrawSVG();
+     });
+
+
+     distanceStore.on("update", function(event) {
+       distanceStore.nextPk = Math.max(event.target.pk + 1, distanceStore.nextPk);
+       event.target.ClearSVG();
+       event.target.DrawSVG();
+     });
+
+
+     distanceStore.on("delete", function(event) {
+       // Remove coords that reference this distance.
+       yCoordStore.filter({fk_dst: event.target.pk}).forEach(function(item) {
+         yCoordStore.removeSync(item.pk);
+       });
+
+       distanceStore.len -= 1;
+       event.target.ClearSVG();
+     });
+
+
+     // ===============================================
+     // Redraw SVG
+     // ===============================================
+     function RemoveIntroMessage() {
+       var intro = svg.getElementById("intro");
+       if(intro) {
+         intro.parentNode.removeChild(intro);
+       } 
+     }
+
+
+     function AdjustCrewmemberBarScaleX(x) {
+       var bar = svg.getElementById("crewmember_bar");
+       bar.setAttribute("transform", "scale(" + x + ",1)");
+     }
+
+
+     topic.subscribe("refreshGraph", function() {
+       // function RedrawSVG() {
+       console.log("refreshGraph");          
+       IsDrawingEnable = true;
+
+       RemoveIntroMessage();
+
+       var x = 0;
+       calendarStore.forEach(function(item) {
+         // on.emit(item, "update", { bubbles: true, cancelable: true });
+         item.ClearSVG();
+         item.DrawSVG();
+         x = Math.max(x, item.get("x") + item.get("width")); 
+       });
+       AdjustCrewmemberBarScaleX(x);
+
+       highLightStore.forEach(function(item) {
+         item.ClearSVG();
+         item.DrawSVG();
+       });
+       distanceStore.forEach(function(item) {
+         item.ClearSVG();
+         item.DrawSVG();
+       });
+       crewMemberStore.forEach(function(item) {
+         item.ClearSVG();
+         item.DrawSVG();
+       });
+       activityStore.forEach(function(item) {
+         item.ClearSVG();
+         item.DrawSVG(crewMemberStore.getSync(item.fk_cm));
+       });
+     });
+
+
+     // ===============================================
+     // SAVING STORES TO SVG
+     // ===============================================
+     function SaveStore(store, id, obj_name) {
+       var InsertionPointId = svg.getElementById(id);
+       var schema           = store.Model().schema;
+
+       store.forEach(function(item) {
+         var objNode = document.createElementNS("", obj_name);
+
+         InsertionPointId.appendChild(objNode);
+
+         for(var property in schema) {
+           if( schema.hasOwnProperty(property) ) {
+
+             var node = document.createElementNS("", property);
+             var data = item.get(property);
+
+             if( data instanceof Array ) {
+
+               data = item.get(property).slice();
+
+               for(var j = 0; j < data.length; j++) {
+                 var item = document.createElementNS("", "item");
+                 var t = document.createTextNode(data[j]); 
+                 item.appendChild(t);
+                 node.appendChild(item);
+               }
+             }
+             else {
+               var t = document.createTextNode(data);
+               node.appendChild(t);
+             }
+             objNode.appendChild(node);
+           }
+         }    
+       });
+     }
+
+
+     function LoadStore(store, svgNode, nodeName) {
+       var childrenNodes = svgNode.childNodes; // getElementsByTagName(nodeName);
+       var schema = store.Model().schema;
+
+       for(var i = 0; i < childrenNodes.length; i ++) {
+         var data = childrenNodes[i];
+         var def = {};
+
+         for(var property in schema) {
+           if( schema.hasOwnProperty(property) ) {
+             var type = typeof(schema[property]) == "object" ? schema[property].type : schema[property];
+             var elements = data.getElementsByTagName(property); // [0].textContent;
+
+             if( elements.length > 0 ) { 
+               if( type == "numeric" ) {
+                 if( !isNaN(elements[0].textContent) ) def[property] = Number(elements[0].textContent);
+               }
+               else if( type == "boolean") def[property] = elements[0].textContent == 'true';
+               else def[property] = elements[0].textContent;
+             }
+           }
+         }
+         store.putSync(def);
+       }
+     }
+
+
+     function SaveStores() {
+       SaveStore(configurationStore, "ConfigurationStore", "configuration");
+       SaveStore(calendarStore, "CalendarStore", "calendar");
+       SaveStore(yCoordStore, "YCoordStore", "ycoord");
+       SaveStore(crewMemberStore, "CrewMemberStore", "crew");
+       SaveStore(activityStore, "ActivityStore", "activity");
+       SaveStore(highLightStore, "HighLightStore", "highligth");
+       SaveStore(distanceStore, "DistanceStore", "distance");
+       SaveStore(stationStore, "StationStore" , "station"); 
+     }
+
+
+     function LoadSvgStores(svgNode) {
+       RemoveIntroMessage();
+
+       IsDrawingEnable = false;
+
+       LoadStore(configurationStore, svgNode.getElementById("ConfigurationStore"),"configuration");
+       // load single object (id 0) in config.
+       config = configurationStore.getSync(0);
+       console.log(config);          
+
+       registry.byId("CalendarStart").set("value", config.calendarStart);
+       registry.byId("CalendarEnd").set("value", config.calendarEnd);
+
+       var start = moment(config.calendarStart);
+       Xorig = start.unix();
+
+       timezoneStore.filter({name: config.timezone}).fetchRange({start: 0, end: 1}).then(function(results) {
+         if( results.length > 0 ) {
+           registry.byId("CalendarTimezone").set("value", results[0].id);
+         }
+       });
+
+       LoadStore(calendarStore, svgNode.getElementById("CalendarStore"),"calendar");
+       LoadStore(yCoordStore, svgNode.getElementById("YCoordStore"),"ycoord");
+       LoadStore(crewMemberStore, svgNode.getElementById("CrewMemberStore"), "crew");
+       LoadStore(activityStore, svgNode.getElementById("ActivityStore"), "activity");
+       LoadStore(highLightStore, svgNode.getElementById("HighLightStore"), "highligth");
+       LoadStore(distanceStore, svgNode.getElementById("DistanceStore"), "distance");
+       LoadStationStore(svgNode.getElementById("StationStore"), MODE_SVG);
+
+       stationStore.filter({name: config.station}).fetchRange({start: 0, end: 1}).then(function(results) {
+         if( results.length > 0 ) {
+           registry.byId("CalendarStation").set("value", results[0].id);
+         }
+       });
+
+       topic.publish("refreshGraph");
+     }
+
+
+     // ===============================================
+     // LOADING STORES FROM SVG
+     // ===============================================
+
+     mappingStationSvgXml = { 
+       "id"          : "id",
+       "code"        : "code",
+       "name"        : "name",
+       "dstShift"    : "dst-shift",
+       "dstStartLst" : "dst-start-lst",
+       "dstEndLst"   : "dst-end-lst",
+       "utcOffset"   : "utc-offset",
+       "regionList"  : "region-list",
+       "item"        : "region"
+     };
+
+     MODE_SVG = 0;
+     MODE_XML = 1;
+
+     // Some tags are not exactly the same in svg def and xml def of a station.
+     // The xml introduce some dash character in word which is not compliant with 
+     // variable name.
+     function convertionSvgXml(key, mode) {
+       return mode == MODE_SVG ? key : mappingStationSvgXml[key];
+     }
+
+
+     function LoadStationStore(parentNode, mode) {
+       var rootStationStoreChildren = parentNode.getElementsByTagName("station");
+       var offsetRegex = /^(-?\d{2})h(\d{2})$/;
+
+       for(var i = 0; i < rootStationStoreChildren.length; i ++) {
+         var obj = rootStationStoreChildren[i];
+
+         var data = offsetRegex.exec(obj.getElementsByTagName(convertionSvgXml("utcOffset", mode))[0].textContent);
+         var offset = moment.duration({hours: data[1], minutes: data[2]}).asMinutes() * -1;
+
+         var id = mode == MODE_SVG ? obj.getElementsByTagName("id")[0].textContent : obj.getAttribute("id"); 
+
+         var regionList = obj.getElementsByTagName(convertionSvgXml("item", mode)); 
+
+         var regions = [];
+         for(var j = 0; j < regionList.length; j++) {
+           regions.push(regionList[j].textContent);
+         }
+
+         console.log("station code:   " + obj.getElementsByTagName(convertionSvgXml("code", mode))[0].textContent ); 
+         console.log("station name:   " + obj.getElementsByTagName(convertionSvgXml("name", mode))[0].textContent );          
+         console.log("station offset: " + offset );          
+
+         stationStore.addSync({
+           id: id,
+           code: obj.getElementsByTagName(convertionSvgXml("code", mode))[0].textContent,
+           name: obj.getElementsByTagName(convertionSvgXml("name", mode))[0].textContent,
+           dstShift: obj.getElementsByTagName(convertionSvgXml("dstShift", mode))[0].textContent, 
+           dstStartLst: obj.getElementsByTagName(convertionSvgXml("dstStartLst", mode))[0].textContent,
+           dstEndLst: obj.getElementsByTagName(convertionSvgXml("dstEndLst", mode))[0].textContent,
+           utcOffset: obj.getElementsByTagName(convertionSvgXml("utcOffset", mode))[0].textContent,
+           offset: offset,
+           regionList: regions,
+         });
+       }
+     }
+
+
+     var stationStoreAdapter = new DstoreAdapter(stationStore);
+     registry.byId("CalendarStation").set("store", stationStoreAdapter);
+
+
+
+     // ===============================================
+     // 
+     // ===============================================
+
+     var grid = new (declare([OnDemandGrid, Selection, Keyboard, Editor, CompoundColumns]))({ 
+         collection    : tripDetailStore,
+         showHeader    : true,
+         noDataMessage : 'Please fill in the "Start date time" field first.',
+       },
+       'TripGrid',
+     );
+
+
      grid.on('dgrid-datachange', function (event) {
        var cell = grid.cell(event);
-       
+
        var columnName =  cell.column.field;
 
        if( columnName == "station") {
@@ -2157,1154 +2179,1113 @@ console.log("GetActivityLineNumber: je passe la");
 
      });
 
- var columns = [
-      {
-        label: "Station",
-        field: "station",
-        sortable: false,
-        editor: FilteringSelect,
-        editorArgs: {
-          store: stationStoreAdapter,
-          maxHeight: 150,
-          style: "width:5em;",
-          labelAttr: "code",
-          searchAttr: "code",
-          required: true,
-        },
-        canEdit: function (object, value) {
-          return object.stationSelect;
-        },
-        autoSave: true,
-      },
-      {
-        label: "Type",
-        field: "lblType",
-        sortable: false,
-      },
-      {
-        label: "Leg type",
-        field: "legType",
-        sortable: false,
-        editor: FilteringSelect,
-        editorArgs: {
-          store: typeLegStore,
-          maxHeight: 150,
-          style: "width:7em;",
-          required: true,
-        },
-        canEdit: function (object, value) {
-          return object.type == "leg";
-        },
-        autoSave: true,
-      },
-      { label: 'Start',
-        field: 'startDateTime',
-        sortable: false,
-      },
-
-      {
-        label: 'Duration',
-        children: [
-          { field: 'dhour', 
-            label: 'Hour', 
-            sortable: false,
-            editor: ComboBox,
-            editorArgs: {
-              store: zeroTo99Store,
-              regExp: "[0-9]+",
-              style: "width:5em;",
-              required: true,
-            },
-            autoSave: true,
-            canEdit: function( object, value) {
-              return object.durationSelect;
-            },
-          },
-          { field: 'dminute', 
-            label: 'Minute', 
-            sortable: false,
-            editor: FilteringSelect,
-            editorArgs: {
-              store: zeroTo59Store,
-              style: "width:5em;",
-              required: true,
-            },
-            autoSave: true,
-            canEdit: function( object, value) {
-              return object.durationSelect;
-            },
-          },
-        ],
-      },
-      { label: 'End',
-        field: 'endDateTime',
-        sortable: false,
-      },
-      {
-        label: 'Operations',
-        sortable: false,
-        editor: CustomEditorOperations,
-        editorArgs:{
-          grid: grid 
-        },
-      },
+     var columns = [{
+         label      : "Station",
+         field      : "station",
+         sortable   : false,
+         editor     : FilteringSelect,
+         autoSave   : true,
+         editorArgs : {
+           store      : stationStoreAdapter,
+           maxHeight  : 150,
+           style      : "width:5em;",
+           labelAttr  : "code",
+           searchAttr : "code",
+           required   : true,
+         },
+         canEdit    : function(object, value) {
+                        return object.stationSelect;
+                      },
+       },
+       {
+         label    : "Type",
+         field    : "lblType",
+         sortable : false,
+       },
+       {
+         label      : "Leg type",
+         field      : "legType",
+         sortable   : false,
+         editor     : FilteringSelect,
+         autoSave   : true,
+         editorArgs : {
+           store     : typeLegStore,
+           maxHeight : 150,
+           style     : "width:7em;",
+           required  : true,
+         },
+         canEdit    : function (object, value) {
+                        return object.type == "leg";
+                      },
+       },
+       { 
+         label    : 'Start',
+         field    : 'startDateTime',
+         sortable : false,
+       },
+       {
+         label    : 'Duration',
+         children : [{ 
+             field      : 'dhour',
+             label      : 'Hour',
+             sortable   : false,
+             editor     : ComboBox,
+             autoSave   : true,
+             editorArgs : {
+               store      : zeroTo99Store,
+               regExp     : "[0-9]+",
+               style      : "width         : 5em;",
+               required   : true,
+             },
+             canEdit    : function(object, value) {
+                            return object.durationSelect;
+                          },
+           },
+           { 
+             field      : 'dminute',
+             label      : 'Minute',
+             sortable   : false,
+             editor     : FilteringSelect,
+             autoSave   : true,
+             editorArgs : {
+               store      : zeroTo59Store,
+               style      : "width         : 5em;",
+               required   : true,
+             },
+             canEdit    : function( object, value) {
+                            return object.durationSelect;
+                          },
+           },
+         ],
+       },
+       { 
+         label    : 'End',
+         field    : 'endDateTime',
+         sortable : false,
+       },
+       {
+         label      : 'Operations',
+         sortable   : false,
+         editor     : CustomEditorOperations,
+         editorArgs : {
+           grid : grid 
+         },
+       },
      ];
 
-    grid.set("columns", columns);
-    grid.set('sort', 'order');
-
-   grid.startup();          
-
-
-  // ===============================================
-  // EVENTS on dijit
-  // ===============================================
-  
-  // -----------------------------------------------
-  // Show/Hide dialog
-  // -----------------------------------------------
-  registry.byId("SHCoordinates").on("change", function(isChecked) {
-    svg.getElementById("coordinateX").setAttribute("display", isChecked ? "block" : "none");
-    svg.getElementById("coordinateY").setAttribute("display", isChecked ? "block" : "none");
-  }, true);
-  
-  registry.byId("SHCalendarHours").on("change", function(isChecked) {
-    var divs = svg.getElementsByClassName("hour_label");
-
-    for (var i = 0; i < divs.length; i++) {
-      divs[i].setAttribute("display", isChecked ? "block" : "none");
-    }
-  }, true);
-  
-  registry.byId("SHCalendarDayX").on("change", function(isChecked) {
-    var divs = svg.getElementsByClassName("relative");
-
-    for (var i = 0; i < divs.length; i++) {
-      divs[i].setAttribute("display", isChecked ? "block" : "none");
-    }
-  }, true);
-  
-  registry.byId("SHCalendarDayYYYYMMDD").on("change", function(isChecked) {
-    var divs = svg.getElementsByClassName("yyyymmdd");
-
-    for (var i = 0; i < divs.length; i++) {
-      divs[i].setAttribute("display", isChecked ? "block" : "none");
-    }
-  }, true);
-
-  registry.byId("SHCalendarDayBars").on("change", function(isChecked) {
-    var divs = svg.getElementsByClassName("day_bar");
-
-    for (var i = 0; i < divs.length; i++) {
-      divs[i].setAttribute("display", isChecked ? "block" : "none");
-    }
-  }, true);
-
-  registry.byId("SHCalendarHourBars").on("change", function(isChecked) {
-    var divs = svg.getElementsByClassName("hour_bar");
-
-    for (var i = 0; i < divs.length; i++) {
-      divs[i].setAttribute("display", isChecked ? "block" : "none");
-    }
-  }, true);
-
-  registry.byId("XGraphCompression").on("change", function(value) {
-    config.XGraphCompression = value;
-
-    configurationStore.putSync(config);          
-          
-    // RedrawSVG();
-    topic.publish("refreshGraph");
-  }, true);
-
-  // -----------------------------------------------
-  // Show/Hide activity dialog
-  // -----------------------------------------------
-  registry.byId("SHActivityHours").on("change", function(isChecked) {
-    var divs = svg.getElementsByClassName("act_hour");
-
-    for (var i = 0; i < divs.length; i++) {
-      divs[i].setAttribute("display", isChecked ? "block" : "none");
-    }
-  }, true);
-
-   registry.byId("SHActivityDetails").on("change", function(isChecked) {
-    var divs = svg.getElementsByClassName("details");
-
-    for (var i = 0; i < divs.length; i++) {
-      divs[i].setAttribute("display", isChecked ? "block" : "none");
-    }
-  }, true);
-
-   registry.byId("SHActivityDetailHours").on("change", function(isChecked) {
-    var divs = svg.getElementsByClassName("dtl_hour");
-
-    for (var i = 0; i < divs.length; i++) {
-      divs[i].setAttribute("display", isChecked ? "block" : "none");
-    }
-  }, true);
- 
-  registry.byId("SHActivityDetailStations").on("change", function(isChecked) {
-    var divs = svg.getElementsByClassName("dtl_station");
-
-    for (var i = 0; i < divs.length; i++) {
-      divs[i].setAttribute("display", isChecked ? "block" : "none");
-    }
-  }, true);
- 
-  // -----------------------------------------------
-  // Load XML station file dialog
-  // -----------------------------------------------
-  registry.byId("LoadStation").on("click", function() {
-    var upload = registry.byId("uploader");
-
-    var f = upload._files[0];
-          
-    if( f.type != "text/xml" ) {
-      alert("Please provide an xml file");
-      return;
-    }          
-
-    var reader = new FileReader();
-
-    // Closure to capture the file information and save it in the store.
-    reader.onload = (function(theFile) {
-      return function(e) {
-        xmlDom = xmlparser.parse(e.target.result);
-          
-        LoadStationStore(xmlDom, MODE_XML);
-      };
-    })(f);
-
-    // Read in the file as a text.
-    reader.readAsText(f);
-
-    LoadStationDialog.hide();
-    
-    config.MenuCalendar = false;
-    config.MenuCalendarSetStartEnd = false;
-
-    configurationStore.putSync(config);
-
-  });
-
-  // -----------------------------------------------
-  // Load SVG file dialog
-  // -----------------------------------------------
-  registry.byId("LoadSvg").on("click", function() {
-    var upload = registry.byId("uploader2");
-
-    var f = upload._files[0];
-          
-    if( f.type != "image/svg+xml" ) {
-      alert("Please provide an svg file");
-      return;
-    }          
+     grid.set("columns", columns);
+     grid.set('sort', 'order');
 
-    var reader = new FileReader();
+     grid.startup();          
 
-    // Closure to capture the file information and save it in the store.
-    reader.onload = (function(theFile) {
-      return function(e) {
-        xmlDom = xmlparser.parse(e.target.result);
-          
-        LoadSvgStores(xmlDom);
-      };
-    })(f);
-
-    // Read in the file as a text.
-    reader.readAsText(f);
-
-    LoadSvgDialog.hide();
-  });
-
-   
-  // -----------------------------------------------
-  // Constants dialog
-  // -----------------------------------------------
+
+     // ===============================================
+     // EVENTS on dijit
+     // ===============================================
 
-  registry.byId("ShowConstantsDialog").on("show", function() {
-    viewInForm(config, dom.byId("ShowConstantsForm"));
-  }, true);
+     // -----------------------------------------------
+     // Show/Hide dialog
+     // -----------------------------------------------
+     registry.byId("SHCoordinates").on("change", function(isChecked) {
+       svg.getElementById("coordinateX").setAttribute("display", isChecked ? "block" : "none");
+       svg.getElementById("coordinateY").setAttribute("display", isChecked ? "block" : "none");
+     }, true);
 
-  registry.byId("SaveConstants").on("click", function() {
-    if( !registry.byId("ShowConstantsForm").validate() ) {
-      return;
-    }
+     registry.byId("SHCalendarHours").on("change", function(isChecked) {
+       var divs = svg.getElementsByClassName("hour_label");
 
-    ShowConstantsDialog.hide();
+       for (var i = 0; i < divs.length; i++) {
+         divs[i].setAttribute("display", isChecked ? "block" : "none");
+       }
+     }, true);
 
-    setFromForm(config, dom.byId("ShowConstantsForm"));
+     registry.byId("SHCalendarDayX").on("change", function(isChecked) {
+       var divs = svg.getElementsByClassName("relative");
 
-    configurationStore.putSync(config);
-  });
+       for (var i = 0; i < divs.length; i++) {
+         divs[i].setAttribute("display", isChecked ? "block" : "none");
+       }
+     }, true);
 
-  // -----------------------------------------------
-  // Show/Hide calendar dialog
-  // -----------------------------------------------
+     registry.byId("SHCalendarDayYYYYMMDD").on("change", function(isChecked) {
+       var divs = svg.getElementsByClassName("yyyymmdd");
 
-  registry.byId("ShowHideCalendarDialog").on("show", function() {
-    viewInForm(config, dom.byId("ShowHideCalendarForm"));
-  }, true);
+       for (var i = 0; i < divs.length; i++) {
+         divs[i].setAttribute("display", isChecked ? "block" : "none");
+       }
+     }, true);
 
-  registry.byId("SaveShowHideCalendar").on("click", function() {
-    if( !registry.byId("ShowHideCalendarForm").validate() ) {
-      return;
-    }
+     registry.byId("SHCalendarDayBars").on("change", function(isChecked) {
+       var divs = svg.getElementsByClassName("day_bar");
 
-    ShowHideCalendarDialog.hide();
+       for (var i = 0; i < divs.length; i++) {
+         divs[i].setAttribute("display", isChecked ? "block" : "none");
+       }
+     }, true);
 
-    setFromForm(config, dom.byId("ShowHideCalendarForm"));
+     registry.byId("SHCalendarHourBars").on("change", function(isChecked) {
+       var divs = svg.getElementsByClassName("hour_bar");
 
-    configurationStore.putSync(config);
-  });
+       for (var i = 0; i < divs.length; i++) {
+         divs[i].setAttribute("display", isChecked ? "block" : "none");
+       }
+     }, true);
 
-  // -----------------------------------------------
-  // Show/Hide activity dialog
-  // -----------------------------------------------
+     registry.byId("XGraphCompression").on("change", function(value) {
+       config.XGraphCompression = value;
 
-  registry.byId("ShowHideActivityDialog").on("show", function() {
-    viewInForm(config, dom.byId("ShowHideActivityForm"));
-  }, true);
+       configurationStore.putSync(config);          
 
-  registry.byId("SaveShowHideActivity").on("click", function() {
-    if( !registry.byId("ShowHideActivityForm").validate() ) {
-      return;
-    }
+       topic.publish("refreshGraph");
+     }, true);
 
-    ShowHideActivityDialog.hide();
+     // -----------------------------------------------
+     // Show/Hide activity dialog
+     // -----------------------------------------------
+     registry.byId("SHActivityHours").on("change", function(isChecked) {
+       var divs = svg.getElementsByClassName("act_hour");
 
-    setFromForm(config, dom.byId("ShowHideActivityForm"));
+       for (var i = 0; i < divs.length; i++) {
+         divs[i].setAttribute("display", isChecked ? "block" : "none");
+       }
+     }, true);
 
-    configurationStore.putSync(config);
-  });
+     registry.byId("SHActivityDetails").on("change", function(isChecked) {
+       var divs = svg.getElementsByClassName("details");
 
-  // -----------------------------------------------
-  // Save file dialog
-  // -----------------------------------------------
-  registry.byId("SaveFile").on("click", function() {
+       for (var i = 0; i < divs.length; i++) {
+         divs[i].setAttribute("display", isChecked ? "block" : "none");
+       }
+     }, true);
 
-    SaveStores();
+     registry.byId("SHActivityDetailHours").on("change", function(isChecked) {
+       var divs = svg.getElementsByClassName("dtl_hour");
 
-          
-    var a           = document.createElement("a");
-    var contentType = "data:application/octet-stream,";
+       for (var i = 0; i < divs.length; i++) {
+         divs[i].setAttribute("display", isChecked ? "block" : "none");
+       }
+     }, true);
 
-    //get svg source.
-    var serializer = new XMLSerializer();
-    var source = serializer.serializeToString(svg);
+     registry.byId("SHActivityDetailStations").on("change", function(isChecked) {
+       var divs = svg.getElementsByClassName("dtl_station");
 
-    var uriContent  = contentType + encodeURIComponent(source);
+       for (var i = 0; i < divs.length; i++) {
+         divs[i].setAttribute("display", isChecked ? "block" : "none");
+       }
+     }, true);
 
-    a.setAttribute("href", uriContent);
-    a.setAttribute("download", registry.byId("filename").value);
+     // -----------------------------------------------
+     // Load XML station file dialog
+     // -----------------------------------------------
+     registry.byId("LoadStation").on("click", function() {
+       var upload = registry.byId("uploader");
 
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+       var f = upload._files[0];
 
-    SaveFileDialog.hide();
-  }, true);
+       if( f.type != "text/xml" ) {
+         alert("Please provide an xml file");
+         return;
+       }          
 
-  // -----------------------------------------------
-  // Calendar range set up dialog
-  // -----------------------------------------------
-  registry.byId("CalendarTimezone").on("focus", function() {
-    if( this.get("value") ) {
-      registry.byId("CalendarStation").set("disabled", false);
-    }          
-  }, true);
+       var reader = new FileReader();
 
-  registry.byId("CalendarTimezone").on("change", function() {
-    var item = timezoneStore.getSync(this.get("value"));
+       // Closure to capture the file information and save it in the store.
+       reader.onload = (function(theFile) {
+         return function(e) {
+           xmlDom = xmlparser.parse(e.target.result);
 
-    console.log("timezone :" + item); 
+           LoadStationStore(xmlDom, MODE_XML);
+         };
+       })(f);
 
-    if( item ) {          
-      registry.byId("CalendarStation").set("disabled", false);
+       // Read in the file as a text.
+       reader.readAsText(f);
 
-      if( !registry.byId("CalendarStation").get("value") ) {
-        var zone = moment.tz.zone(item.name);
+       LoadStationDialog.hide();
 
-        console.log("zone: ");  
-        console.log(zone);  
+       config.MenuCalendar = false;
+       config.MenuCalendarSetStartEnd = false;
 
+       configurationStore.putSync(config);
 
-        var dateOutsideDST = moment();
-
-        while( dateOutsideDST.isDST() ) {
-          dateOutsideDST.subtract(1, 'months');
-        }
-
-        var offsetZone = zone.offset(dateOutsideDST.valueOf());         
-        console.log("offsetZone: " + offsetZone);
-
-        registry.byId("CalendarStation").set("value", "");
-        registry.byId("CalendarStation").set("query", {offset: offsetZone});
-      }
-    }
-  }, true);
-
-
-  registry.byId("CalendarStart").on("change", function() {
-    registry.byId("CalendarEnd").constraints.min = date.add(this.get("value"), "day", 1);
-    registry.byId("CalendarEnd").dropDownDefaultValue = this.get("value");     
-
-    registry.byId("TrainingStartDate").constraints.min = this.get("value");
-    registry.byId("TrainingStartDate").dropDownDefaultValue = this.get("value");
-    registry.byId("TripStartDate").constraints.min = this.get("value");
-    registry.byId("TripStartDate").dropDownDefaultValue = this.get("value");
-  }, true);
-  
-  registry.byId("CalendarEnd").on("change", function() {
-    var maxDate = date.add(this.get("value"), "day", -1);
-
-    registry.byId("CalendarStart").constraints.max = maxDate;
-
-    registry.byId("TrainingStartDate").constraints.max = maxDate;
-    registry.byId("TripStartDate").constraints.max = maxDate;
-  }, true);
-
-  registry.byId("SetCalendarDialog").on("show", function() {
-    viewInForm(config, dom.byId("SetCalendarForm"));
-  }, true);
-
-  registry.byId("SetCalendar").on("click", function() {
-    if( !registry.byId("SetCalendarForm").validate() ) {
-      return;
-    }
-    RemoveIntroMessage();
-
-    setFromForm(config, dom.byId("SetCalendarForm"));
-
-    var start = moment(config.calendarStart);
-    Xorig = start.unix();
-    var end   = moment(config.calendarEnd); 
-    var range = end.diff(start, "days");
-
-    calendarStore.fetch().then(function (days) {
-      for (var i = days.length - 1; i >= 0; i--) {
-        calendarStore.remove(days[i].pk);
-      }
-    });        
-
-    var dstStatus = start.isDST();
-
-    var x = 0;
-    var width = 0;
-
-    XStartPeriod = 0;
-
-    for(i = 0; i < range; i++) {
-      
-      var nextDay = moment(start).add(1, "days");   
-      width = nextDay.diff(start, "hours") * 60;
-
-      calendarStore.addSync({
-        name: start.format().substring(0, 10),
-        relative: i,
-        pk: i+1, // for unknown reason, checkedmultiselect does not work with 0. 
-        x: x, 
-        width: width - 1, 
-      });
-
-      // look for DST
-      if( width != 1440 ) { 
-        var InitialState =  start.isDST();
-
-        while( start.isDST() == InitialState ) {
-          start.add(1, "minutes");
-        }
-
-        var pkY  = yCoordStore.nextPk;
-        var pkHL = highLightStore.nextPk;
-
-        // Add the new entry in the y coord store.
-        yCoordStore.addSync({
-          pk: pkY,
-          fk_hl: pkHL,
-          height: HEIGHT_LINE_HL,
-          y: 0,
-        });
-
-        highLightStore.addSync({
-          message: InitialState ? "End DST" : "Start DST",
-          x: getPositionX(start),
-          pk: pkHL,
-        });
-      }
-
-      x += width;
-      start = nextDay;
-      XStartNextPeriod = x;
-    }
-
-    AdjustCrewmemberBarScaleX(x);
-
-    // enabled some menu items.
-    config.MenuCalendarSetStartPeriods = false;
-    config.MenuBusinessObject = false;
-    config.MenuGraphOption = false;
-    config.MenuHighLights = false;
-    config.MenuFileSaveSVGFile = false;
-
-    configurationStore.putSync(config);
-
-    SetCalendarDialog.hide();
-  });
-  
-
-  // -----------------------------------------------
-  // Manage Set Start Periods dialog
-  // -----------------------------------------------
-  registry.byId("SetStartPeriodsDialog").on("show", function() {
-    var arrChecked = [];
-    calendarStore.forEach(function(item) {
-      if( item.startperiod ) {
-        arrChecked.push(item.pk);
-      }
-    });
-    arrChecked.push(0);          
-    console.log(arrChecked);
-    registry.byId("CalendarStartPeriods").setStore(calendarStoreAdapter, arrChecked);
-  }, true);
-
-  // Redraw start periods
-  registry.byId("SetStartPeriods").on("click", function() {
-
-
-    var newStarts = registry.byId("CalendarStartPeriods").value;
-    var ref =  newStarts.length > 0 ? newStarts[0] : 0; 
-
-    var i = 0; 
-
-    calendarStore.forEach(function(item) {
-      item.set("relative", item.pk - ref);
-      if( i < newStarts.length && newStarts[i] == item.pk ) {
-        console.log("SetStartPeriods");
-          console.log(i);
-          console.log(item);
-        item.set("startperiod", true);
-        if( i == 0 ) XStartPeriod = item.x;
-        if( i == 1 ) XStartNextPeriod = item.x;  
-        i+=1;
-      }
-      else {
-        item.set("startperiod", false);
-      }
-      calendarStore.put(item);
-    });
-
-    SetStartPeriodsDialog.hide();
-  });
-
-  // -----------------------------------------------
-  // Create Crewmember dialog
-  // -----------------------------------------------
-  registry.byId("CreateCrewMember").on("click", function() {
-    var pkY = yCoordStore.nextPk;
-    var pkCM = crewMemberStore.nextPk;
-
-    // Add the new entry in the y coord store.
-    yCoordStore.addSync({
-      pk: pkY,
-      fk_cm: pkCM,
-      y: yCoordStore.nextY,
-      height: MARGIN_TOP_CM + HEIGHT_LINE_CM + MARGIN_BOTTOM_CM,
-    });
-
-    
-
-    // Add the new crew in the store. Event will trigger the drawing.
-    crewMemberStore.addSync({
-      name: registry.byId("CrewMemberName").get("value"),
-      birthdate: registry.byId("CrewMemberBirthDate").get("value").toISOString().substring(0, 10),
-      pk: pkCM,
-      fk_yc: pkY,
-      lineCount: 1,    
-    });
-
-    CreateCrewMemberDialog.hide();
-  });
-
-
-  // -----------------------------------------------
-  // Create Day Off dialog
-  // -----------------------------------------------
-  registry.byId("CreateDayOff").on("click", function() {
-    if( !registry.byId("CreateDayOffForm").validate() ) {
-      return;
-    }
-
-    CreateDayOffDialog.hide();
-    var crewmemberId = parseInt(registry.byId("DayOffCrewMemberSelect").get("value"));
-    var days = registry.byId("DayOffDatesSelect").value; 
-
-    // to avoid the "at least one item must be selected" message, form data are save in 
-    // local variables before reseting the form.
-    registry.byId("CreateDayOffForm").reset();
-    
-    days.forEach(function(day) {
-      var calendarDay = calendarStore.getSync(day); 
-
-      var x     = calendarDay.get("x");
-      var width = calendarDay.get("width") + 1;
-
-      var lineNb = GetActivityLineNumber(crewmemberId, x, width);
-          
-      if( lineNb > 1 ) {  
-        alert("DO starting " + calendarDay.get("name") + " is overlapping with another activity."); 
-      }
-      activityStore.addSync({
-        name: "DO",
-        fullname: crewMemberStore.getSync(crewmemberId).name + " -- " + moment(calendarDay.get("name")).format("YYYY-MM-DD") + " -- DO",  
-        type: "DO",
-        pk: activityStore.nextPk,
-        fk_cm: crewmemberId,
-        x: x,
-        lbtStart: moment(calendarDay.get("name")).format("YYYY-MM-DD HH:mm"), 
-        utcStart: moment(calendarDay.get("name")).utc().format("YYYY-MM-DD HH:mm"), 
-        utcEnd: moment(calendarDay.get("name")).add(width, 'm').utc().format("YYYY-MM-DD HH:mm"), 
-        width: width,
-        tp: 0,
-        resta: 0,
-        restb: 0,
-        lineNb: lineNb,
-      });
-    });
-  });
-
-  // -----------------------------------------------
-  // Create Training dialog
-  // -----------------------------------------------
-  function TryEnableDuration() {
-    if(   registry.byId("TrainingStartTime").get("value") != null 
-       && registry.byId("TrainingStartDate").get("value") != null ) {
-      registry.byId("TrainingDurationHour").readOnly = false;
-      registry.byId("TrainingDurationHour").set("value", 0);
-      registry.byId("TrainingDurationMinute").readOnly = false;
-      registry.byId("TrainingDurationMinute").set("value", 0);
-
-      UpdateEndDateTime("Training");
-    }
-  }
-
-  registry.byId("TrainingStartDate").on("click,mousedown", function() {
-    TryEnableDuration();          
-  });
-
-  registry.byId("TrainingStartDate").on("change", function(value) {
-    TryEnableDuration();          
-  });
-
-  registry.byId("TrainingStartTime").on("click,mousedown", function() {
-    TryEnableDuration();          
-  });
-
-  registry.byId("TrainingStartTime").on("change", function(value) {
-    TryEnableDuration();          
-  });
-
-  registry.byId("TrainingDurationHour").on("click", function() {
-    UpdateEndDateTime("Training");
-  });
-  registry.byId("TrainingDurationHour").on("change", function(val) {
-    UpdateEndDateTime("Training");
-  });
-  
-  registry.byId("TrainingDurationMinute").on("click", function() {
-    UpdateEndDateTime("Training");
-  });
-  registry.byId("TrainingDurationMinute").on("change", function(val) {
-    UpdateEndDateTime("Training");
-  });
-
-  registry.byId("CreateTraining").on("click", function() {
-    if( !registry.byId("CreateTrainingForm").validate() ) {
-      return;
-    }
-
-    CreateTrainingDialog.hide();
-
-    var lbtStartTraining = registry.byId("TrainingStartDate").get("value");
-
-    var mydate = moment(registry.byId("TrainingStartDate").get("value"));
-    var mytime = moment(registry.byId("TrainingStartTime").get("value"));
-
-    // rebuild the start date from StartDate and StartTime field values, 
-    mydate.hours(mytime.hours());
-    mydate.minutes(mytime.minutes());
-    var x                = getPositionX(mydate);
-    var startTraining    = moment.tz(mydate, timezoneStore.get(config.timezone).name);
-
-    var width = Number(registry.byId("TrainingDurationHour").get("value")) * 60 + Number(registry.byId("TrainingDurationMinute").get("value"));
-
-    var endTraining = startTraining.clone().add(width, 'm');
-    var crewMemberPk = Number(registry.byId("TrainingCrewMemberSelect").get("value"));
-
-
-    var lineNb = GetActivityLineNumber(crewmemberId, x, width);
-    
-    var fullname = crewMemberPk ? crewMemberStore.getSync(crewmemberId).name : "Open time";
-    fullname += " -- " + mydate.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TrainingName").get("value");
-
-    if( lineNb > 1 ) {
-      alert("The new traininig is overlapping with another activity."); 
-    }
-    activityStore.addSync({
-      name: registry.byId("TrainingName").get("value"),
-      fullname: fullname,  
-      type: "TRN",
-      pk: activityStore.nextPk,
-      fk_cm: crewMemberPk,
-      x: x,
-      lbtStart: mydate.format("YYYY-MM-DD HH:mm"),
-      utcStart: startTraining.utc().format("YYYY-MM-DD HH:mm"),
-      utcEnd: endTraining.utc().format("YYYY-MM-DD HH:mm"), 
-      width: width,
-      tp: registry.byId("TrainingTransportationTime").checked ? Number(config.transportationTime) : 0,  // registry.byId("TransportationTimeDuration").get("value") : 0,
-      resta: Number(registry.byId("TrainingRestAfterH").get("value")) * 60 + Number(registry.byId("TrainingRestAfterM").get("value")),
-      restb: Number(registry.byId("TrainingRestBeforeH").get("value")) * 60 + Number(registry.byId("TrainingRestBeforeM").get("value")),
-      lineNb: lineNb,
-    });
-  });
-
- 
-  // -----------------------------------------------
-  // Create Highlight dialog
-  // -----------------------------------------------
-   
-  registry.byId("CreateHighlight").on("click", function() {
-    if( !registry.byId("CreateHighlightForm").validate() ) {
-      return;
-    }
-
-    CreateHighlightDialog.hide();
-    var label   = registry.byId("HighlightLabel").get("value");
-    var days    = registry.byId("HighlightDatesSelect").value; 
-    var time    = registry.byId("HighlightTime").value; 
-
-    // to avoid the "at least one item must be selected" message, form data are save in 
-    // local variables before reseting the form.
-    registry.byId("CreateHighlightForm").reset();
-
-    if( days.length == 0 ) {
-      calendarStore.forEach(function(item) {
-        days.push(item.pk);
-      }); 
-    }
-
-    var pkY  = yCoordStore.nextPk;
-
-    // Add the new entry in the y coord store.
-    yCoordStore.addSync({
-      pk: pkY,
-      fk_hl: highLightStore.nextPk,
-      y: 0,
-      height: HEIGHT_LINE_HL,
-    });
-
-
-    for(i = 0; i < days.length; i++) {
-      var calDay = calendarStore.getSync(days[i]);
-      
-      var when = moment(calDay.get("name"));
-      when.hour(time.getHours());
-      when.minute(time.getMinutes());
-
-      if( when.isValid() ) {   
-        highLightStore.addSync({
-          message: label,
-          x: getPositionX(when),
-          pk: highLightStore.nextPk,
-          fk_yc: pkY,
-        });
-      }
-    }
-  });  
-
-
-  // -----------------------------------------------
-  // Create Distance dialog
-  // -----------------------------------------------
-  function UpdateEvent(val, idEventSelect) {
-    var activity = activityStore.getSync(val);
-    if( activity ) {      
-      var when = registry.byId(idEventSelect);
-
-      when.set("disabled", false);
-      when.getOptions("1").disabled = activity.restb > 0 ? false : true;
-      when.getOptions("2").disabled = activity.tp > 0 ? false : true;
-      when.getOptions("5").disabled = activity.tp > 0 ? false : true;
-      when.getOptions("6").disabled = activity.resta > 0 ? false : true;
-    }
-  }
-          
-  registry.byId("DistanceFromSelect").on("change", function(val) {
-    UpdateEvent(val, "DistanceFromEventSelect");
-  });
-  registry.byId("DistanceToSelect").on("change", function(val) {
-    UpdateEvent(val, "DistanceToEventSelect");
-  });
-   
-  registry.byId("CreateDistance").on("click", function() {
-    if( !registry.byId("CreateDistanceForm").validate() ) {
-      return;
-    }
-
-    CreateDistanceDialog.hide();
-
-    var from      = registry.byId("DistanceFromSelect").value;
-    var to        = registry.byId("DistanceToSelect").value;
-    var fromEvent = registry.byId("DistanceFromEventSelect").value;
-    var toEvent   = registry.byId("DistanceToEventSelect").value;
-
-    var act1  = activityStore.getSync(from);
-    var act2  = activityStore.getSync(to);
-    var pkY   = yCoordStore.nextPk;
-    var pkDST = distanceStore.nextPk;
-
-    // Add the new entry in the y coord store.
-    yCoordStore.addSync({
-      pk: pkY,
-      fk_dst: pkDST,
-      y: Math.min(act1.GetYCoord(), act2.GetYCoord()),
-      height: HEIGHT_LINE_HL,
-    });
-
-
-    distanceStore.addSync({
-      fk_act1: from,
-      act1_event: Number(fromEvent),
-      fk_act2: to,
-      act2_event: Number(toEvent),
-      pk: pkDST,
-      fk_yc: pkY,
-    });
-  });  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  function TryEnableGrid() {
-    if(   registry.byId("TripStartTime").get("value") != null 
-       && registry.byId("TripStartDate").get("value") != null ) {
-      tripDetailStore.reportTime = config.reportTime;
-      tripDetailStore.releaseTime = config.releaseTime;
-
-      var mydate = moment(registry.byId("TripStartDate").get("value"));
-      var mytime = moment(registry.byId("TripStartTime").get("value"));
-
-      // rebuild the start date from StartDate and StartTime field values, 
-      mydate.hours(mytime.hours());
-      mydate.minutes(mytime.minutes());
-
-      tripDetailStore.startDateTime = mydate;
-
-      if( tripDetailStore.len == 0 ) {
-       
-        tripDetailStore.addSync({
-          pk: 1,
-          order: 1,
-          type: "sta",
-          station: config.station,
-        });
-        tripDetailStore.addSync({
-          pk: 2,
-          order: 2,
-          type: "leg",
-          legType: "A",
-          dhour: 2,
-          dminute: 0,
-        });
-        tripDetailStore.addSync({
-          pk: 3,
-          order: 3,
-          type: "sta",
-          station: config.station,
-        });
-      }
-      // allow to recompute end date time.
-      tripDetailStore.process();
-    }
-  }
-
-
-  registry.byId("TripStartDate").on("click,mousedown", function() {
-    TryEnableGrid();          
-  });
-
-  registry.byId("TripStartDate").on("change", function(value) {
-    TryEnableGrid();          
-  });
-
-  registry.byId("TripStartTime").on("click,mousedown", function() {
-    TryEnableGrid();          
-  });
-
-  registry.byId("TripStartTime").on("change", function(value) {
-    TryEnableGrid();          
-  });
-
-  registry.byId("MenuBusinessObjectCreateActivityTrip").on("click", function() {
-    registry.byId("TripRestBeforeM").set("value", 0);
-    registry.byId("TripRestAfterM").set("value", 0);
-   
-    registry.byId("CreateTripDialog").show();
-
-    grid.resize();
-  });
-
-
-
-
- registry.byId("CreateTripDialog").on("hide", function() {
-
-    tripDetailStore.fetch().then(function (items) {
-      for (var i = items.length - 1; i >= 0; i--) {
-        tripDetailStore.remove(items[i].pk);
-      }           
-
-      grid.refresh();
-    });
- });
-
-  function formatDurationInHoursMinutes(width) {
-    return parseInt(width / 60) + "h" + ("0" + width % 60).slice(-2);
-  }
-
-  function getInPeriod(x, width) {
-    var tafbInPeriod = 0;
-
-    var Xstart = Math.max(x, XStartPeriod);
-    var Xend   = Math.min(x + width, XStartNextPeriod);
-
-    return Math.max(Xend - Xstart, 0);
-  }
-
-
-  registry.byId("CreateTrip").on("click", function() {
-    if( !registry.byId("CreateTripForm").validate() ) {
-      return;
-    }
-
-    CreateTripDialog.hide();
-
-    var mydate = moment(registry.byId("TripStartDate").get("value"));
-    var mytime = moment(registry.byId("TripStartTime").get("value"));
-
-    // rebuild the start date from StartDate and StartTime field values, 
-    mydate.hours(mytime.hours());
-    mydate.minutes(mytime.minutes());
-    var x            = getPositionX(mydate);
-    var endTrip = moment(registry.byId("TripEndDate").get("value")); //startTrip.clone().add(width, 'm');
-    mytime = moment(registry.byId("TripEndTime").get("value"));
-    endTrip.hours(mytime.hours());
-    endTrip.minutes(mytime.minutes());
-    var width = getPositionX(endTrip) - x;
-
-    var startTrip    = moment.tz(mydate, timezoneStore.get(config.timezone).name);
-
-    var crewmemberId = Number(registry.byId("TripCrewMemberSelect").get("value"));
-
-    
-
-    var lineNb = GetActivityLineNumber(crewmemberId, x, width);
-   
-    if( lineNb > 1 ) {
-      alert("The new trip is overlapping with another activity."); 
-    }
-    // It is IMPORTANT to create detail items before the trip because to draw trip,
-    // we need the details. And because the drawing is linked with the add event, the 
-    // trip must be added after details.
-    // obtain uniq pk for the trip activity.
-    var fk_parent = activityStore.nextPk;
-
-    // to skip to the next uniq id, 
-    activityStore.nextPk +=1;
-    
-    var xDetail        = x;
-    var credit         = 0;
-    var block          = 0;
-    var duty           = 0;
-    var creditInPeriod = 0;
-    var blockInPeriod  = 0;
-    var dutyInPeriod   = 0;
-
-    
-    tripDetailStore.sort('order').fetch().then(function (items) {
-      var j = 0;
-
-      var iLeg = 0;
-      var iLay = 0;
-
-      var name;
-
-      for (var i = 0; i < items.length ; i++) {
-        var width = Number(items[i].dhour * 60) + Number(items[i].dminute);
-        var inPeriod = getInPeriod(xDetail, width);
-        var type = items[i].type;
-        if( type == "leg" ) {
-          j += 1; 
-          type += items[i].legType;
-          if( items[i].legType == "A" ) {
-            credit += width;
-            creditInPeriod += inPeriod;
-          }
-          block += width;
-          blockInPeriod += inPeriod;
-          iLeg += 1;
-          name = type + iLeg;
-        }
-        else {
-          iLay += 1;
-          name = type + iLay;
-        }
-        if( type != "lay" ) {
-          duty += width;
-          dutyInPeriod += inPeriod;
-        } 
-
-
-        activityStore.addSync({
-          name: name,
-          fullname: name + " -- " + mydate.format("YYYY-MM-DD HH:mm"),  
-          type: type.toUpperCase(),
-          pk: activityStore.nextPk,
-          fk_parent: fk_parent,
-          fk_cm: crewmemberId,
-          x: xDetail,
-          width: width,
-          station: items[i].station,
-        });
-        xDetail += width;
-      }           
-    });
-
-    var tmp = activityStore.nextPk;     
-
-    var fullname = crewmemberId ? crewMemberStore.getSync(crewmemberId).name : "Open time";
-        
-    fullname += " -- " + mydate.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TripName").get("value"),  
-
-    activityStore.addSync({
-      name: registry.byId("TripName").get("value"),
-      fullname: crewMemberStore.getSync(crewmemberId).name + " -- " + mydate.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TripName").get("value"),  
-      type: "TRP",
-      pk: fk_parent,
-      fk_cm: crewmemberId,
-      x: x,
-      lbtStart: mydate.format("YYYY-MM-DD HH:mm"),
-      utcStart: startTrip.utc().format("YYYY-MM-DD HH:mm"),
-      utcEnd: endTrip.utc().format("YYYY-MM-DD HH:mm"), 
-      width: width,
-      tp: registry.byId("TripTransportationTime").checked ? Number(config.transportationTime) : 0,
-      resta: Number(registry.byId("TripRestAfterH").get("value")) * 60 + Number(registry.byId("TripRestAfterM").get("value")),
-      restb: Number(registry.byId("TripRestBeforeH").get("value")) * 60 + Number(registry.byId("TripRestBeforeM").get("value")),
-      block: block,
-      credit: credit,
-      duty: duty,
-      tafbInPeriod: getInPeriod(x, width),
-      blockInPeriod: blockInPeriod,
-      creditInPeriod: creditInPeriod,
-      dutyInPeriod: dutyInPeriod,
-      lineNb: lineNb,
-    });
-console.log(activityStore);
-    activityStore.nextPk = tmp;          
-  });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  function viewInForm(object, form) {
-    for(var i = 0; i < form.elements.length; i++ ) {
-      if(form.elements[i].name) {
-        var element = form.elements[i];
-        var name = element.name;
-        var value = object[name];
-
-        console.log(name);
-        console.log(element.type);
-        console.log(element.checked);
-        console.log(object[name]);
-
-        if( element.type == "checkbox" ) {
-          console.log('on checked');
-          console.log(registry.byId(name));
-          registry.byId(name).set("checked", value);
-        }
-        else {
-          console.log('on value');
-          console.log(registry.byId(name));
-          if( registry.byId(name) ) {
-            registry.byId(name).set("value", value);
-          }
-          else  {
-            var input = query("input[name=" + name + "]", form)[0];
-            if(input) {
-              console.log(name + "---" + value);
-              // here is a little hack. dijit dialog create an hidden input with the right name.
-              // but the one used to display is the sibling before. So I reference the parent and
-              // pick the first child with the right class.
-              var dijitInputInner  = query(".dijitInputInner", input.parentNode)[0];
-              var dijitPlaceHolder = query(".dijitPlaceHolder", input.parentNode)[0];
-
-              console.log(dijitInputInner);
-
-              if( dijitInputInner ) dijitInputInner.value = value;
-              if( dijitPlaceHolder ) dijitPlaceHolder.style.display = "none";  
-            }
-          }
-        }
-      }
-    }
-  }
-          
-  function setFromForm(object, form) {
-    for(var i = 0; i < form.elements.length; i++ ) {
-      if(form.elements[i].name) {
-        // console.log(form.elements[i].name);
-        // console.log(form.elements[i].value);
-        // console.log(form.elements[i].type);
-        // console.log(form.elements[i].checked);
-        object[form.elements[i].name] =form.elements[i].type == "checkbox" ?  form.elements[i].checked : form.elements[i].value;
-      }
-    }
-  }
+     });
+
+     // -----------------------------------------------
+     // Load SVG file dialog
+     // -----------------------------------------------
+     registry.byId("LoadSvg").on("click", function() {
+       var upload = registry.byId("uploader2");
+
+       var f = upload._files[0];
+
+       if( f.type != "image/svg+xml" ) {
+         alert("Please provide an svg file");
+         return;
+       }          
+
+       var reader = new FileReader();
+
+       // Closure to capture the file information and save it in the store.
+       reader.onload = (function(theFile) {
+         return function(e) {
+           xmlDom = xmlparser.parse(e.target.result);
+
+           LoadSvgStores(xmlDom);
+         };
+       })(f);
+
+       // Read in the file as a text.
+       reader.readAsText(f);
+
+       LoadSvgDialog.hide();
+     });
+
+
+     // -----------------------------------------------
+     // Constants dialog
+     // -----------------------------------------------
+
+     registry.byId("ShowConstantsDialog").on("show", function() {
+       viewInForm(config, dom.byId("ShowConstantsForm"));
+     }, true);
+
+     registry.byId("SaveConstants").on("click", function() {
+       if( !registry.byId("ShowConstantsForm").validate() ) {
+         return;
+       }
+
+       ShowConstantsDialog.hide();
+
+       setFromForm(config, dom.byId("ShowConstantsForm"));
+
+       configurationStore.putSync(config);
+     });
+
+     // -----------------------------------------------
+     // Show/Hide calendar dialog
+     // -----------------------------------------------
+
+     registry.byId("ShowHideCalendarDialog").on("show", function() {
+       viewInForm(config, dom.byId("ShowHideCalendarForm"));
+     }, true);
+
+     registry.byId("SaveShowHideCalendar").on("click", function() {
+       if( !registry.byId("ShowHideCalendarForm").validate() ) {
+         return;
+       }
+
+       ShowHideCalendarDialog.hide();
+
+       setFromForm(config, dom.byId("ShowHideCalendarForm"));
+
+       configurationStore.putSync(config);
+     });
+
+     // -----------------------------------------------
+     // Show/Hide activity dialog
+     // -----------------------------------------------
+
+     registry.byId("ShowHideActivityDialog").on("show", function() {
+       viewInForm(config, dom.byId("ShowHideActivityForm"));
+     }, true);
+
+     registry.byId("SaveShowHideActivity").on("click", function() {
+       if( !registry.byId("ShowHideActivityForm").validate() ) {
+         return;
+       }
+
+       ShowHideActivityDialog.hide();
+
+       setFromForm(config, dom.byId("ShowHideActivityForm"));
+
+       configurationStore.putSync(config);
+     });
+
+     // -----------------------------------------------
+     // Save file dialog
+     // -----------------------------------------------
+     registry.byId("SaveFile").on("click", function() {
+
+       SaveStores();
+
+
+       var a           = document.createElement("a");
+       var contentType = "data:application/octet-stream,";
+
+       //get svg source.
+       var serializer = new XMLSerializer();
+       var source = serializer.serializeToString(svg);
+
+       var uriContent  = contentType + encodeURIComponent(source);
+
+       a.setAttribute("href", uriContent);
+       a.setAttribute("download", registry.byId("filename").value);
+
+       document.body.appendChild(a);
+       a.click();
+       document.body.removeChild(a);
+
+       SaveFileDialog.hide();
+     }, true);
+
+     // -----------------------------------------------
+     // Calendar range set up dialog
+     // -----------------------------------------------
+     registry.byId("CalendarTimezone").on("focus", function() {
+       if( this.get("value") ) {
+         registry.byId("CalendarStation").set("disabled", false);
+       }          
+     }, true);
+
+     registry.byId("CalendarTimezone").on("change", function() {
+       var item = timezoneStore.getSync(this.get("value"));
+
+       console.log("timezone :" + item); 
+
+       if( item ) {          
+         registry.byId("CalendarStation").set("disabled", false);
+
+         if( !registry.byId("CalendarStation").get("value") ) {
+           var zone = moment.tz.zone(item.name);
+
+           console.log("zone: ");  
+           console.log(zone);  
+
+
+           var dateOutsideDST = moment();
+
+           while( dateOutsideDST.isDST() ) {
+             dateOutsideDST.subtract(1, 'months');
+           }
+
+           var offsetZone = zone.offset(dateOutsideDST.valueOf());         
+           console.log("offsetZone: " + offsetZone);
+
+           registry.byId("CalendarStation").set("value", "");
+           registry.byId("CalendarStation").set("query", {offset: offsetZone});
+         }
+       }
+     }, true);
+
+
+     registry.byId("CalendarStart").on("change", function() {
+       registry.byId("CalendarEnd").constraints.min = date.add(this.get("value"), "day", 1);
+       registry.byId("CalendarEnd").dropDownDefaultValue = this.get("value");     
+
+       registry.byId("TrainingStartDate").constraints.min = this.get("value");
+       registry.byId("TrainingStartDate").dropDownDefaultValue = this.get("value");
+       registry.byId("TripStartDate").constraints.min = this.get("value");
+       registry.byId("TripStartDate").dropDownDefaultValue = this.get("value");
+     }, true);
+
+     registry.byId("CalendarEnd").on("change", function() {
+       var maxDate = date.add(this.get("value"), "day", -1);
+
+       registry.byId("CalendarStart").constraints.max = maxDate;
+
+       registry.byId("TrainingStartDate").constraints.max = maxDate;
+       registry.byId("TripStartDate").constraints.max = maxDate;
+     }, true);
+
+     registry.byId("SetCalendarDialog").on("show", function() {
+       viewInForm(config, dom.byId("SetCalendarForm"));
+     }, true);
+
+     registry.byId("SetCalendar").on("click", function() {
+       if( !registry.byId("SetCalendarForm").validate() ) {
+         return;
+       }
+       RemoveIntroMessage();
+
+       setFromForm(config, dom.byId("SetCalendarForm"));
+
+       var start = moment(config.calendarStart);
+       Xorig = start.unix();
+       var end   = moment(config.calendarEnd); 
+       var range = end.diff(start, "days");
+
+       calendarStore.fetch().then(function (days) {
+         for (var i = days.length - 1; i >= 0; i--) {
+           calendarStore.remove(days[i].pk);
+         }
+       });        
+
+       var dstStatus = start.isDST();
+
+       var x = 0;
+       var width = 0;
+
+       XStartPeriod = 0;
+
+       for(i = 0; i < range; i++) {
+
+         var nextDay = moment(start).add(1, "days");   
+         width = nextDay.diff(start, "hours") * 60;
+
+         calendarStore.addSync({
+           name: start.format().substring(0, 10),
+           relative: i,
+           pk: i+1, // for unknown reason, checkedmultiselect does not work with 0. 
+           x: x, 
+           width: width - 1, 
+         });
+
+         // look for DST
+         if( width != 1440 ) { 
+           var InitialState =  start.isDST();
+
+           while( start.isDST() == InitialState ) {
+             start.add(1, "minutes");
+           }
+
+           var pkY  = yCoordStore.nextPk;
+           var pkHL = highLightStore.nextPk;
+
+           // Add the new entry in the y coord store.
+           yCoordStore.addSync({
+             pk: pkY,
+             fk_hl: pkHL,
+             height: HEIGHT_LINE_HL,
+             y: 0,
+           });
+
+           highLightStore.addSync({
+             message: InitialState ? "End DST" : "Start DST",
+             x: getPositionX(start),
+             pk: pkHL,
+           });
+         }
+
+         x += width;
+         start = nextDay;
+         XStartNextPeriod = x;
+       }
+
+       AdjustCrewmemberBarScaleX(x);
+
+       // enabled some menu items.
+       config.MenuCalendarSetStartPeriods = false;
+       config.MenuBusinessObject          = false;
+       config.MenuGraphOption             = false;
+       config.MenuHighLights              = false;
+       config.MenuFileSaveSVGFile         = false;
+
+       configurationStore.putSync(config);
+
+       SetCalendarDialog.hide();
+     });
+
+
+     // -----------------------------------------------
+     // Manage Set Start Periods dialog
+     // -----------------------------------------------
+     registry.byId("SetStartPeriodsDialog").on("show", function() {
+       var arrChecked = [];
+       calendarStore.forEach(function(item) {
+         if( item.startperiod ) {
+           arrChecked.push(item.pk);
+         }
+       });
+       arrChecked.push(0);          
+       console.log(arrChecked);
+       registry.byId("CalendarStartPeriods").setStore(calendarStoreAdapter, arrChecked);
+     }, true);
+
+     // Redraw start periods
+     registry.byId("SetStartPeriods").on("click", function() {
+       var newStarts = registry.byId("CalendarStartPeriods").value;
+       var ref =  newStarts.length > 0 ? newStarts[0] : 0; 
+
+       var i = 0; 
+
+       calendarStore.forEach(function(item) {
+         item.set("relative", item.pk - ref);
+         if( i < newStarts.length && newStarts[i] == item.pk ) {
+           console.log("SetStartPeriods");
+           console.log(i);
+           console.log(item);
+           item.set("startperiod", true);
+           if( i == 0 ) XStartPeriod = item.x;
+           if( i == 1 ) XStartNextPeriod = item.x;  
+           i+=1;
+         }
+         else {
+           item.set("startperiod", false);
+         }
+         calendarStore.put(item);
+       });
+
+       SetStartPeriodsDialog.hide();
+     });
+
+     // -----------------------------------------------
+     // Create Crewmember dialog
+     // -----------------------------------------------
+     registry.byId("CreateCrewMember").on("click", function() {
+       var pkY  = yCoordStore.nextPk;
+       var pkCM = crewMemberStore.nextPk;
+
+       // Add the new entry in the y coord store.
+       yCoordStore.addSync({
+         pk     : pkY,
+         fk_cm  : pkCM,
+         y      : yCoordStore.nextY,
+         height : MARGIN_TOP_CM + HEIGHT_LINE_CM + MARGIN_BOTTOM_CM,
+       });
+
+
+
+       // Add the new crew in the store. Event will trigger the drawing.
+       crewMemberStore.addSync({
+         name      : registry.byId("CrewMemberName").get("value"),
+         birthdate : registry.byId("CrewMemberBirthDate").get("value").toISOString().substring(0, 10),
+         pk        : pkCM,
+         fk_yc     : pkY,
+         lineCount : 1,
+       });
+
+       CreateCrewMemberDialog.hide();
+     });
+
+
+     // -----------------------------------------------
+     // Create Day Off dialog
+     // -----------------------------------------------
+     registry.byId("CreateDayOff").on("click", function() {
+       if( !registry.byId("CreateDayOffForm").validate() ) {
+         return;
+       }
+
+       CreateDayOffDialog.hide();
+       var crewmemberId = parseInt(registry.byId("DayOffCrewMemberSelect").get("value"));
+       var days = registry.byId("DayOffDatesSelect").value; 
+
+       // to avoid the "at least one item must be selected" message, form data are save in 
+       // local variables before reseting the form.
+       registry.byId("CreateDayOffForm").reset();
+
+       days.forEach(function(day) {
+         var calendarDay = calendarStore.getSync(day); 
+
+         var x     = calendarDay.get("x");
+         var width = calendarDay.get("width") + 1;
+
+         var lineNb = GetActivityLineNumber(crewmemberId, x, width);
+
+         if( lineNb > 1 ) {  
+           alert("DO starting " + calendarDay.get("name") + " is overlapping with another activity."); 
+         }
+         activityStore.addSync({
+           name     : "DO",
+           fullname : crewMemberStore.getSync(crewmemberId).name + " -- " + moment(calendarDay.get("name")).format("YYYY-MM-DD") + " -- DO",
+           type     : "DO",
+           pk       : activityStore.nextPk,
+           fk_cm    : crewmemberId,
+           x        : x,
+           lbtStart : moment(calendarDay.get("name")).format("YYYY-MM-DD HH:mm"),
+           utcStart : moment(calendarDay.get("name")).utc().format("YYYY-MM-DD HH:mm"),
+           utcEnd   : moment(calendarDay.get("name")).add(width, 'm').utc().format("YYYY-MM-DD HH:mm"),
+           width    : width,
+           tp       : 0,
+           resta    : 0,
+           restb    : 0,
+           lineNb   : lineNb,
+         });
+       });
+     });
+
+     // -----------------------------------------------
+     // Create Training dialog
+     // -----------------------------------------------
+     function TryEnableDuration() {
+       if(   registry.byId("TrainingStartTime").get("value") != null 
+           && registry.byId("TrainingStartDate").get("value") != null ) {
+         registry.byId("TrainingDurationHour").readOnly = false;
+         registry.byId("TrainingDurationHour").set("value", 0);
+         registry.byId("TrainingDurationMinute").readOnly = false;
+         registry.byId("TrainingDurationMinute").set("value", 0);
+
+         UpdateEndDateTime("Training");
+       }
+     }
+
+     registry.byId("TrainingStartDate").on("click,mousedown", function() {
+       TryEnableDuration();          
+     });
+
+     registry.byId("TrainingStartDate").on("change", function(value) {
+       TryEnableDuration();          
+     });
+
+     registry.byId("TrainingStartTime").on("click,mousedown", function() {
+       TryEnableDuration();          
+     });
+
+     registry.byId("TrainingStartTime").on("change", function(value) {
+       TryEnableDuration();          
+     });
+
+     registry.byId("TrainingDurationHour").on("click", function() {
+       UpdateEndDateTime("Training");
+     });
+     registry.byId("TrainingDurationHour").on("change", function(val) {
+       UpdateEndDateTime("Training");
+     });
+
+     registry.byId("TrainingDurationMinute").on("click", function() {
+       UpdateEndDateTime("Training");
+     });
+     registry.byId("TrainingDurationMinute").on("change", function(val) {
+       UpdateEndDateTime("Training");
+     });
+
+     registry.byId("CreateTraining").on("click", function() {
+       if( !registry.byId("CreateTrainingForm").validate() ) {
+         return;
+       }
+
+       CreateTrainingDialog.hide();
+
+       var lbtStartTraining = registry.byId("TrainingStartDate").get("value");
+
+       var mydate = moment(registry.byId("TrainingStartDate").get("value"));
+       var mytime = moment(registry.byId("TrainingStartTime").get("value"));
+
+       // rebuild the start date from StartDate and StartTime field values, 
+       mydate.hours(mytime.hours());
+       mydate.minutes(mytime.minutes());
+       var x                = getPositionX(mydate);
+       var startTraining    = moment.tz(mydate, timezoneStore.get(config.timezone).name);
+
+       var width = Number(registry.byId("TrainingDurationHour").get("value")) * 60 + Number(registry.byId("TrainingDurationMinute").get("value"));
+
+       var endTraining = startTraining.clone().add(width, 'm');
+       var crewMemberPk = Number(registry.byId("TrainingCrewMemberSelect").get("value"));
+
+
+       var lineNb = GetActivityLineNumber(crewmemberId, x, width);
+
+       var fullname = crewMemberPk ? crewMemberStore.getSync(crewmemberId).name : "Open time";
+       fullname += " -- " + mydate.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TrainingName").get("value");
+
+       if( lineNb > 1 ) {
+         alert("The new traininig is overlapping with another activity."); 
+       }
+       activityStore.addSync({
+         name     : registry.byId("TrainingName").get("value"),
+         fullname : fullname,
+         type     : "TRN",
+         pk       : activityStore.nextPk,
+         fk_cm    : crewMemberPk,
+         x        : x,
+         lbtStart : mydate.format("YYYY-MM-DD HH:mm"),
+         utcStart : startTraining.utc().format("YYYY-MM-DD HH:mm"),
+         utcEnd   : endTraining.utc().format("YYYY-MM-DD HH:mm"),
+         width    : width,
+         tp       : registry.byId("TrainingTransportationTime").checked ? Number(config.transportationTime) : 0,
+         resta    : Number(registry.byId("TrainingRestAfterH").get("value")) * 60 + Number(registry.byId("TrainingRestAfterM").get("value")),
+         restb    : Number(registry.byId("TrainingRestBeforeH").get("value")) * 60 + Number(registry.byId("TrainingRestBeforeM").get("value")),
+         lineNb   : lineNb,
+       });
+     });
+
+
+     // -----------------------------------------------
+     // Create Highlight dialog
+     // -----------------------------------------------
+
+     registry.byId("CreateHighlight").on("click", function() {
+       if( !registry.byId("CreateHighlightForm").validate() ) {
+         return;
+       }
+
+       CreateHighlightDialog.hide();
+       var label   = registry.byId("HighlightLabel").get("value");
+       var days    = registry.byId("HighlightDatesSelect").value; 
+       var time    = registry.byId("HighlightTime").value; 
+
+       // to avoid the "at least one item must be selected" message, form data are save in 
+       // local variables before reseting the form.
+       registry.byId("CreateHighlightForm").reset();
+
+       if( days.length == 0 ) {
+         calendarStore.forEach(function(item) {
+           days.push(item.pk);
+         }); 
+       }
+
+       var pkY  = yCoordStore.nextPk;
+
+       // Add the new entry in the y coord store.
+       yCoordStore.addSync({
+         pk     : pkY,
+         fk_hl  : highLightStore.nextPk,
+         y      : 0,
+         height : HEIGHT_LINE_HL,
+       });
+
+
+       for(i = 0; i < days.length; i++) {
+         var calDay = calendarStore.getSync(days[i]);
+
+         var when = moment(calDay.get("name"));
+         when.hour(time.getHours());
+         when.minute(time.getMinutes());
+
+         if( when.isValid() ) {   
+           highLightStore.addSync({
+             message : label,
+             x       : getPositionX(when),
+             pk      : highLightStore.nextPk,
+             fk_yc   : pkY,
+           });
+         }
+       }
+     });  
+
+
+     // -----------------------------------------------
+     // Create Distance dialog
+     // -----------------------------------------------
+     function UpdateEvent(val, idEventSelect) {
+       var activity = activityStore.getSync(val);
+       if( activity ) {      
+         var when = registry.byId(idEventSelect);
+
+         when.set("disabled", false);
+         when.getOptions("1").disabled = activity.restb > 0 ? false : true;
+         when.getOptions("2").disabled = activity.tp > 0 ? false : true;
+         when.getOptions("5").disabled = activity.tp > 0 ? false : true;
+         when.getOptions("6").disabled = activity.resta > 0 ? false : true;
+       }
+     }
+
+     registry.byId("DistanceFromSelect").on("change", function(val) {
+       UpdateEvent(val, "DistanceFromEventSelect");
+     });
+     registry.byId("DistanceToSelect").on("change", function(val) {
+       UpdateEvent(val, "DistanceToEventSelect");
+     });
+
+     registry.byId("CreateDistance").on("click", function() {
+       if( !registry.byId("CreateDistanceForm").validate() ) {
+         return;
+       }
+
+       CreateDistanceDialog.hide();
+
+       var from      = registry.byId("DistanceFromSelect").value;
+       var to        = registry.byId("DistanceToSelect").value;
+       var fromEvent = registry.byId("DistanceFromEventSelect").value;
+       var toEvent   = registry.byId("DistanceToEventSelect").value;
+
+       var act1  = activityStore.getSync(from);
+       var act2  = activityStore.getSync(to);
+       var pkY   = yCoordStore.nextPk;
+       var pkDST = distanceStore.nextPk;
+
+       // Add the new entry in the y coord store.
+       yCoordStore.addSync({
+         pk     : pkY,
+         fk_dst : pkDST,
+         y      : Math.min(act1.GetYCoord(), act2.GetYCoord()),
+         height : HEIGHT_LINE_HL,
+       });
+
+       distanceStore.addSync({
+         fk_act1    : from,
+         act1_event : Number(fromEvent),
+         fk_act2    : to,
+         act2_event : Number(toEvent),
+         pk         : pkDST,
+         fk_yc      : pkY,
+       });
+     });  
+
+
+     function TryEnableGrid() {
+       if(   registry.byId("TripStartTime").get("value") != null 
+           && registry.byId("TripStartDate").get("value") != null ) {
+         tripDetailStore.reportTime = config.reportTime;
+         tripDetailStore.releaseTime = config.releaseTime;
+
+         var mydate = moment(registry.byId("TripStartDate").get("value"));
+         var mytime = moment(registry.byId("TripStartTime").get("value"));
+
+         // rebuild the start date from StartDate and StartTime field values, 
+         mydate.hours(mytime.hours());
+         mydate.minutes(mytime.minutes());
+
+         tripDetailStore.startDateTime = mydate;
+
+         if( tripDetailStore.len == 0 ) {
+
+           tripDetailStore.addSync({
+             pk      : 1,
+             order   : 1,
+             type    : "sta",
+             station : config.station,
+           });
+           tripDetailStore.addSync({
+             pk      : 2,
+             order   : 2,
+             type    : "leg",
+             legType : "A",
+             dhour   : 2,
+             dminute : 0,
+           });
+           tripDetailStore.addSync({
+             pk      : 3,
+             order   : 3,
+             type    : "sta",
+             station : config.station,
+           });
+         }
+         // allow to recompute end date time.
+         tripDetailStore.process();
+       }
+     }
+
+
+     registry.byId("TripStartDate").on("click,mousedown", function() {
+       TryEnableGrid();          
+     });
+
+     registry.byId("TripStartDate").on("change", function(value) {
+       TryEnableGrid();          
+     });
+
+     registry.byId("TripStartTime").on("click,mousedown", function() {
+       TryEnableGrid();          
+     });
+
+     registry.byId("TripStartTime").on("change", function(value) {
+       TryEnableGrid();          
+     });
+
+     registry.byId("MenuBusinessObjectCreateActivityTrip").on("click", function() {
+       registry.byId("TripRestBeforeM").set("value", 0);
+       registry.byId("TripRestAfterM").set("value", 0);
+
+       registry.byId("CreateTripDialog").show();
+
+       grid.resize();
+     });
+
+
+     registry.byId("CreateTripDialog").on("hide", function() {
+
+       tripDetailStore.fetch().then(function (items) {
+         for (var i = items.length - 1; i >= 0; i--) {
+           tripDetailStore.remove(items[i].pk);
+         }           
+
+         grid.refresh();
+       });
+     });
+
+     function formatDurationInHoursMinutes(width) {
+       return parseInt(width / 60) + "h" + ("0" + width % 60).slice(-2);
+     }
+
+     function getInPeriod(x, width) {
+       var tafbInPeriod = 0;
+
+       var Xstart = Math.max(x, XStartPeriod);
+       var Xend   = Math.min(x + width, XStartNextPeriod);
+
+       return Math.max(Xend - Xstart, 0);
+     }
+
+
+     registry.byId("CreateTrip").on("click", function() {
+       if( !registry.byId("CreateTripForm").validate() ) {
+         return;
+       }
+
+       CreateTripDialog.hide();
+
+       var mydate = moment(registry.byId("TripStartDate").get("value"));
+       var mytime = moment(registry.byId("TripStartTime").get("value"));
+
+       // rebuild the start date from StartDate and StartTime field values, 
+       mydate.hours(mytime.hours());
+       mydate.minutes(mytime.minutes());
+
+       var x       = getPositionX(mydate);
+       var endTrip = moment(registry.byId("TripEndDate").get("value")); //startTrip.clone().add(width, 'm');
+
+       mytime = moment(registry.byId("TripEndTime").get("value"));
+
+       endTrip.hours(mytime.hours());
+       endTrip.minutes(mytime.minutes());
+
+       var width        = getPositionX(endTrip) - x;
+       var startTrip    = moment.tz(mydate, timezoneStore.get(config.timezone).name);
+       var crewmemberId = Number(registry.byId("TripCrewMemberSelect").get("value"));
+       var lineNb       = GetActivityLineNumber(crewmemberId, x, width);
+
+       if( lineNb > 1 ) {
+         alert("The new trip is overlapping with another activity."); 
+       }
+       // It is IMPORTANT to create detail items before the trip because to draw trip,
+       // we need the details. And because the drawing is linked with the add event, the 
+       // trip must be added after details.
+       // obtain uniq pk for the trip activity.
+       var fk_parent = activityStore.nextPk;
+
+       // to skip to the next uniq id, 
+       activityStore.nextPk +=1;
+
+       var xDetail        = x;
+       var credit         = 0;
+       var block          = 0;
+       var duty           = 0;
+       var creditInPeriod = 0;
+       var blockInPeriod  = 0;
+       var dutyInPeriod   = 0;
+
+
+       tripDetailStore.sort('order').fetch().then(function (items) {
+         var j    = 0;
+         var iLeg = 0;
+         var iLay = 0;
+         var name;
+
+         for (var i = 0; i < items.length ; i++) {
+           var width = Number(items[i].dhour * 60) + Number(items[i].dminute);
+           var inPeriod = getInPeriod(xDetail, width);
+           var type = items[i].type;
+           if( type == "leg" ) {
+             j += 1; 
+             type += items[i].legType;
+             if( items[i].legType == "A" ) {
+               credit         += width;
+               creditInPeriod += inPeriod;
+             }
+             block         += width;
+             blockInPeriod += inPeriod;
+             iLeg          += 1;
+             name = type + iLeg;
+           }
+           else {
+             iLay += 1;
+             name = type + iLay;
+           }
+           if( type != "lay" ) {
+             duty         += width;
+             dutyInPeriod += inPeriod;
+           } 
+
+
+           activityStore.addSync({
+             name      : name,
+             fullname  : name + " -- " + mydate.format("YYYY-MM-DD HH:mm"),
+             type      : type.toUpperCase(),
+             pk        : activityStore.nextPk,
+             fk_parent : fk_parent,
+             fk_cm     : crewmemberId,
+             x         : xDetail,
+             width     : width,
+             station   : items[i].station,
+           });
+           xDetail += width;
+         }           
+       });
+
+       var tmp = activityStore.nextPk;     
+
+       var fullname = crewmemberId ? crewMemberStore.getSync(crewmemberId).name : "Open time";
+
+       fullname += " -- " + mydate.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TripName").get("value"),  
+
+       activityStore.addSync({
+         name           : registry.byId("TripName").get("value"),
+         fullname       : crewMemberStore.getSync(crewmemberId).name + " -- " + mydate.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TripName").get("value"),
+         type           : "TRP",
+         pk             : fk_parent,
+         fk_cm          : crewmemberId,
+         x              : x,
+         lbtStart       : mydate.format("YYYY-MM-DD HH:mm"),
+         utcStart       : startTrip.utc().format("YYYY-MM-DD HH:mm"),
+         utcEnd         : endTrip.utc().format("YYYY-MM-DD HH:mm"),
+         width          : width,
+         tp             : registry.byId("TripTransportationTime").checked ? Number(config.transportationTime) : 0,
+         resta          : Number(registry.byId("TripRestAfterH").get("value")) * 60 + Number(registry.byId("TripRestAfterM").get("value")),
+         restb          : Number(registry.byId("TripRestBeforeH").get("value")) * 60 + Number(registry.byId("TripRestBeforeM").get("value")),
+         block          : block,
+         credit         : credit,
+         duty           : duty,
+         tafbInPeriod   : getInPeriod(x, width),
+         blockInPeriod  : blockInPeriod,
+         creditInPeriod : creditInPeriod,
+         dutyInPeriod   : dutyInPeriod,
+         lineNb         : lineNb,
+       });
+       console.log(activityStore);
+       activityStore.nextPk = tmp;          
+     });
+
+
+
+     // ==============================================
+     // FORM
+     // ==============================================
+     function viewInForm(object, form) {
+       for(var i = 0; i < form.elements.length; i++ ) {
+         if(form.elements[i].name) {
+           var element = form.elements[i];
+           var name = element.name;
+           var value = object[name];
+
+           console.log(name);
+           console.log(element.type);
+           console.log(element.checked);
+           console.log(object[name]);
+
+           if( element.type == "checkbox" ) {
+             console.log('on checked');
+             console.log(registry.byId(name));
+             registry.byId(name).set("checked", value);
+           }
+           else {
+             console.log('on value');
+             console.log(registry.byId(name));
+             if( registry.byId(name) ) {
+               registry.byId(name).set("value", value);
+             }
+             else  {
+               var input = query("input[name=" + name + "]", form)[0];
+               if(input) {
+                 console.log(name + "---" + value);
+                 // here is a little hack. dijit dialog create an hidden input with the right name.
+                 // but the one used to display is the sibling before. So I reference the parent and
+                 // pick the first child with the right class.
+                 var dijitInputInner  = query(".dijitInputInner", input.parentNode)[0];
+                 var dijitPlaceHolder = query(".dijitPlaceHolder", input.parentNode)[0];
+
+                 console.log(dijitInputInner);
+
+                 if( dijitInputInner ) dijitInputInner.value = value;
+                 if( dijitPlaceHolder ) dijitPlaceHolder.style.display = "none";  
+               }
+             }
+           }
+         }
+       }
+     }
+
+     function setFromForm(object, form) {
+       for(var i = 0; i < form.elements.length; i++ ) {
+         if(form.elements[i].name) {
+           // console.log(form.elements[i].name);
+           // console.log(form.elements[i].value);
+           // console.log(form.elements[i].type);
+           // console.log(form.elements[i].checked);
+           object[form.elements[i].name] =form.elements[i].type == "checkbox" ?  form.elements[i].checked : form.elements[i].value;
+         }
+       }
+     }
 
 
 
@@ -3375,206 +3356,203 @@ console.log(activityStore);
     /// CONFIGURATION 
     /// ====>
 
-    var enablePan = 1; // 1 or 0: enable or disable panning (default enabled)
-    var enableZoom = 1; // 1 or 0: enable or disable zooming (default enabled)
-    var enableDrag = 0; // 1 or 0: enable or disable dragging (default disabled)
+     var enablePan = 1; // 1 or 0: enable or disable panning (default enabled)
+     var enableZoom = 1; // 1 or 0: enable or disable zooming (default enabled)
+     var enableDrag = 0; // 1 or 0: enable or disable dragging (default disabled)
 
-    /// <====
-    /// END OF CONFIGURATION 
+     /// <====
+     /// END OF CONFIGURATION 
 
-    var root = dom.byId("graph");
+     var root = dom.byId("graph");
 
-    var state = "none", svgRoot, stateTarget, stateOrigin, stateTf;
+     var state = "none", svgRoot, stateTarget, stateOrigin, stateTf;
 
-    /**
-     * Retrieves the root element for SVG manipulation. The element is then cached into the svgRoot global variable.
-     */
-    function getRoot(root) {
-      if(typeof(svgRoot) == "undefined") {
-        var g = null;
+     /**
+      * Retrieves the root element for SVG manipulation. The element is then cached into the svgRoot global variable.
+      */
+     function getRoot(root) {
+       if(typeof(svgRoot) == "undefined") {
+         var g = null;
 
-        g = dom.byId("viewport");
+         g = dom.byId("viewport");
 
-        if(g == null)
-          alert("Unable to obtain SVG root element");
+         if(g == null)
+           alert("Unable to obtain SVG root element");
 
-        setCTM(g, g.getCTM());
+         setCTM(g, g.getCTM());
 
-        g.removeAttribute("viewBox");
+         g.removeAttribute("viewBox");
 
-        svgRoot = g;
-      }
+         svgRoot = g;
+       }
 
-      return svgRoot;
-    }
+       return svgRoot;
+     }
 
-    /**
-     * Instance an SVGPoint object with given event coordinates.
-     */
-    function getEventPoint(evt) {
-      var p = root.createSVGPoint();
+     /**
+      * Instance an SVGPoint object with given event coordinates.
+      */
+     function getEventPoint(evt) {
+       var p = root.createSVGPoint();
 
-      p.x = evt.clientX;
-      p.y = evt.clientY;
+       p.x = evt.clientX;
+       p.y = evt.clientY;
 
-      return p;
-    }
+       return p;
+     }
 
-    /**
-     * Sets the current transform matrix of an element.
-     */
-    function setCTM(element, matrix) {
-      var s = "matrix(" + matrix.a + "," + matrix.b + "," + matrix.c + "," + matrix.d + "," + matrix.e + "," + matrix.f + ")";
+     /**
+      * Sets the current transform matrix of an element.
+      */
+     function setCTM(element, matrix) {
+       var s = "matrix(" + matrix.a + "," + matrix.b + "," + matrix.c + "," + matrix.d + "," + matrix.e + "," + matrix.f + ")";
 
-      element.setAttribute("transform", s);
-    }
+       element.setAttribute("transform", s);
+     }
 
-    /**
-     * Dumps a matrix to a string (useful for debug).
-     */
-    function dumpMatrix(matrix) {
-      var s = "[ " + matrix.a + ", " + matrix.c + ", " + matrix.e + "\n  " + matrix.b + ", " + matrix.d + ", " + matrix.f + "\n  0, 0, 1 ]";
+     /**
+      * Dumps a matrix to a string (useful for debug).
+      */
+     function dumpMatrix(matrix) {
+       var s = "[ " + matrix.a + ", " + matrix.c + ", " + matrix.e + "\n  " + matrix.b + ", " + matrix.d + ", " + matrix.f + "\n  0, 0, 1 ]";
 
-      return s;
-    }
+       return s;
+     }
 
-    /**
-     * Sets attributes of an element.
-     */
-    function setAttributes(element, attributes) {
-      for (var i in attributes)
-        element.setAttributeNS(null, i, attributes[i]);
-    }
+     /**
+      * Sets attributes of an element.
+      */
+     function setAttributes(element, attributes) {
+       for (var i in attributes)
+         element.setAttributeNS(null, i, attributes[i]);
+     }
 
-    /**
-     * Handle mouse wheel event.
-     */
-    on(root, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
-      if(!enableZoom)
-        return;
+     /**
+      * Handle mouse wheel event.
+      */
+     on(root, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
+       if(!enableZoom)
+         return;
 
-      if(evt.preventDefault)
-        evt.preventDefault();
+       if(evt.preventDefault)
+         evt.preventDefault();
 
-      evt.returnValue = false;
+       evt.returnValue = false;
 
-      var svgDoc = evt.target.ownerDocument;
+       var svgDoc = evt.target.ownerDocument;
+       var delta;
 
-      var delta;
+       if(evt.wheelDelta)
+         delta = evt.wheelDelta / 3600; // Chrome/Safari
+       else
+         delta = evt.detail / -90; // Mozilla
 
-      if(evt.wheelDelta)
-        delta = evt.wheelDelta / 3600; // Chrome/Safari
-      else
-        delta = evt.detail / -90; // Mozilla
+       var z = 1 + delta; // Zoom factor: 0.9/1.1
+       var g = getRoot(svgDoc);
+       var p = getEventPoint(evt);
 
-      var z = 1 + delta; // Zoom factor: 0.9/1.1
+       p = p.matrixTransform(g.getCTM().inverse());
 
-      var g = getRoot(svgDoc);
+       // Compute new scale matrix in current mouse position
+       var k = root.createSVGMatrix().translate(p.x, p.y).scale(z).translate(-p.x, -p.y);
 
-      var p = getEventPoint(evt);
+       setCTM(g, g.getCTM().multiply(k));
 
-      p = p.matrixTransform(g.getCTM().inverse());
+       if(typeof(stateTf) == "undefined")
+         stateTf = g.getCTM().inverse();
 
-      // Compute new scale matrix in current mouse position
-      var k = root.createSVGMatrix().translate(p.x, p.y).scale(z).translate(-p.x, -p.y);
+       stateTf = stateTf.multiply(k.inverse());
+     });
 
-      setCTM(g, g.getCTM().multiply(k));
+     /**
+      * Handle mouse move event.
+      */
+     on(root, touch.move, function(evt) {
+       if( evt.preventDefault ) {
+         evt.preventDefault();
+       }
 
-      if(typeof(stateTf) == "undefined")
-        stateTf = g.getCTM().inverse();
+       evt.returnValue = false;
 
-      stateTf = stateTf.multiply(k.inverse());
-    });
+       var svgDoc = evt.target.ownerDocument;
 
-    /**
-     * Handle mouse move event.
-     */
-    on(root, touch.move, function(evt) {
-      if( evt.preventDefault ) {
-        evt.preventDefault();
-      }
+       var g = getRoot(svgDoc);
 
-      evt.returnValue = false;
+       // This is the section added to be able to display coordinates.
+       var pt = getEventPoint(evt).matrixTransform(g.getCTM().inverse());
+       var coordinateX = document.getElementById("coordinateX");
+       var coordinateY = document.getElementById("coordinateY");
 
-      var svgDoc = evt.target.ownerDocument;
+       coordinateX.firstChild.nodeValue = "X: " + Math.floor(pt.x);
+       coordinateY.firstChild.nodeValue = "Y: " + Math.floor(pt.y);
 
-      var g = getRoot(svgDoc);
+       if(state == "pan" && enablePan) {
+         // Pan mode
+         var p = getEventPoint(evt).matrixTransform(stateTf);
 
-      // This is the section added to be able to display coordinates.
-      var pt = getEventPoint(evt).matrixTransform(g.getCTM().inverse());
-      var coordinateX = document.getElementById("coordinateX");
-      var coordinateY = document.getElementById("coordinateY");
-      coordinateX.firstChild.nodeValue = "X: " + Math.floor(pt.x);
-      coordinateY.firstChild.nodeValue = "Y: " + Math.floor(pt.y);
+         setCTM(g, stateTf.inverse().translate(p.x - stateOrigin.x, p.y - stateOrigin.y));
+       } else if(state == "drag" && enableDrag) {
+         // Drag mode
+         var p = getEventPoint(evt).matrixTransform(g.getCTM().inverse());
 
-      if(state == "pan" && enablePan) {
-        // Pan mode
-        var p = getEventPoint(evt).matrixTransform(stateTf);
+         setCTM(stateTarget, root.createSVGMatrix().translate(p.x - stateOrigin.x, p.y - stateOrigin.y).multiply(g.getCTM().inverse()).multiply(stateTarget.getCTM()));
 
-        setCTM(g, stateTf.inverse().translate(p.x - stateOrigin.x, p.y - stateOrigin.y));
-      } else if(state == "drag" && enableDrag) {
-        // Drag mode
-        var p = getEventPoint(evt).matrixTransform(g.getCTM().inverse());
+         stateOrigin = p;
+       }
+     });
 
-        setCTM(stateTarget, root.createSVGMatrix().translate(p.x - stateOrigin.x, p.y - stateOrigin.y).multiply(g.getCTM().inverse()).multiply(stateTarget.getCTM()));
+     /**
+      * Handle click event.
+      */
+     on(root, touch.press, function(evt) {
+       if( evt.preventDefault ) {
+         evt.preventDefault();
+       }
 
-        stateOrigin = p;
-      }
-    });
+       evt.returnValue = false;
 
-    /**
-     * Handle click event.
-     */
-    on(root, touch.press, function(evt) {
-      if( evt.preventDefault ) {
-        evt.preventDefault();
-      }
+       var svgDoc = evt.target.ownerDocument;
+       var g = getRoot(svgDoc);
 
-      evt.returnValue = false;
+       if(
+           evt.target.tagName == "svg" 
+           || !enableDrag // Pan anyway when drag is disabled and the user clicked on an element 
+         ) {
+         // Pan mode
+         state = "pan";
 
-      var svgDoc = evt.target.ownerDocument;
+         stateTf = g.getCTM().inverse();
 
-      var g = getRoot(svgDoc);
+         stateOrigin = getEventPoint(evt).matrixTransform(stateTf);
+       } else {
+         // Drag mode
+         state = "drag";
 
-      if(
-          evt.target.tagName == "svg" 
-          || !enableDrag // Pan anyway when drag is disabled and the user clicked on an element 
-        ) {
-        // Pan mode
-        state = "pan";
+         stateTarget = evt.target;
 
-        stateTf = g.getCTM().inverse();
+         stateTf = g.getCTM().inverse();
 
-        stateOrigin = getEventPoint(evt).matrixTransform(stateTf);
-      } else {
-        // Drag mode
-        state = "drag";
+         stateOrigin = getEventPoint(evt).matrixTransform(stateTf);
+       }
+     });
 
-        stateTarget = evt.target;
+     /**
+      * Handle mouse button release event.
+      */
+     on(root, touch.release, function(evt) {
+       if( evt.preventDefault ) { 
+         evt.preventDefault();
+       }
 
-        stateTf = g.getCTM().inverse();
+       evt.returnValue = false;
 
-        stateOrigin = getEventPoint(evt).matrixTransform(stateTf);
-      }
-    });
+       var svgDoc = evt.target.ownerDocument;
 
-    /**
-     * Handle mouse button release event.
-     */
-    on(root, touch.release, function(evt) {
-      if( evt.preventDefault ) { 
-        evt.preventDefault();
-      }
-
-      evt.returnValue = false;
-
-      var svgDoc = evt.target.ownerDocument;
-
-      if( state == "pan" || state == "drag" ) {
-        // Quit pan mode
-        state = "";
-      }
-    });
+       if( state == "pan" || state == "drag" ) {
+         // Quit pan mode
+         state = "";
+       }
+     });
 
 });
 
@@ -3583,80 +3561,78 @@ console.log(activityStore);
 </head>
 <body class="claro">
   <div id="loader">
-    <div id="loaderInner" style="direction:ltr;">Loading libraries ...
-      <!-- <div id="basicStandby1" data-dojo-type="dojox/widget/Standby" data-dojo-props="target:'basic'"> --> 
-    </div> 
+    <div id="loaderInner" style="direction:ltr;">Loading libraries ...</div> 
   </div> 
   <div id="content" style="display:none;">
-  <div data-dojo-type="dijit/MenuBar" id="navMenu" style="margin-bottom: 8px;">
-    <div id="MenuFile" data-dojo-type="dijit/PopupMenuBarItem">
-      <span>File</span>
-      <div data-dojo-type="dijit/DropDownMenu">
-        <div id="MenuFileLoadSVGFile"        data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {LoadSvgDialog.show();}">Load SVG file</div>
-        <div id="MenuFileLoadXMLStationFile" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {LoadStationDialog.show();}">Load XML station file</div>
-        <div id="MenuFileSaveSVGFile"        data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {SaveFileDialog.show();}">Save SVG file</div>
+    <div data-dojo-type="dijit/MenuBar" id="navMenu" style="margin-bottom: 8px;">
+      <div id="MenuFile" data-dojo-type="dijit/PopupMenuBarItem">
+        <span>File</span>
+        <div data-dojo-type="dijit/DropDownMenu">
+          <div id="MenuFileLoadSVGFile"        data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {LoadSvgDialog.show();}">Load SVG file</div>
+          <div id="MenuFileLoadXMLStationFile" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {LoadStationDialog.show();}">Load XML station file</div>
+          <div id="MenuFileSaveSVGFile"        data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {SaveFileDialog.show();}">Save SVG file</div>
+        </div>
       </div>
-    </div>
-    <div id="MenuCalendar" data-dojo-type="dijit/PopupMenuBarItem">
-      <span>Calendar</span>
-      <div data-dojo-type="dijit/DropDownMenu">
-        <div id="MenuCalendarSetStartEnd"     data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {SetCalendarDialog.show();}">Set [Start, End[</div>
-        <div id="MenuCalendarSetStartPeriods" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {SetStartPeriodsDialog.show();}">Set start period(s)</div>
+      <div id="MenuCalendar" data-dojo-type="dijit/PopupMenuBarItem">
+        <span>Calendar</span>
+        <div data-dojo-type="dijit/DropDownMenu">
+          <div id="MenuCalendarSetStartEnd"     data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {SetCalendarDialog.show();}">Set [Start, End[</div>
+          <div id="MenuCalendarSetStartPeriods" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {SetStartPeriodsDialog.show();}">Set start period(s)</div>
+        </div>
       </div>
-    </div>
-    <div id="MenuBusinessObject" data-dojo-type="dijit/PopupMenuBarItem">
-      <span>Business objects</span>
-      <div data-dojo-type="dijit/DropDownMenu">
-        <div id="MenuBusinessObjectShowConstants"    data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {ShowConstantsDialog.show();}">Show constants</div>
-        <div id="MenuBusinessObjectCreateCrewMember" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateCrewMemberDialog.show();}">Create crewmember</div>
-        <div data-dojo-type="dijit/PopupMenuItem">
-          <span>Create activity</span>
-          <div id="MenuBusinessObjectCreateActivity" data-dojo-type="dijit/DropDownMenu">
-            <div id="MenuBusinessObjectCreateActivityDayOff"        data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateDayOffDialog.show();}">Day off</div>
-            <div id="MenuBusinessObjectCreateActivityTraining"      data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateTrainingDialog.show();}">Training</div>
-            <div id="MenuBusinessObjectCreateActivityTrip"          data-dojo-type="dijit/MenuItem" data-dojo-props="">Trip</div>
-            <div id="MenuBusinessObjectCreateActivityOtherActivity" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {alert('not yet available');}">Other activity</div>
+      <div id="MenuBusinessObject" data-dojo-type="dijit/PopupMenuBarItem">
+        <span>Business objects</span>
+        <div data-dojo-type="dijit/DropDownMenu">
+          <div id="MenuBusinessObjectShowConstants"    data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {ShowConstantsDialog.show();}">Show constants</div>
+          <div id="MenuBusinessObjectCreateCrewMember" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateCrewMemberDialog.show();}">Create crewmember</div>
+          <div data-dojo-type="dijit/PopupMenuItem">
+            <span>Create activity</span>
+            <div id="MenuBusinessObjectCreateActivity" data-dojo-type="dijit/DropDownMenu">
+              <div id="MenuBusinessObjectCreateActivityDayOff"        data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateDayOffDialog.show();}">Day off</div>
+              <div id="MenuBusinessObjectCreateActivityTraining"      data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateTrainingDialog.show();}">Training</div>
+              <div id="MenuBusinessObjectCreateActivityTrip"          data-dojo-type="dijit/MenuItem" data-dojo-props="">Trip</div>
+              <div id="MenuBusinessObjectCreateActivityOtherActivity" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {alert('not yet available');}">Other activity</div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-    <div id="MenuGraphOption" data-dojo-type="dijit/PopupMenuBarItem">
-      <span>Graph options</span>
-      <div data-dojo-type="dijit/DropDownMenu">
-        <div data-dojo-type="dijit/PopupMenuItem">
-          <span>Graph factor compression on X axis</span>
-          <select data-dojo-type="dijit/form/Select" name="XGraphCompression" id="XGraphCompression" style="width: 3em;">
-            <option value=".25">0.25</option>
-            <option value=".5">0.5</option>
-            <option value="1" selected="selected">1</option>
-            <option value="2">2</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
-            <option value="6">6</option>
-            <option value="8">8</option>
-            <option value="10">10</option>
-          </select>
+      <div id="MenuGraphOption" data-dojo-type="dijit/PopupMenuBarItem">
+        <span>Graph options</span>
+        <div data-dojo-type="dijit/DropDownMenu">
+          <div data-dojo-type="dijit/PopupMenuItem">
+            <span>Graph factor compression on X axis</span>
+            <select data-dojo-type="dijit/form/Select" name="XGraphCompression" id="XGraphCompression" style="width: 3em;">
+              <option value=".25">0.25</option>
+              <option value=".5">0.5</option>
+              <option value="1" selected="selected">1</option>
+              <option value="2">2</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+              <option value="8">8</option>
+              <option value="10">10</option>
+            </select>
+          </div>
+          <div id="MenuGraphOptionCalendar" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {ShowHideCalendarDialog.show();}">Calendar Date/Hours</div>
+          <div id="MenuGraphOptionActivity" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {ShowHideActivityDialog.show();}">Activity details</div>
         </div>
-        <div id="MenuGraphOptionCalendar" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {ShowHideCalendarDialog.show();}">Calendar Date/Hours</div>
-        <div id="MenuGraphOptionActivity" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {ShowHideActivityDialog.show();}">Activity details</div>
       </div>
-    </div>
-    <div id="MenuHighLights" data-dojo-type="dijit/PopupMenuBarItem">
-      <span>Highlights</span>
-      <div data-dojo-type="dijit/DropDownMenu">
-        <div id="MenuHighLightsSpecificDateTime" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateHighlightDialog.show();}">Specific datetime(s)</div>
-        <div id="MenuHighLightsDistance"         data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateDistanceDialog.show();}">Distance</div>
-        <div id="MenuHighLightsWindow"           data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {alert('not yet available');}">Window</div>
+      <div id="MenuHighLights" data-dojo-type="dijit/PopupMenuBarItem">
+        <span>Highlights</span>
+        <div data-dojo-type="dijit/DropDownMenu">
+          <div id="MenuHighLightsSpecificDateTime" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateHighlightDialog.show();}">Specific datetime(s)</div>
+          <div id="MenuHighLightsDistance"         data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateDistanceDialog.show();}">Distance</div>
+          <div id="MenuHighLightsWindow"           data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {alert('not yet available');}">Window</div>
+        </div>
       </div>
+
     </div>
 
-  </div>
 
-
-  <!-- SVG code -->
-  <div id="gantt">
-    <svg id="graph" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" height="100%" width="100%">
-      <style>
+    <!-- SVG code -->
+    <div id="gantt">
+      <svg id="graph" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" height="100%" width="100%">
+        <style>
 .day_bar {
   fill-opacity: 0.2;
 }
@@ -3717,7 +3693,7 @@ console.log(activityStore);
   font-size: 9px;
   fill: black;
 }
-  
+
 .start_hour {
   text-anchor: start; 
 }
@@ -3775,509 +3751,509 @@ console.log(activityStore);
 .REST {
   fill: purple;
 }
-      </style>
+        </style>
 
-      <g id="viewport" transform="matrix(0.75, 0, 0, 0.75, 160, 110)">
+        <g id="viewport" transform="matrix(0.75, 0, 0, 0.75, 160, 110)">
         <!--
-        ====================================================================================
-        CALENDAR
-        ====================================================================================
+          ====================================================================================
+          CALENDAR
+          ====================================================================================
         -->
         <g id="calendar">
-          <g id="intro">
-            <image x="220" y="20" width="140" height="195" xlink:href="https://i.ebayimg.com/00/s/MzkwWDI4MA==/z/YKQAAOSwYqxXi7cf/$_86.JPG" />
+        <g id="intro">
+        <image x="220" y="20" width="140" height="195" xlink:href="https://i.ebayimg.com/00/s/MzkwWDI4MA==/z/YKQAAOSwYqxXi7cf/$_86.JPG" />
 
-            <text x="400" y="50"  style="fill:black;font-size:40px;">Bob, the "problem" builder v0.1</text>
-            <text x="400" y="90"  style="fill:black;font-size:20px;">To start, please do one of: </text>
-            <text x="420" y="120" style="fill:black;font-size:20px;">- Use File menu to load an XML station file and then Calendar menu to set a period or</text>
-            <text x="420" y="150" style="fill:black;font-size:20px;">- Use File menu to load a SVG file.</text>
-          </g>
-          <g id="calendar_bar" transform="scale(1,1)"></g>
+        <text x="400" y="50"  style="fill:black;font-size:40px;">Bob, the "problem" builder v0.1</text>
+        <text x="400" y="90"  style="fill:black;font-size:20px;">To start, please do one of: </text>
+        <text x="420" y="120" style="fill:black;font-size:20px;">- Use File menu to load an XML station file and then Calendar menu to set a period or</text>
+        <text x="420" y="150" style="fill:black;font-size:20px;">- Use File menu to load a SVG file.</text>
+        </g>
+        <g id="calendar_bar" transform="scale(1,1)"></g>
         </g>
 
         <!--
-        ====================================================================================
-        CREWMEMBERS
-        ====================================================================================
+          ====================================================================================
+          CREWMEMBERS
+          ====================================================================================
         -->
         <g id="crewmembers">
-          <g id="crewmember_bar" transform="scale(1,1)"></g>
+        <g id="crewmember_bar" transform="scale(1,1)"></g>
         </g>
 
         <!--
-        ====================================================================================
-        OPENTIME
-        ====================================================================================
+          ====================================================================================
+          OPENTIME
+          ====================================================================================
         -->
         <g id="opentime"></g>
-      </g>
+        </g>
 
-      <!--
-      ====================================================================================
-      COORDINATES
-      ====================================================================================
-      -->
-      <g id="coordinate">
+        <!--
+          ====================================================================================
+          COORDINATES
+          ====================================================================================
+        -->
+        <g id="coordinate">
         <text x="10" y="20" id="coordinateX" style="position:fixed;"> </text> <!-- the white space is mandatatory. -->
         <text x="10" y="40" id="coordinateY" style="position:fixed;"> </text>
-      </g>
+        </g>
 
-      <!--
-      ====================================================================================
-      DSTORE
-      ====================================================================================
-      -->
-       <!-- Those stores are managed automatically by the graph editor. -->
-       <g id="ConfigurationStore"></g>
-       <g id="CalendarStore"></g>
-       <g id="YCoordStore"></g>
-       <g id="HighLightStore"></g>
-       <g id="DistanceStore"></g>
-       <g id="CrewMemberStore"></g>
-       <g id="ActivityStore"></g>
-       <g id="StationStore"></g>
-    </svg>
-  </div>
-  
-  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateTrainingDialog" title="Create training" style="display: none;" data-dojo-props="onHide: function() {CreateTrainingForm.reset();}" >
-    <div data-dojo-type="dijit/form/Form" id="CreateTrainingForm" data-dojo-id="CreateTrainingForm" encType="multipart/form-data" action="" method="">
+        <!--
+          ====================================================================================
+          DSTORE
+          ====================================================================================
+        -->
+        <!-- Those stores are managed automatically by the graph editor. -->
+        <g id="ConfigurationStore"></g>
+        <g id="CalendarStore"></g>
+        <g id="YCoordStore"></g>
+        <g id="HighLightStore"></g>
+        <g id="DistanceStore"></g>
+        <g id="CrewMemberStore"></g>
+        <g id="ActivityStore"></g>
+        <g id="StationStore"></g>
+      </svg>
+    </div>
+
+    <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateTrainingDialog" title="Create training" style="display: none;" data-dojo-props="onHide: function() {CreateTrainingForm.reset();}" >
+      <div data-dojo-type="dijit/form/Form" id="CreateTrainingForm" data-dojo-id="CreateTrainingForm" encType="multipart/form-data" action="" method="">
+        <table class="dijitDialogPaneContentArea">
+          <tr>
+            <td><label for="name">Name</label></td>
+            <td><input data-dojo-type="dijit/form/TextBox" name="name" id="TrainingName" required="true"></td>
+          </tr>
+          <tr>
+            <td><label for="TrnCm">Crew member</label></td>
+            <td><select data-dojo-type="dijit/form/FilteringSelect" name="TrnCm" id="TrainingCrewMemberSelect" required="false"></td>
+          </tr>
+          <tr>
+            <td><label for="transportationtime">Transportation time apply</label></td>
+            <td><input data-dojo-type="dijit/form/CheckBox" name="transportationtime" id="TrainingTransportationTime" value="true" required="true"></td>
+          </tr>
+          <tr>
+            <td><label for="restbefore">Rest before</label></td>
+            <td>
+              <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="restbefore" id="TrainingRestBeforeH" value="0" data-dojo-props="" required="true">h&nbsp;
+              <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="restbefore" id="TrainingRestBeforeM" value="0" data-dojo-props="" required="true">m
+            </td>
+          </tr>
+          <tr>
+            <td><label for="start">Start date time</label></td>
+            <td class="datetime">
+              <input id="TrainingStartDate" name="start" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"/>
+              <input id="TrainingStartTime" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'"/>
+            </td>
+          </tr>
+          <tr>
+            <td><label for="duration">Duration</label></td>
+            <td>
+              <input id="TrainingDurationHour"   class="durationHour" data-dojo-type="dijit/form/ComboBox" name="duration" data-dojo-props="placeHolder:'0'" required="true" readonly="true" />h&nbsp;
+              <input id="TrainingDurationMinute" class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="duration" data-dojo-props="placeHolder:'0'" required="true" readonly="true" />m
+            </td>
+          </tr>
+          <tr>
+            <td><label for="end">End date time</label></td>
+            <td class="datetime">
+              <input id="TrainingEndDate" name="start" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'" readonly="true" disabled="true" />
+              <input id="TrainingEndTime" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'" readonly="true" disabled="true" />
+            </td>
+          </tr>
+          <tr>
+            <td><label for="restafter">Rest after</label></td>
+            <td>
+              <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="restafter" id="TrainingRestAfterH" value="0" data-dojo-props="" required="true">h&nbsp;
+              <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="restafter" id="TrainingRestAfterM" value="0" data-dojo-props="" required="true">m
+            </td>
+          </tr>
+        </table>
+
+        <div class="dijitDialogPaneActionBar">
+          <button data-dojo-type="dijit/form/Button" type="button" id="CreateTraining">Create</button>
+        </div>
+      </div>
+    </div>
+
+
+
+    <div data-dojo-type="dijit/Dialog" id="ShowHideActivityDialog" data-dojo-id="ShowHideActivityDialog" title="Show/hide activity details" style="display: none;">
+      <div data-dojo-type="dijit/form/Form" id="ShowHideActivityForm" encType="multipart/form-data" action="" method="">
+        <table class="dijitDialogPaneContentArea">
+          <tr>
+            <td><label for="SHActivityHours">Show activity hour label</label></td>
+            <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHActivityHours" id="SHActivityHours" checked></td>
+          </tr>
+          <tr>
+            <td><label for="SHActivityDetails">Show activity details (leg/layover)</label></td>
+            <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHActivityDetails" id="SHActivityDetails" checked></td>
+          </tr>
+          <tr>
+            <td><label for="SHActivityDetailHours">Show activity detail hours</label></td>
+            <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHActivityDetailHours" id="SHActivityDetailHours"></td>
+          </tr>
+          <tr>
+            <td><label for="SHActivityDetailStations">Show activity detail stations</label></td>
+            <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHActivityDetailStations" id="SHActivityDetailStations"></td>
+          </tr>
+        </table>
+
+        <div class="dijitDialogPaneActionBar">
+          <button data-dojo-type="dijit/form/Button" type="button" id="SaveShowHideActivity">Close</button>
+        </div>
+      </div>
+    </div>
+
+
+    <div data-dojo-type="dijit/Dialog" id="ShowHideCalendarDialog" data-dojo-id="ShowHideCalendarDialog" title="Show/hide Calendar items" style="display: none;">
+      <div data-dojo-type="dijit/form/Form" id="ShowHideCalendarForm" encType="multipart/form-data" action="" method="">
+        <table class="dijitDialogPaneContentArea">
+          <tr>
+            <td><label for="SHCoordinates">Show coordinates X and Y</label></td>
+            <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCoordinates" id="SHCoordinates" checked></td>
+          </tr>
+          <tr>
+            <td><label for="SHCalendarHours">Show calendar hour label</label></td>
+            <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarHours" id="SHCalendarHours" checked></td>
+          </tr>
+          <tr>
+            <td><label for="SHCalendarHourBars">Show calendar hour bars</label></td>
+            <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarHourBars" id="SHCalendarHourBars" checked></td>
+          </tr>
+          <tr>
+            <td><label for="SHCalendarDayX">Show calendar Day X</label></td>
+            <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarDayX" id="SHCalendarDayX"></td>
+          </tr>
+          <tr>
+            <td><label for="SHCalendarDayYYYYMMDD">Show calendar day YYYY-MM-DD</label></td>
+            <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarDayYYYYMMDD" id="SHCalendarDayYYYYMMDD"></td>
+          </tr>
+          <tr>
+            <td><label for="SHCalendarDayBars">Show calendar day bars</label></td>
+            <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarDayBars" id="SHCalendarDayBars"></td>
+          </tr>
+        </table>
+
+        <div class="dijitDialogPaneActionBar">
+          <button data-dojo-type="dijit/form/Button" type="button" id="SaveShowHideCalendar">Close</button>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- TODO: create a tpl, since LoadSvgDialog and LoadStationDialog look the same -->
+    <div data-dojo-type="dijit/Dialog" data-dojo-id="LoadSvgDialog" title="Load SVG file" style="display: none; width: 300px;">
+      <div data-dojo-type="dijit/form/Form" id="LoadSvgForm" data-dojo-id="LoadSvgForm" encType="multipart/form-data" action="" method="">
+        <table class="dijitDialogPaneContentArea">
+          <tr>
+            <td>
+              <input name="uploadedfile" multiple="false" type="file" id="uploader2" data-dojo-type="dojox/form/Uploader" data-dojo-props="label: 'Select an SVG File'"/> 
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <div id="files2" data-dojo-type="dojox/form/uploader/FileList" uploaderId="uploader2"></div>
+            </td>
+          </tr>
+        </table>
+
+        <div class="dijitDialogPaneActionBar">
+          <button data-dojo-type="dijit/form/Button" type="button" id="LoadSvg">Load file</button>
+        </div>
+      </div>
+    </div>
+
+
+    <div data-dojo-type="dijit/Dialog" data-dojo-id="LoadStationDialog" title="Load XML station file" style="display: none; width: 300px;">
+      <div data-dojo-type="dijit/form/Form" id="LoadStationForm" data-dojo-id="LoadStationForm" encType="multipart/form-data" action="" method="">
+        <table class="dijitDialogPaneContentArea">
+          <tr>
+            <td>
+              <input name="uploadedfile" multiple="false" type="file" id="uploader" data-dojo-type="dojox/form/Uploader" data-dojo-props="label: 'Select an XML File'"/> 
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <div id="files" data-dojo-type="dojox/form/uploader/FileList" uploaderId="uploader"></div>
+            </td>
+          </tr>
+        </table>
+
+        <div class="dijitDialogPaneActionBar">
+          <button data-dojo-type="dijit/form/Button" type="button" id="LoadStation">Load file</button>
+        </div>
+      </div>
+    </div>
+
+
+    <div data-dojo-type="dijit/Dialog" data-dojo-id="SaveFileDialog" title="Save SVG graph as a file" style="display: none;">
       <table class="dijitDialogPaneContentArea">
         <tr>
-          <td><label for="name">Name</label></td>
-          <td><input data-dojo-type="dijit/form/TextBox" name="name" id="TrainingName" required="true"></td>
-        </tr>
-        <tr>
-          <td><label for="TrnCm">Crew member</label></td>
-          <td><select data-dojo-type="dijit/form/FilteringSelect" name="TrnCm" id="TrainingCrewMemberSelect" required="false"></td>
-        </tr>
-        <tr>
-          <td><label for="transportationtime">Transportation time apply</label></td>
-          <td><input data-dojo-type="dijit/form/CheckBox" name="transportationtime" id="TrainingTransportationTime" value="true" required="true"></td>
-        </tr>
-        <tr>
-          <td><label for="restbefore">Rest before</label></td>
-          <td>
-            <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="restbefore" id="TrainingRestBeforeH" value="0" data-dojo-props="" required="true">h&nbsp;
-            <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="restbefore" id="TrainingRestBeforeM" value="0" data-dojo-props="" required="true">m
-          </td>
-        </tr>
-        <tr>
-          <td><label for="start">Start date time</label></td>
-          <td class="datetime">
-            <input id="TrainingStartDate" name="start" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"/>
-            <input id="TrainingStartTime" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'"/>
-          </td>
-        </tr>
-        <tr>
-          <td><label for="duration">Duration</label></td>
-          <td>
-            <input id="TrainingDurationHour"   class="durationHour" data-dojo-type="dijit/form/ComboBox" name="duration" data-dojo-props="placeHolder:'0'" required="true" readonly="true" />h&nbsp;
-            <input id="TrainingDurationMinute" class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="duration" data-dojo-props="placeHolder:'0'" required="true" readonly="true" />m
-          </td>
-        </tr>
-        <tr>
-          <td><label for="end">End date time</label></td>
-          <td class="datetime">
-            <input id="TrainingEndDate" name="start" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'" readonly="true" disabled="true" />
-            <input id="TrainingEndTime" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'" readonly="true" disabled="true" />
-          </td>
-        </tr>
-        <tr>
-          <td><label for="restafter">Rest after</label></td>
-          <td>
-            <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="restafter" id="TrainingRestAfterH" value="0" data-dojo-props="" required="true">h&nbsp;
-            <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="restafter" id="TrainingRestAfterM" value="0" data-dojo-props="" required="true">m
-          </td>
+          <td><label for="filename">Filename:</label></td>
+          <td><input data-dojo-type="dijit/form/TextBox" name="filename" id="filename" value=".svg" required="true"></td>
         </tr>
       </table>
 
       <div class="dijitDialogPaneActionBar">
-        <button data-dojo-type="dijit/form/Button" type="button" id="CreateTraining">Create</button>
+        <button data-dojo-type="dijit/form/Button" type="button" id="SaveFile">Save file</button>
       </div>
     </div>
-  </div>
 
 
+    <div data-dojo-type="dijit/Dialog" id="SetCalendarDialog" data-dojo-id="SetCalendarDialog" title="Set calendar" style="display: none;">
+      <div data-dojo-type="dijit/form/Form" id="SetCalendarForm" data-dojo-id="SetCalendarForm" encType="multipart/form-data" action="" method="">
+        <table class="dijitDialogPaneContentArea">
+          <tr>
+            <td><label for="timezone">Timezone</label></td>
+            <td><input data-dojo-type="dijit/form/FilteringSelect" name="timezone" id="CalendarTimezone" required="true"></td>
+          </tr>
+          <tr>
+            <td><label for="station">Station</label></td>
+            <td><input data-dojo-type="dijit/form/FilteringSelect" name="station" id="CalendarStation" required="true" disabled="true"></td>
+          </tr>
+          <tr>
+            <td><label for="calendarStart">Start date</label></td>
+            <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="calendarStart" id="CalendarStart" required="true" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"></td>
+          </tr>
+          <tr>
+            <td><label for="calendarEnd">End date (excluded)</label></td>
+            <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="calendarEnd" id="CalendarEnd" required="true" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"></td>
+          </tr>
+        </table>
 
-  <div data-dojo-type="dijit/Dialog" id="ShowHideActivityDialog" data-dojo-id="ShowHideActivityDialog" title="Show/hide activity details" style="display: none;">
-    <div data-dojo-type="dijit/form/Form" id="ShowHideActivityForm" encType="multipart/form-data" action="" method="">
-      <table class="dijitDialogPaneContentArea">
-        <tr>
-          <td><label for="SHActivityHours">Show activity hour label</label></td>
-          <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHActivityHours" id="SHActivityHours" checked></td>
-        </tr>
-        <tr>
-          <td><label for="SHActivityDetails">Show activity details (leg/layover)</label></td>
-          <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHActivityDetails" id="SHActivityDetails" checked></td>
-        </tr>
-        <tr>
-          <td><label for="SHActivityDetailHours">Show activity detail hours</label></td>
-          <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHActivityDetailHours" id="SHActivityDetailHours"></td>
-        </tr>
-        <tr>
-          <td><label for="SHActivityDetailStations">Show activity detail stations</label></td>
-          <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHActivityDetailStations" id="SHActivityDetailStations"></td>
-        </tr>
-      </table>
-
-      <div class="dijitDialogPaneActionBar">
-        <button data-dojo-type="dijit/form/Button" type="button" id="SaveShowHideActivity">Close</button>
+        <div class="dijitDialogPaneActionBar">
+          <button data-dojo-type="dijit/form/Button" type="button" id="SetCalendar">Set</button>
+        </div>
       </div>
     </div>
-  </div>
 
 
-  <div data-dojo-type="dijit/Dialog" id="ShowHideCalendarDialog" data-dojo-id="ShowHideCalendarDialog" title="Show/hide Calendar items" style="display: none;">
-    <div data-dojo-type="dijit/form/Form" id="ShowHideCalendarForm" encType="multipart/form-data" action="" method="">
-      <table class="dijitDialogPaneContentArea">
-        <tr>
-          <td><label for="SHCoordinates">Show coordinates X and Y</label></td>
-          <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCoordinates" id="SHCoordinates" checked></td>
-        </tr>
-        <tr>
-          <td><label for="SHCalendarHours">Show calendar hour label</label></td>
-          <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarHours" id="SHCalendarHours" checked></td>
-        </tr>
-        <tr>
-          <td><label for="SHCalendarHourBars">Show calendar hour bars</label></td>
-          <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarHourBars" id="SHCalendarHourBars" checked></td>
-        </tr>
-        <tr>
-          <td><label for="SHCalendarDayX">Show calendar Day X</label></td>
-          <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarDayX" id="SHCalendarDayX"></td>
-        </tr>
-        <tr>
-          <td><label for="SHCalendarDayYYYYMMDD">Show calendar day YYYY-MM-DD</label></td>
-          <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarDayYYYYMMDD" id="SHCalendarDayYYYYMMDD"></td>
-        </tr>
-        <tr>
-          <td><label for="SHCalendarDayBars">Show calendar day bars</label></td>
-          <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarDayBars" id="SHCalendarDayBars"></td>
-        </tr>
-      </table>
 
-      <div class="dijitDialogPaneActionBar">
-        <button data-dojo-type="dijit/form/Button" type="button" id="SaveShowHideCalendar">Close</button>
+    <div data-dojo-type="dijit/Dialog" id="SetStartPeriodsDialog" data-dojo-id="SetStartPeriodsDialog" title="Set start period(s)" style="display: none;">
+      <div data-dojo-type="dijit/form/Form" id="SetStartPeriodsForm" data-dojo-id="SetStartPeriodsForm" encType="multipart/form-data" action="" method="">
+        <table class="dijitDialogPaneContentArea">
+          <tr>
+            <td><label for="start">Start period date(s)</label></td>
+            <td><input multiple="true" data-dojo-type="dojox/form/CheckedMultiSelect" name="start" id="CalendarStartPeriods" size="14"></td>
+          </tr>
+        </table>
+
+        <div class="dijitDialogPaneActionBar">
+          <button data-dojo-type="dijit/form/Button" type="button" id="SetStartPeriods">Set</button>
+        </div>
       </div>
     </div>
-  </div>
 
 
-  <!-- TODO: create a tpl, since LoadSvgDialog and LoadStationDialog look the same -->
-  <div data-dojo-type="dijit/Dialog" data-dojo-id="LoadSvgDialog" title="Load SVG file" style="display: none; width: 300px;">
-    <div data-dojo-type="dijit/form/Form" id="LoadSvgForm" data-dojo-id="LoadSvgForm" encType="multipart/form-data" action="" method="">
-      <table class="dijitDialogPaneContentArea">
-        <tr>
-          <td>
-            <input name="uploadedfile" multiple="false" type="file" id="uploader2" data-dojo-type="dojox/form/Uploader" data-dojo-props="label: 'Select an SVG File'"/> 
-          </td>
-        </tr>
-        <tr>
-          <td>
-            <div id="files2" data-dojo-type="dojox/form/uploader/FileList" uploaderId="uploader2"></div>
-          </td>
-        </tr>
-      </table>
 
-      <div class="dijitDialogPaneActionBar">
-        <button data-dojo-type="dijit/form/Button" type="button" id="LoadSvg">Load file</button>
+    <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateDayOffDialog" title="Create day off" style="display: none;" data-dojo-props="onHide: function() {CreateDayOffForm.reset();}" >
+      <div data-dojo-type="dijit/form/Form" id="CreateDayOffForm" data-dojo-id="CreateDayOffForm" encType="multipart/form-data" action="" method="">
+        <table class="dijitDialogPaneContentArea">
+          <tr>
+            <td><label for="crewmemeber">Crew member</label></td>
+            <td><select data-dojo-type="dijit/form/FilteringSelect" name="crewmember" id="DayOffCrewMemberSelect" required="true"></td>
+          </tr>
+          <tr>
+            <td><label for="start">date(s)</label></td>
+            <td><select multiple="true" data-dojo-type="dojox/form/FixedCheckedMultiSelect" name="start" id="DayOffDatesSelect" required="true"></td>
+          </tr>
+        </table>
+
+        <div class="dijitDialogPaneActionBar">
+          <button data-dojo-type="dijit/form/Button" type="button" id="CreateDayOff">Create</button>
+        </div>
       </div>
     </div>
-  </div>
 
 
-  <div data-dojo-type="dijit/Dialog" data-dojo-id="LoadStationDialog" title="Load XML station file" style="display: none; width: 300px;">
-    <div data-dojo-type="dijit/form/Form" id="LoadStationForm" data-dojo-id="LoadStationForm" encType="multipart/form-data" action="" method="">
-      <table class="dijitDialogPaneContentArea">
-        <tr>
-          <td>
-            <input name="uploadedfile" multiple="false" type="file" id="uploader" data-dojo-type="dojox/form/Uploader" data-dojo-props="label: 'Select an XML File'"/> 
-          </td>
-        </tr>
-        <tr>
-          <td>
-            <div id="files" data-dojo-type="dojox/form/uploader/FileList" uploaderId="uploader"></div>
-          </td>
-        </tr>
-      </table>
 
-      <div class="dijitDialogPaneActionBar">
-        <button data-dojo-type="dijit/form/Button" type="button" id="LoadStation">Load file</button>
+    <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateCrewMemberDialog" title="Create crew member" style="display: none;" data-dojo-props="onHide: function() {CreateCrewMemberForm.reset();}" >
+      <div data-dojo-type="dijit/form/Form" id="CreateCrewMemberForm" data-dojo-id="CreateCrewMemberForm" encType="multipart/form-data" action="" method="">
+        <table class="dijitDialogPaneContentArea">
+          <tr>
+            <td><label for="name">Name</label></td>
+            <td><input data-dojo-type="dijit/form/TextBox" name="name" id="CrewMemberName" required="true"></td>
+          </tr>
+          <tr>
+            <td><label for="start">Birth date</label></td>
+            <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="day" id="CrewMemberBirthDate" required="true"  data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"   ></td>
+          </tr>
+        </table>
+
+
+        <div class="dijitDialogPaneActionBar">
+          <button data-dojo-type="dijit/form/Button" type="button" id="CreateCrewMember">Create</button>
+        </div>
       </div>
     </div>
-  </div>
 
 
-  <div data-dojo-type="dijit/Dialog" data-dojo-id="SaveFileDialog" title="Save SVG graph as a file" style="display: none;">
-    <table class="dijitDialogPaneContentArea">
-      <tr>
-        <td><label for="filename">Filename:</label></td>
-        <td><input data-dojo-type="dijit/form/TextBox" name="filename" id="filename" value=".svg" required="true"></td>
-      </tr>
-    </table>
+    <div data-dojo-type="dijit/Dialog" id="ShowConstantsDialog" data-dojo-id="ShowConstantsDialog" title="Set constants" style="display: none;">
+      <div data-dojo-type="dijit/form/Form" id="ShowConstantsForm" encType="multipart/form-data" action="" method="">
+        <table class="dijitDialogPaneContentArea">
+          <tr>
+            <td><label for="transportationTime">Transportation time duration (in minutes)</label></td>
+            <td><input data-dojo-type="dijit/form/ComboBox" name="transportationTime" id="transportationTime" value="0" data-dojo-props="" required="true" style="width: 5em;"></td>
+          </tr>
+          <tr>
+            <td><label for="reportTime">Report time (in minutes)</label></td>
+            <td><input data-dojo-type="dijit/form/ComboBox" name="reportTime" id="reportTime" value="20" data-dojo-props="" required="true" style="width: 5em;"></td>
+          </tr>
+          <tr>
+            <td><label for="releaseTime">Release time (in minutes)</label></td>
+            <td><input data-dojo-type="dijit/form/ComboBox" name="releaseTime" id="releaseTime" value="15" data-dojo-props="" required="true" style="width: 5em;"></td>
+          </tr>
+          <tr>
+            <td><label for="midnightOffset">Midnight offset (in minutes)</label></td>
+            <td><input data-dojo-type="dijit/form/ComboBox" name="midnightOffset" id="midnightOffset" value="0" data-dojo-props="constraints:{max: 1440}" required="true" style="width: 5em;"></td>
+          </tr>
+        </table>
 
-    <div class="dijitDialogPaneActionBar">
-      <button data-dojo-type="dijit/form/Button" type="button" id="SaveFile">Save file</button>
-    </div>
-  </div>
-
-
-  <div data-dojo-type="dijit/Dialog" id="SetCalendarDialog" data-dojo-id="SetCalendarDialog" title="Set calendar" style="display: none;">
-    <div data-dojo-type="dijit/form/Form" id="SetCalendarForm" data-dojo-id="SetCalendarForm" encType="multipart/form-data" action="" method="">
-      <table class="dijitDialogPaneContentArea">
-        <tr>
-          <td><label for="timezone">Timezone</label></td>
-          <td><input data-dojo-type="dijit/form/FilteringSelect" name="timezone" id="CalendarTimezone" required="true"></td>
-        </tr>
-        <tr>
-          <td><label for="station">Station</label></td>
-          <td><input data-dojo-type="dijit/form/FilteringSelect" name="station" id="CalendarStation" required="true" disabled="true"></td>
-        </tr>
-        <tr>
-          <td><label for="calendarStart">Start date</label></td>
-          <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="calendarStart" id="CalendarStart" required="true" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"></td>
-        </tr>
-        <tr>
-          <td><label for="calendarEnd">End date (excluded)</label></td>
-          <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="calendarEnd" id="CalendarEnd" required="true" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"></td>
-        </tr>
-      </table>
-
-      <div class="dijitDialogPaneActionBar">
-        <button data-dojo-type="dijit/form/Button" type="button" id="SetCalendar">Set</button>
+        <div class="dijitDialogPaneActionBar">
+          <button data-dojo-type="dijit/form/Button" type="button" id="SaveConstants">Save</button>
+        </div>
       </div>
     </div>
-  </div>
 
 
+    <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateHighlightDialog" title="Create highlight" style="display: none;" data-dojo-props="onHide: function() {CreateHighlightForm.reset();}" >
+      <div data-dojo-type="dijit/form/Form" id="CreateHighlightForm" data-dojo-id="CreateHighlightForm" encType="multipart/form-data" action="" method="">
+        <table class="dijitDialogPaneContentArea">
+          <tr>
+            <td><label for="lbl">Label</label></td>
+            <td><input data-dojo-type="dijit/form/TextBox" name="lbl" id="HighlightLabel"></td>
+          </tr>
+          <tr>
+            <td><label for="days">Date(s)</label></td>
+            <td><select multiple="true" data-dojo-type="dojox/form/FixedCheckedMultiSelect" name="days" id="HighlightDatesSelect"></td>
+          </tr>
+          <tr>
+            <td><label for="time">Time</label></td>
+            <td class="datetime">
+              <input id="HighlightTime" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'"/>
+            </td>
+          </tr>
+        </table>
 
-  <div data-dojo-type="dijit/Dialog" id="SetStartPeriodsDialog" data-dojo-id="SetStartPeriodsDialog" title="Set start period(s)" style="display: none;">
-    <div data-dojo-type="dijit/form/Form" id="SetStartPeriodsForm" data-dojo-id="SetStartPeriodsForm" encType="multipart/form-data" action="" method="">
-      <table class="dijitDialogPaneContentArea">
-        <tr>
-          <td><label for="start">Start period date(s)</label></td>
-          <td><input multiple="true" data-dojo-type="dojox/form/CheckedMultiSelect" name="start" id="CalendarStartPeriods" size="14"></td>
-        </tr>
-      </table>
-
-      <div class="dijitDialogPaneActionBar">
-        <button data-dojo-type="dijit/form/Button" type="button" id="SetStartPeriods">Set</button>
+        <div class="dijitDialogPaneActionBar">
+          <button data-dojo-type="dijit/form/Button" type="button" id="CreateHighlight">Create</button>
+        </div>
       </div>
     </div>
-  </div>
 
 
+    <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateDistanceDialog" title="Distance" style="display: none;" data-dojo-props="onHide: function() {CreateDistanceForm.reset();}" >
+      <div data-dojo-type="dijit/form/Form" id="CreateDistanceForm" data-dojo-id="CreateDistanceForm" encType="multipart/form-data" action="" method="">
+        <table class="dijitDialogPaneContentArea">
+          <tr>
+            <td><label for="From">From activity</label></td>
+            <td><select data-dojo-type="dijit/form/FilteringSelect" name="From" id="DistanceFromSelect" style="width: 30em;" required="true"></td>
+            <td>
+              <select data-dojo-type="dijit/form/Select" id="DistanceFromEventSelect" disabled="true" required="true">
+                <option value="1">rest before start</option>
+                <option value="2">transp. time before start</option>
+                <option value="3" selected="selected">activity start</option>
+                <option value="4">activity end</option>
+                <option value="5">transp. time after end</option>
+                <option value="6">rest after end</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td><label for="To">To activity</label></td>
+            <td><select data-dojo-type="dijit/form/FilteringSelect" name="To" id="DistanceToSelect" style="width: 30em;" required="true"></td>
+            <td>
+              <select data-dojo-type="dijit/form/Select" id="DistanceToEventSelect" disabled="true" required="true">
+                <option value="1">rest before start</option>
+                <option value="2">transp. time before start</option>
+                <option value="3" selected="selected">activity start</option>
+                <option value="4">activity end</option>
+                <option value="5">transp. time after end</option>
+                <option value="6">rest after end</option>
+              </select>
+            </td>
+          </tr>
+        </table>
 
-  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateDayOffDialog" title="Create day off" style="display: none;" data-dojo-props="onHide: function() {CreateDayOffForm.reset();}" >
-    <div data-dojo-type="dijit/form/Form" id="CreateDayOffForm" data-dojo-id="CreateDayOffForm" encType="multipart/form-data" action="" method="">
-      <table class="dijitDialogPaneContentArea">
-        <tr>
-          <td><label for="crewmemeber">Crew member</label></td>
-          <td><select data-dojo-type="dijit/form/FilteringSelect" name="crewmember" id="DayOffCrewMemberSelect" required="true"></td>
-        </tr>
-        <tr>
-          <td><label for="start">date(s)</label></td>
-          <td><select multiple="true" data-dojo-type="dojox/form/FixedCheckedMultiSelect" name="start" id="DayOffDatesSelect" required="true"></td>
-        </tr>
-      </table>
-
-      <div class="dijitDialogPaneActionBar">
-        <button data-dojo-type="dijit/form/Button" type="button" id="CreateDayOff">Create</button>
+        <div class="dijitDialogPaneActionBar">
+          <button data-dojo-type="dijit/form/Button" type="button" id="CreateDistance">Create</button>
+        </div>
       </div>
     </div>
-  </div>
 
 
+    <div data-dojo-type="dijit/Dialog" id="CreateTripDialog" data-dojo-id="CreateTripDialog" title="Create trip" style="display: none;" data-dojo-props="onHide: function() {CreateTripForm.reset();}" >
+      <div data-dojo-type="dijit/form/Form" id="CreateTripForm" data-dojo-id="CreateTripForm" encType="multipart/form-data" action="" method="">
+        <table class="dijitDialogPaneContentArea">
+          <tr>
+            <td><label for="name">Name</label></td>
+            <td><input data-dojo-type="dijit/form/TextBox" name="name" id="TripName" required="true"></td>
+          </tr>
+          <tr>
+            <td><label for="TrnCm">Crew member</label></td>
+            <td><select data-dojo-type="dijit/form/FilteringSelect" name="TrnCm" id="TripCrewMemberSelect" /></td>
+          </tr>
+          <tr>
+            <td><label for="transportationtime">Transportation time apply</label></td>
+            <td><input data-dojo-type="dijit/form/CheckBox" name="transportationtime" id="TripTransportationTime" value="true" required="true"></td>
+          </tr>
+          <tr>
+            <td><label for="restbefore">Rest before</label></td>
+            <td>
+              <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="restbefore" id="TripRestBeforeH" value="0" data-dojo-props="" required="true">h&nbsp;
+              <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="restbefore" id="TripRestBeforeM" value="0" data-dojo-props="" required="true">m
+            </td>
+          </tr>
+          <tr>
+            <td><label for="start">Start date time</label></td>
+            <td class="datetime">
+              <input id="TripStartDate" name="start" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"/>
+              <input id="TripStartTime" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'"/>
+            </td>
+          </tr>
+          <tr>
+            <td><label>Details</label></td>
+            <td><div id="TripGrid"></div></td>
+          </tr>
+          <tr>
+            <td><label for="end">End date time</label></td>
+            <td class="datetime">
+              <input id="TripEndDate" name="start" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'" readonly="true" disabled="true" />
+              <input id="TripEndTime" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'" readonly="true" disabled="true" />
+            </td>
+          </tr>
+          <tr>
+            <td><label for="restafter">Rest after</label></td>
+            <td>
+              <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="restafter" id="TripRestAfterH" value="0" data-dojo-props="" required="true">h&nbsp;
+              <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="restafter" id="TripRestAfterM" value="0" data-dojo-props="" required="true">m
+            </td>
+          </tr>
+        </table>
 
-  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateCrewMemberDialog" title="Create crew member" style="display: none;" data-dojo-props="onHide: function() {CreateCrewMemberForm.reset();}" >
-    <div data-dojo-type="dijit/form/Form" id="CreateCrewMemberForm" data-dojo-id="CreateCrewMemberForm" encType="multipart/form-data" action="" method="">
-      <table class="dijitDialogPaneContentArea">
-        <tr>
-          <td><label for="name">Name</label></td>
-          <td><input data-dojo-type="dijit/form/TextBox" name="name" id="CrewMemberName" required="true"></td>
-        </tr>
-        <tr>
-          <td><label for="start">Birth date</label></td>
-          <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="day" id="CrewMemberBirthDate" required="true"  data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"   ></td>
-        </tr>
-      </table>
-
-
-      <div class="dijitDialogPaneActionBar">
-        <button data-dojo-type="dijit/form/Button" type="button" id="CreateCrewMember">Create</button>
+        <div class="dijitDialogPaneActionBar">
+          <button data-dojo-type="dijit/form/Button" type="button" id="CreateTrip">Create</button>
+        </div>
       </div>
     </div>
-  </div>
 
 
-  <div data-dojo-type="dijit/Dialog" id="ShowConstantsDialog" data-dojo-id="ShowConstantsDialog" title="Set constants" style="display: none;">
-    <div data-dojo-type="dijit/form/Form" id="ShowConstantsForm" encType="multipart/form-data" action="" method="">
-      <table class="dijitDialogPaneContentArea">
-        <tr>
-          <td><label for="transportationTime">Transportation time duration (in minutes)</label></td>
-          <td><input data-dojo-type="dijit/form/ComboBox" name="transportationTime" id="transportationTime" value="0" data-dojo-props="" required="true" style="width: 5em;"></td>
-        </tr>
-        <tr>
-          <td><label for="reportTime">Report time (in minutes)</label></td>
-          <td><input data-dojo-type="dijit/form/ComboBox" name="reportTime" id="reportTime" value="20" data-dojo-props="" required="true" style="width: 5em;"></td>
-        </tr>
-        <tr>
-          <td><label for="releaseTime">Release time (in minutes)</label></td>
-          <td><input data-dojo-type="dijit/form/ComboBox" name="releaseTime" id="releaseTime" value="15" data-dojo-props="" required="true" style="width: 5em;"></td>
-        </tr>
-        <tr>
-          <td><label for="midnightOffset">Midnight offset (in minutes)</label></td>
-          <td><input data-dojo-type="dijit/form/ComboBox" name="midnightOffset" id="midnightOffset" value="0" data-dojo-props="constraints:{max: 1440}" required="true" style="width: 5em;"></td>
-        </tr>
-      </table>
+    <!-- 
+      <script type="text/template" id="activity-dialog-template">
+<div style="width:300px;">
 
-      <div class="dijitDialogPaneActionBar">
-        <button data-dojo-type="dijit/form/Button" type="button" id="SaveConstants">Save</button>
-      </div>
-    </div>
-  </div>
-
-
-  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateHighlightDialog" title="Create highlight" style="display: none;" data-dojo-props="onHide: function() {CreateHighlightForm.reset();}" >
-    <div data-dojo-type="dijit/form/Form" id="CreateHighlightForm" data-dojo-id="CreateHighlightForm" encType="multipart/form-data" action="" method="">
-      <table class="dijitDialogPaneContentArea">
-        <tr>
-          <td><label for="lbl">Label</label></td>
-          <td><input data-dojo-type="dijit/form/TextBox" name="lbl" id="HighlightLabel"></td>
-        </tr>
-        <tr>
-          <td><label for="days">Date(s)</label></td>
-          <td><select multiple="true" data-dojo-type="dojox/form/FixedCheckedMultiSelect" name="days" id="HighlightDatesSelect"></td>
-        </tr>
-        <tr>
-          <td><label for="time">Time</label></td>
-          <td class="datetime">
-            <input id="HighlightTime" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'"/>
-          </td>
-        </tr>
-      </table>
-
-      <div class="dijitDialogPaneActionBar">
-        <button data-dojo-type="dijit/form/Button" type="button" id="CreateHighlight">Create</button>
-      </div>
-    </div>
-  </div>
-
-
-  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateDistanceDialog" title="Distance" style="display: none;" data-dojo-props="onHide: function() {CreateDistanceForm.reset();}" >
-    <div data-dojo-type="dijit/form/Form" id="CreateDistanceForm" data-dojo-id="CreateDistanceForm" encType="multipart/form-data" action="" method="">
-      <table class="dijitDialogPaneContentArea">
-        <tr>
-          <td><label for="From">From activity</label></td>
-          <td><select data-dojo-type="dijit/form/FilteringSelect" name="From" id="DistanceFromSelect" style="width: 30em;" required="true"></td>
-          <td>
-            <select data-dojo-type="dijit/form/Select" id="DistanceFromEventSelect" disabled="true" required="true">
-              <option value="1">rest before start</option>
-              <option value="2">transp. time before start</option>
-              <option value="3" selected="selected">activity start</option>
-              <option value="4">activity end</option>
-              <option value="5">transp. time after end</option>
-              <option value="6">rest after end</option>
-            </select>
-          </td>
-        </tr>
-        <tr>
-          <td><label for="To">To activity</label></td>
-          <td><select data-dojo-type="dijit/form/FilteringSelect" name="To" id="DistanceToSelect" style="width: 30em;" required="true"></td>
-          <td>
-            <select data-dojo-type="dijit/form/Select" id="DistanceToEventSelect" disabled="true" required="true">
-              <option value="1">rest before start</option>
-              <option value="2">transp. time before start</option>
-              <option value="3" selected="selected">activity start</option>
-              <option value="4">activity end</option>
-              <option value="5">transp. time after end</option>
-              <option value="6">rest after end</option>
-            </select>
-          </td>
-        </tr>
-      </table>
-
-      <div class="dijitDialogPaneActionBar">
-        <button data-dojo-type="dijit/form/Button" type="button" id="CreateDistance">Create</button>
-      </div>
-    </div>
-  </div>
-
-
-  <div data-dojo-type="dijit/Dialog" id="CreateTripDialog" data-dojo-id="CreateTripDialog" title="Create trip" style="display: none;" data-dojo-props="onHide: function() {CreateTripForm.reset();}" >
-    <div data-dojo-type="dijit/form/Form" id="CreateTripForm" data-dojo-id="CreateTripForm" encType="multipart/form-data" action="" method="">
-      <table class="dijitDialogPaneContentArea">
-        <tr>
-          <td><label for="name">Name</label></td>
-          <td><input data-dojo-type="dijit/form/TextBox" name="name" id="TripName" required="true"></td>
-        </tr>
-        <tr>
-          <td><label for="TrnCm">Crew member</label></td>
-          <td><select data-dojo-type="dijit/form/FilteringSelect" name="TrnCm" id="TripCrewMemberSelect" /></td>
-        </tr>
-        <tr>
-          <td><label for="transportationtime">Transportation time apply</label></td>
-          <td><input data-dojo-type="dijit/form/CheckBox" name="transportationtime" id="TripTransportationTime" value="true" required="true"></td>
-        </tr>
-        <tr>
-          <td><label for="restbefore">Rest before</label></td>
-          <td>
-            <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="restbefore" id="TripRestBeforeH" value="0" data-dojo-props="" required="true">h&nbsp;
-            <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="restbefore" id="TripRestBeforeM" value="0" data-dojo-props="" required="true">m
-          </td>
-        </tr>
-        <tr>
-          <td><label for="start">Start date time</label></td>
-          <td class="datetime">
-            <input id="TripStartDate" name="start" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"/>
-            <input id="TripStartTime" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'"/>
-          </td>
-        </tr>
-        <tr>
-          <td><label>Details</label></td>
-          <td><div id="TripGrid"></div></td>
-        </tr>
-        <tr>
-          <td><label for="end">End date time</label></td>
-          <td class="datetime">
-            <input id="TripEndDate" name="start" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'" readonly="true" disabled="true" />
-            <input id="TripEndTime" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'" readonly="true" disabled="true" />
-          </td>
-        </tr>
-        <tr>
-          <td><label for="restafter">Rest after</label></td>
-          <td>
-            <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="restafter" id="TripRestAfterH" value="0" data-dojo-props="" required="true">h&nbsp;
-            <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="restafter" id="TripRestAfterM" value="0" data-dojo-props="" required="true">m
-          </td>
-        </tr>
-      </table>
-
-      <div class="dijitDialogPaneActionBar">
-        <button data-dojo-type="dijit/form/Button" type="button" id="CreateTrip">Create</button>
-      </div>
-    </div>
-  </div>
-
-
-  <!-- 
-  <script type="text/template" id="activity-dialog-template">
-    <div style="width:300px;">
-      
       <div class="dijitDialogPaneContentArea">
         <div data-dojo-attach-point="contentNode">
             ${message}              
         </div>
       </div>
-    
+
       <div class="dijitDialogPaneActionBar">
         <button data-dojo-type="dijit/form/Button" data-dojo-attach-point="closeButton" >Close</button>
         <button data-dojo-type="dijit.form.Button" data-dojo-attach-point="cancelButton" >DELETE </button> 
       </div>
-      
-    </div>
-  </script>
-  -->
 
-  </div> <!-- id=content>
+    </div>
+      </script>
+      -->
+
+  </div> 
 </html>
