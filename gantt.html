@@ -12,20 +12,20 @@
   <style type="text/css">
 
 .thinButton .dijitButtonNode {
-	padding: 0px !important;	
+  padding: 0px !important;	
 }
 
 .thinButtonHover .dijitButtonNode {
-	border-color:#a5beda !important;
-	border-bottom-color:#5c7590 !important;
-	border-right-color:#5c7590 !important;
-	color:#000 !important;
-	background:#fcfdff url(/dojo/dijit/themes/claro/images/buttonHover.png) repeat-x bottom !important;
+  border-color:#a5beda !important;
+  border-bottom-color:#5c7590 !important;
+  border-right-color:#5c7590 !important;
+  color:#000 !important;
+  background:#fcfdff url(/dojo/dijit/themes/claro/images/buttonHover.png) repeat-x bottom !important;
 }
 
 .thinButtonActive .dijitButtonNode {
-	border-color:#366dba !important;
-	background: #ededed url(/dojo/dijit/themes/claro/images/buttonActive.png) bottom repeat-x !important;
+  border-color:#366dba !important;
+  background: #ededed url(/dojo/dijit/themes/claro/images/buttonActive.png) bottom repeat-x !important;
 }
 
 .datetime {
@@ -95,54 +95,52 @@
   height: 14em; /* DOES NOT WORK */
 }
 
-    .dgrid {
-      margin: 0px;
-    }
-    .dgrid-grid {
-      width: 900px;
-    }
-    .dgrid-list {
-      width: 200px;
-    }
-    .dgrid {
-      font-size: 12px;
-    }
+.dgrid {
+  margin: 0px;
+}
+.dgrid-grid {
+  width: 900px;
+}
+.dgrid-list {
+  width: 200px;
+}
+.dgrid {
+  font-size: 12px;
+}
 
-    .dgrid .field-pk {
-      width: 2em;
-    }
-    .dgrid .field-order {
-      width: 2em;
-    }
-    .dgrid .field-station {
-      width: 6em;
-    }
-    .dgrid .field-lblType {
-      width: 9em;
-    }
-    .dgrid .field-legType {
-      width: 8em;
-    }
-    .dgrid .field-startDateTime {
-      width: 11em;
-      color: gray;
-    }
-    .dgrid .field-dhour {
-      width: 6em;
-    }
-    .dgrid .field-dminute {
-      width: 6em;
-    }
-    .dgrid .field-endDateTime {
-      width: 11em;
-      color: gray;
-    }
+.dgrid .field-pk {
+  width: 2em;
+}
+.dgrid .field-order {
+  width: 2em;
+}
+.dgrid .field-station {
+  width: 6em;
+}
+.dgrid .field-lblType {
+  width: 9em;
+}
+.dgrid .field-legType {
+  width: 8em;
+}
+.dgrid .field-startDateTime {
+  width: 11em;
+  color: gray;
+}
+.dgrid .field-dhour {
+  width: 6em;
+}
+.dgrid .field-dminute {
+  width: 6em;
+}
+.dgrid .field-endDateTime {
+  width: 11em;
+  color: gray;
+}
 
-    .dgrid-row-even {
-      background-color: ivory !important;
-    }
-
-
+.dgrid-row-even {
+  background-color: ivory !important;
+}
 
   </style>
 
@@ -175,12 +173,12 @@ var dojoConfig = {
 
 
   <script>
-
 require([
   "dojo/_base/declare",
   "dojo/window",
   "dojo/sniff",
   "dojo/on",
+  "dojo/topic",
   "dojo/touch",
   "dojo/dom",
   "dojo/dom-style",
@@ -216,7 +214,6 @@ require([
   "moment/moment",
   "moment-timezone/builds/moment-timezone-with-data",
   
-  
   "dojo/domReady!",
 
   "dijit/MenuBar",
@@ -238,11 +235,12 @@ require([
   "dojox/form/Uploader",
   "dojox/form/uploader/FileList",
 ], function(
-  // dojo
+  // dojo section    
   declare,
   win,
   has,
   on, 
+  topic,
   touch,
   dom, 
   domStyle,
@@ -255,7 +253,7 @@ require([
   ObjectStore, 
   LegacyMemory,
   LegacyObservable,
-  // dijit
+  // dijit section
   _WidgetBase,
   registry, 
   Dialog,
@@ -263,87 +261,90 @@ require([
   Select,
   FilteringSelect,
   ComboBox,
-  // dojox
+  // dojox section
   xmlparser,
   Standby,
   CheckedMultiSelect,
-  // dstore
+  // dstore section
   Memory,
   Trackable,
   DstoreAdapter,
-  // dmodel
+  // dmodel section
   Model,
   ComputedProperty,
-  // dgrid
+  // dgrid section
   OnDemandGrid, 
   Selection, 
   Keyboard, 
   Editor, 
   CompoundColumns,
-  // moment
+  // moment section
   moment,
   timezone
 //  ganttSVG
-  ){
+  ) {
+
+    // About the coordinates:
+    // X axis is the datetime. the first day of the graph start at 0. and a day is 1440 long (except dst ones).
+    
+    var XStartPeriod      = -1;  // X position of the start period. -1 means not set yet.
+    var XStartNextPeriod  = -1;  // X position of the next start periode.
+                                 // The two previous variables are used to compute InPeriod data as credit, block
+                                 // tafb, etc...
+
+    var OpenTimeLineCount = 0;   // Number of lines required to draw opentime activities without overlaps.
+                                 
+    /*
+     * Resize graph size according to window size, then svg graph is the bigger it
+     * is possible.
+     */
+    on(window, "resize", function() {
+      var windowSize = win.getBox();
+
+      domStyle.set("graph", { height: windowSize.h - 3 * 8 - dom.byId("navMenu").offsetHeight + "px" });
+    });
 
 
-  var XStartPeriod = -1;
-  var XStartNextPeriod = -1; 
-  var OpenTimeLineCount = 0;
+    /*
+     * Fix to support reset on CheckedMultiSelect.
+     * source: http://jsfiddle.net/FNL3h/
+     */
+    var FixedCheckedMultiSelect = declare("dojox/form/FixedCheckedMultiSelect", [ CheckedMultiSelect ], {
+      reset: function() {
+        this.inherited(arguments);
+        if (!this._resetValue || !this._resetValue.length) {
+          this._updateSelection();
+        }
+      },
+      validator: function() {
+        if (!this.required) {
+          return true;
+        }
+        return this.value.length > 0 ? true : false; 
+      },
+    });
 
-  // ===============================================
-  // Resize graph size
-  // ===============================================
-  // on window change, update the size of the svg graph.
-  on(window, "resize", function(){
-    var windowSize = win.getBox();
-
-    domStyle.set("graph", { height: windowSize.h - 3 * 8 - dom.byId("navMenu").offsetHeight + "px" });
-  });
-
-
-  // ===============================================
-  // Fix to support reset on CheckedMultiSelect.
-  // ===============================================
-  // source: http://jsfiddle.net/FNL3h/
-  var FixedCheckedMultiSelect = declare("dojox/form/FixedCheckedMultiSelect", [ CheckedMultiSelect ], {
-    reset: function() {
-      this.inherited(arguments);
-      if (!this._resetValue || !this._resetValue.length) {
-        this._updateSelection();
-      }
-    },
-    validator: function() {
-      if (!this.required){
-        return true;
-      }
-      return this.value.length > 0 ? true : false; 
-    },
-  });
-
-  // ===============================================
-  // Set data for duration input.
-  // ===============================================
-  
+    // ===============================================
+    // Set data for duration input.
+    // ===============================================
     var zeroTo99 = [];
-    for( i = 0; i < 100; ++i ){
+    for( i = 0; i < 100; ++i ) {
       zeroTo99.push({name: i, id: i});
     } 
     var zeroTo59 = [];
-    for( i = 0; i < 60; ++i ){
+    for( i = 0; i < 60; ++i ) {
       zeroTo59.push({name: i, id: i});
     } 
 
     var zeroTo59Store = new LegacyMemory({ data: zeroTo59 });
-
     var zeroTo99Store = new LegacyMemory({ data: zeroTo99 });
 
 
 
 
-  // ===============================================
-  // Widget for leg/lay/station from.
-  // ===============================================
+    // ===============================================
+    // Widget for leg/lay/station.
+    // ===============================================
     var CustomEditorOperations = declare([_WidgetBase], {
       value: null,
       buildRendering: function() {
@@ -364,35 +365,41 @@ require([
         });
 
         self._buttonLeg.on("click", function() {
-          self.grid.collection.add({pk: self.grid.collection.nextPk, 
-                                    order: self.value.order + 0.1, 
-                                    type: "leg", 
-                                    legType: "A",
-                                    dhour: 2,
-                                    dminute: 0,
-                                   });
-          self.grid.collection.add({pk: self.grid.collection.nextPk, 
-                                    order: self.value.order + 0.2, 
-                                    dhour: 0,
-                                    dminute: 45,
-                                    type: "sta"});
+          self.grid.collection.add({
+            pk      : self.grid.collection.nextPk,
+            order   : self.value.order + 0.1,
+            type    : "leg",
+            legType : "A",
+            dhour   : 2,
+            dminute : 0,
+          });
+          self.grid.collection.add({
+            pk      : self.grid.collection.nextPk,
+            order   : self.value.order + 0.2,
+            dhour   : 0,
+            dminute : 45,
+            type    : "sta",
+          });
           self.grid.collection.process();
         });
 
         self._buttonLayover.on("click", function() {
           // prevoir le chgt de duree de la station d'avant.
-          self.grid.collection.add({pk: self.grid.collection.nextPk, 
-                                    order: self.value.order + 0.1, 
-                                    type: "lay", 
-                                    dhour: 12,
-                                    dminute: 0,
-                                   });
-          self.grid.collection.add({pk: self.grid.collection.nextPk, 
-                                    order: self.value.order + 0.2, 
-                                    dhour: 0,
-                                    dminute: 20,
-                                    type: "sta", 
-                                    station: self.value.station});
+          self.grid.collection.add({
+            pk      : self.grid.collection.nextPk,
+            order   : self.value.order + 0.1,
+            type    : "lay",
+            dhour   : 12,
+            dminute : 0,
+          });
+          self.grid.collection.add({
+            pk      : self.grid.collection.nextPk,
+            order   : self.value.order + 0.2,
+            dhour   : 0,
+            dminute : 20,
+            type    : "sta",
+            station : self.value.station
+          });
           self.grid.collection.process();
         });
 
@@ -414,7 +421,7 @@ require([
           self.grid.collection.remove(self.value.pk);
           self.grid.collection.process();
         });
- 
+
       },
       _setValueAttr: function(value) {
         this.value = value;
@@ -434,1093 +441,1120 @@ require([
       }
     });
 
-  // ===============================================
-  // Type of leg.
-  // ===============================================
-    var typeLegData = {
-	identifier: 'type',
-	items: [
-		{ 'type': 'A', 'name': 'Active' },
-		{ 'type': 'D', 'name': 'Deadhead' },
-               ]
-    };
-
+    // ===============================================
+    // Type of leg
+    // ===============================================
     typeLegStore = new ObjectStore({
-      objectStore: LegacyObservable(new LegacyMemory({data: typeLegData})),
+      objectStore: LegacyObservable(new LegacyMemory({
+        data: {
+          identifier: 'type',
+          items: [
+            { 'type': 'A', 'name': 'Active' },
+            { 'type': 'D', 'name': 'Deadhead' },
+          ],
+        }
+      })),
       labelProperty: "name"
     });
 
 
 
-  parser.parse().then(function(){ 
-    dom.byId("loader").style.display = "none";
-    dom.byId("content").style.display = "block";
-  });
-
-
-  registry.byId("TrainingRestBeforeH").set("store", zeroTo99Store);
-  registry.byId("TrainingRestAfterH").set("store", zeroTo99Store);
-  registry.byId("TrainingDurationHour").set("store", zeroTo99Store);
-  
-  registry.byId("TrainingRestBeforeH").set("regExp", '[0-9]+');
-  registry.byId("TrainingRestAfterH").set("regExp", '[0-9]+');
-  registry.byId("TrainingDurationHour").set("regExp", '[0-9]+');
-
-  registry.byId("TrainingRestBeforeM").set("store", zeroTo59Store);
-  registry.byId("TrainingRestAfterM").set("store", zeroTo59Store);
-  registry.byId("TrainingDurationMinute").set("store", zeroTo59Store);
-
-  registry.byId("TrainingRestBeforeM").set("value", 0);
-  registry.byId("TrainingRestAfterM").set("value", 0);
-
-
-  registry.byId("TripRestBeforeH").set("store", zeroTo99Store);
-  registry.byId("TripRestAfterH").set("store", zeroTo99Store);
-  
-  registry.byId("TripRestBeforeH").set("regExp", '[0-9]+');
-  registry.byId("TripRestAfterH").set("regExp", '[0-9]+');
-
-  registry.byId("TripRestBeforeM").set("store", zeroTo59Store);
-  registry.byId("TripRestAfterM").set("store", zeroTo59Store);
-
-
-
-  registry.byId("transportationTime").set("store", zeroTo99Store);
-  registry.byId("reportTime").set("store", zeroTo99Store);
-  registry.byId("releaseTime").set("store", zeroTo99Store);
-  registry.byId("midnightOffset").set("store", zeroTo99Store);
-
-  registry.byId("transportationTime").set("regExp", '[0-9]+');
-  registry.byId("reportTime").set("regExp", '[0-9]+');
-  registry.byId("releaseTime").set("regExp", '[0-9]+');
-  registry.byId("midnightOffset").set("regExp", '[0-9]+');
-
-  // ===============================================
-  // Install gantt svg data at the right place.
-  // ===============================================
-  on.emit(window, "resize", {bubbles: true,cancelable: true});
-
-
-  // ===============================================
-  // Load timezones.
-  // ===============================================
-  var array = timezone.tz.names();
-
-  var timezoneStore = new Memory({
-    idProperty: "id"
-  });
-
-  for( i = 0; i < array.length; i++){
-    timezoneStore.addSync({
-      id: i,
-      name: array[i],
-    });
-  }
-
-  var timezoneStoreAdapter = new DstoreAdapter(timezoneStore);
-  registry.byId("CalendarTimezone").set("store", timezoneStoreAdapter);
-
-
-
-  // ===============================================
-  // Display "detail" of activity, or highlight.
-  // ===============================================
-  function PopupActivityDetail(activityId) {
-    var myDialog = new Dialog({
-        title: "Detail activity",
-        style: "width: 300px",
-        content: "Activitiy id: " + activityId + "<br/>name: " + activityStore.getSync(activityId).name + "<br/>",
-    });
-
-    var myButton = new Button({
-        label: "Delete this activity",
-        onClick: function(){
-          activityStore.removeSync(activityId);
-          myDialog.hide();
-        }
-    }).placeAt(myDialog);
-
-    myDialog.show();
-  }
-
-  function PopupHighLightDetail(highLightId) {
-    var myDialog = new Dialog({
-        title: "Detail highlight",
-        style: "width: 300px",
-        content: "Highlight id: " + highLightId + "<br/>",
-    });
-
-    var myButton = new Button({
-        label: "Delete this highlight",
-        onClick: function(){
-          highLightStore.removeSync(highLightId);
-          myDialog.hide();
-        }
-    }).placeAt(myDialog);
-
-    myDialog.show();
-  }
-
-  function PopupCrewMemberDetail(crewMemberId) {
-    var myDialog = new Dialog({
-        title: "Detail crew member",
-        style: "width: 300px",
-        content: "Crewmember id: " + crewMemberId + "<br/>name: " + crewMemberStore.getSync(crewMemberId).name + "<br/>",
-    });
-
-    var myButton = new Button({
-        label: "Delete this crew member",
-        onClick: function(){
-          crewMemberStore.removeSync(crewMemberId);
-          myDialog.hide();
-        }
-    }).placeAt(myDialog);
-
-    myDialog.show();
-  }
-
-
-
-  // ===============================================
-  // Start Date Time + duration Hour Minute => 
-  // End Date Time (readonly).
-  // Here, dojo/date is used, as only local dates
-  // are handled. 
-  // ===============================================
-  function UpdateEndDateTime(prefixId){
-    var mydate = moment(registry.byId(prefixId + "StartDate").get("value"));
-    var mytime = moment(registry.byId(prefixId + "StartTime").get("value"));
-    
-    // rebuild the start date from StartDate and StartTime field values, 
-    mydate.minutes(mytime.minutes());
-    mydate.hours(mytime.hours());
-
-    // add duration to determine end datetime of the activity..
-    var duration = moment.duration({
-      hours: registry.byId(prefixId + "DurationHour").get("value"), 
-      minutes: registry.byId(prefixId + "DurationMinute").get("value")
-    });
-    mydate.add(duration);
-    
-    // update end date and time fields.
-    registry.byId(prefixId + "EndDate").set("value", mydate.toDate());
-    registry.byId(prefixId + "EndTime").set("value", mydate.toDate());
-  } 
-
-
-  
-  // ===============================================
-  // return the X position in SVG, based on starting
-  // calendar and the date provided in argument.
-  // ===============================================
-  function getPositionX(date) {
-    return (date.unix() - Xorig) / 60;
-  }
-
-  // ===============================================
-  //  apply the compression factor on axe X.
-  // ===============================================
-  function CompressX(x) {
-    return x / config.XGraphCompression;
-  }
-
-  // ===============================================
-  // SVG drawing
-  // ===============================================
-
-  // Assumption on the SVG:
-  // - One pixel per minute, so a day is 1440px width.
-  // - Group node (g) is generally used to be able to shift concept in the 
-  //   right position, so drawing the inner concept is logically simpler.
-  //
-  // An attempt to use dojox.gfx module to draw SVG was done, but some problems 
-  // occured to identify existing node, in order to add new objects.
-
-  var svg     = dom.byId("graph"); // .getSVGDocument();
-  var svgNS   = "http://www.w3.org/2000/svg";
-  var xlinkNS = "http://www.w3.org/1999/xlink";
-
-  var Xorig          = 0; // unix time of the start of the calendar.
-  var MARGIN_TOP_CM     = 20;
-  var HEIGHT_LINE_CM    = 140;
-  var MARGIN_BOTTOM_CM  = 20;
-  var HEIGHT_LINE_HL    = 40;
-  var IsDrawingEnable = true; // flag used to disable the drawing.
-
-  // Draw a rectangle.
-  function SVG_drawRect(type, x, y, width, height){
-    var Rect = document.createElementNS(svgNS,"rect");
-    Rect.setAttributeNS(null, "class", type);
-    Rect.setAttributeNS(null, "x", CompressX(x));
-    Rect.setAttributeNS(null, "y", y);
-    Rect.setAttributeNS(null, "width", CompressX(width));
-    Rect.setAttributeNS(null, "height", height);
-    return Rect;
-  }
-
-  // Draw a line.
-  function SVG_drawLine(type, x1, y1, x2, y2){
-    var Line = document.createElementNS(svgNS,"line");
-    Line.setAttributeNS(null, "class", type);
-    Line.setAttributeNS(null, "x1", CompressX(x1));
-    Line.setAttributeNS(null, "y1", y1);
-    Line.setAttributeNS(null, "x2", CompressX(x2));
-    Line.setAttributeNS(null, "y2", y2);
-
-
-    return Line;
-  }
-
-
-  // Draw a text. 
-  function SVG_drawText(type, x, y, label){
-    var Text = document.createElementNS(svgNS, "text");
-    Text.setAttributeNS(null, "class", type);
-    Text.setAttributeNS(null, "x", CompressX(x));
-    Text.setAttributeNS(null, "y", y);
-    
-    Text.appendChild(document.createTextNode(label));
-    
-    return Text;
-  }
-
-
-  // Draw a highlight in calendar.
-  function SVG_drawHighlight(item){
-    var calendarId    = svg.getElementById("calendar");
-    var calendarBarId = svg.getElementById("calendar_bar");
-
-    var G       = document.createElementNS(svgNS, "g");
-    G.setAttributeNS(null,"transform","translate(0, " + item.GetYCoord() + ")");
-    G.setAttributeNS(null, "id", item.get("ident"));
-    calendarId.appendChild(G);
-
-    var lblText = SVG_drawText("highlight_label", item.x + 10, HEIGHT_LINE_HL / 2, item.get("message"));
-    on(lblText, "dblclick", function(evt){
-      PopupHighLightDetail(item.pk);
-    });
-    G.appendChild(lblText);
-
-    // a scale is used to extend the bars, that"s why they are defined into
-    // a specific group.
-    var Gbar     = document.createElementNS(svgNS, "g");
-    Gbar.setAttributeNS(null, "id", item.get("barident"));
-    calendarBarId.appendChild(Gbar);
-
-    Gbar.appendChild(SVG_drawRect("highlight", item.x, 0, 1, 1));
-  }
-
-  function getActivityDistancePosition(event, activity) {
-    var x = activity.x;
- 
-    switch( event ) {
-      case 1: x = x - activity.tp - activity.restb; break;
-      case 2: x = x - activity.tp; break;
-      case 4: x = x + activity.width; break;
-      case 5: x = x + activity.width + activity.tp; break;
-      case 6: x = x + activity.width + activity.tp + activity.resta; break;
-    }
-
-    return x;
-  }
-
-
-  // Draw a distance in calendar.
-  function SVG_drawDistance(item) {
-    var calendarId    = svg.getElementById("calendar");
-
-    var G       = document.createElementNS(svgNS, "g");
-    G.setAttributeNS(null, "id", item.get("ident"));
-    calendarId.appendChild(G);
-
-    var from = activityStore.getSync(item.fk_act1);
-    var to   = activityStore.getSync(item.fk_act2);
-
-    var x1 = getActivityDistancePosition(item.act1_event, from);
-    var x2 = getActivityDistancePosition(item.act2_event, to);
-
-    var y = item.GetYCoord();
-    var yy = y + HEIGHT_LINE_HL / 2;
-
-    var cm1 = crewMemberStore.getSync(from.fk_cm);
-    var cm2 = crewMemberStore.getSync(to.fk_cm);
-
-    var y1 = cm1.GetYCoord();
-    var y2 = cm2.GetYCoord(); 
-
-    if( x2 < x1 ) {
-      var tmp = x1;
-      x1 = x2;
-      x2 = tmp;
-      
-      tmp = y1;
-      y1 = y2;
-      y2 = tmp;
-    }
-    
-    var dur = x2 - x1;
-    var min = dur % 60;
-
-    var label = Math.floor(dur / 60) + "h";
-    label += min > 9 ? min : "0" + min;
-
- 
-    var lblText = SVG_drawText("distance_label", (x1 + x2) / 2 , yy - 3, label);
-    on(lblText, "dblclick", function(evt){
-      PopupHighLightDetail(item.pk);
-    });
-    G.appendChild(lblText);
-    G.appendChild(SVG_drawLine("distance", x1, yy, x2, yy));
-
-    var inc = HEIGHT_LINE_CM / 10;
-    var xinc = inc * config.XGraphCompression; 
-
-    // draw arrow.
-    G.appendChild(SVG_drawLine("distance", x1, yy, x1 + xinc, yy + inc));
-    G.appendChild(SVG_drawLine("distance", x1, yy, x1 + xinc, yy - inc ));
-
-    // draw second arrow.
-    G.appendChild(SVG_drawLine("distance", x2, yy, x2 - xinc, yy + inc));
-    G.appendChild(SVG_drawLine("distance", x2, yy, x2 - xinc, yy - inc));
-
-    // draw vertical lines.
-    var Y1 = MARGIN_TOP_CM + HEIGHT_LINE_CM * cm1.lineCount + MARGIN_BOTTOM_CM; 
-    var Y2 = MARGIN_TOP_CM + HEIGHT_LINE_CM * cm2.lineCount + MARGIN_BOTTOM_CM; 
-     
-    G.appendChild(SVG_drawLine("distance", x1, y1 < y ? y1 - Y1 : y1 + Y1, x1, y1 < y ? yy + 2 * inc : yy - 2 * inc));
-    G.appendChild(SVG_drawLine("distance", x2, y2 < y ? y2 - Y2 : y2 + Y2, x2, y2 < y ? yy + 2 * inc : yy - 2 * inc));
-
-  }
-
-
-  // Draw a calendar date. The drawing belongs to id calendar in the SVG.
-  // Each "date" is embedded in a g node, with a translation on X, according
-  // to the position. This way, each drawing into the g node is strictly the 
-  // same for each day, except labels.
-  function SVG_drawCalendarDate(item){
-    var calendarId    = svg.getElementById("calendar");
-    var calendarBarId = svg.getElementById("calendar_bar");
-
-    var G       = document.createElementNS(svgNS, "g");
-    G.setAttributeNS(null, "transform", "translate(" + CompressX(item.x) + ",0)");
-    G.setAttributeNS(null, "id", item.get("ident"));
-    calendarId.appendChild(G);
-
-    G.appendChild(SVG_drawText("day_label relative", 720, -70, "Day " + item.get("relative")));
-
-    G.appendChild(SVG_drawText("day_label yyyymmdd", 720, -20, item.get("name")));
-
-    var minutes = 120;
-    var time = moment(item.get("name"));
-    var duration = moment.duration(minutes, "minutes");
-
-    for(var i = 0; i < item.width; i += minutes){ 
-      G.appendChild(SVG_drawText("hour_label", i, 0, time.format("H:mm")));
-      time.add(duration);   
-    }
-
-    // a scale is used to extend the bars, that's why they are defined into
-    // a specific group.
-    var Gbar     = document.createElementNS(svgNS, "g");
-    Gbar.setAttributeNS(null, "transform", "translate(" + CompressX(item.x) + ",0)");
-    Gbar.setAttributeNS(null, "class", item.get("startperiod") ? "start_period" : item.get("type"));
-    Gbar.setAttributeNS(null, "id", item.get("barident"));
-    calendarBarId.appendChild(Gbar);
-
-    Gbar.appendChild(SVG_drawRect("day_bar", 0, 0, item.width, 1));
-    Gbar.appendChild(SVG_drawRect("line", 0, 0, 1, 1));
-    Gbar.appendChild(SVG_drawRect("line", item.width, 0, 1, 1));
-
-    for(var i = 60; i < item.width; i += minutes){ 
-      Gbar.appendChild(SVG_drawRect("hour_bar", i, 0, 60, 1));
-    }
-  }
-
-  // Draw a crewmember. The drawing is embedded into a g node 
-  // with a translation on y, and belongs to crewmembers id.
-  // There is no x translation, so every activity attached to the 
-  // crewmember will be add into the g node.
-  function SVG_drawCrewMember(item){
-    var crewMemberId    = svg.getElementById("crewmembers");
-    var crewMemberBarId = svg.getElementById("crewmember_bar");
-
-    console.log(item);
-
-    var G = document.createElementNS(svgNS, "g");
-    var y = item.GetYCoord();
-    G.setAttributeNS(null,"transform","translate(0, " + y + ")");
-    G.setAttributeNS(null,"id", item.get("ident"));
-    crewMemberId.appendChild(G);
-
-    var crewText = SVG_drawText("crewmember", -50, MARGIN_TOP_CM + HEIGHT_LINE_CM / 2, item.name);
-
-    on(crewText, "dblclick", function(evt){
-      PopupCrewMemberDetail(item.pk);
-    });
-    G.appendChild(crewText);
-    
-    var Gbar = document.createElementNS(svgNS, "g");
-    Gbar.setAttributeNS(null,"transform","translate(0, " + y + ")");
-    Gbar.setAttributeNS(null,"id", item.get("barident"));
-    crewMemberBarId.appendChild(Gbar);
-
-    Gbar.appendChild(SVG_drawRect("line", 0, 0, 1, 1));
-    Gbar.appendChild(SVG_drawRect("line", 0, MARGIN_TOP_CM + HEIGHT_LINE_CM * item.lineCount + MARGIN_BOTTOM_CM, 1, 1));
-  }
-
-  // Draw an activity. As the others, the drawing is embedded into a g node 
-  // with a translation on y, and belongs to crewmember or opentime line.
-  // Therefore no y translation is necessary, a x is used to draw the activity on
-  // the rigth place in the calendar.
-  function SVG_drawActivity(activity, line){
-
-    var unitY = HEIGHT_LINE_CM / 14; 
-
-    var parentId = svg.getElementById(line.get("ident"));
-
-    var G = document.createElementNS(svgNS, "g");
-    var Y = MARGIN_TOP_CM + HEIGHT_LINE_CM * ( activity.lineNb - 1 );
-    G.setAttributeNS(null, "transform", "translate(" + CompressX(activity.x) + "," + Y +")");
-    G.setAttributeNS(null, "id", activity.get("ident"));
-
-    on(G, "dblclick", function(evt){
-      PopupActivityDetail(activity.pk);
-    });
-       
-    parentId.appendChild(G);
-
-    var Rect = document.createElementNS(svgNS,"rect");
-    Rect.setAttributeNS(null, "class", activity.get("type"));
-    Rect.setAttributeNS(null, "x", 0);
-    Rect.setAttributeNS(null, "y", 0);
-    Rect.setAttributeNS(null, "rx", Math.min(CompressX(2 * unitY), 20));
-    Rect.setAttributeNS(null, "ry", Math.min(CompressX(2 * unitY), 20));
-    Rect.setAttributeNS(null, "width", CompressX(activity.width));
-    Rect.setAttributeNS(null, "height", HEIGHT_LINE_CM);
-    G.appendChild(Rect);
-
-    G.appendChild(SVG_drawText("label", 10, 5 * unitY, activity.get("name")));
-
-    var startActivity = moment(activity.get("lbtStart"));
-    var endActivity   = startActivity.clone();
-    endActivity.add(activity.width, "m");
-    var hourSize = 9;  // see font-size of class .hour_start.
-    
-    G.appendChild(SVG_drawText("act_hour start_hour", 0 , hourSize, startActivity.format("HH:mm")));
-    G.appendChild(SVG_drawText("act_hour end_hour", activity.width , 14 * unitY, endActivity.format("HH:mm")));
-
-    // transporation time
-    if( activity.tp > 0 ){
-      // before.
-      G.appendChild(SVG_drawRect("TP", activity.tp * -1, 3 * unitY, activity.tp, 4 * unitY));
-      startActivity.subtract(activity.tp, "m");
-      G.appendChild(SVG_drawText("act_hour start_hour", activity.tp * -1, 3 * unitY + hourSize, startActivity.format("HH:mm")));
-
-      // after.
-      G.appendChild(SVG_drawRect("TP", activity.width, 7 * unitY, activity.tp, 4 * unitY));
-      endActivity.add(activity.tp, "m");
-      G.appendChild(SVG_drawText("act_hour end_hour", activity.width + activity.tp , 11 * unitY, endActivity.format("HH:mm")));
-    }
-
-    // rest before
-    if( activity.restb > 0 ){
-      G.appendChild(SVG_drawRect("REST", ( activity.restb + activity.tp ) * -1, 3 * unitY, activity.restb, 4 * unitY));
-      startActivity.subtract(activity.restb, "m");
-      G.appendChild(SVG_drawText("act_hour start_hour", ( activity.restb + activity.tp ) * -1 , 3 * unitY + hourSize, startActivity.format("HH:mm")));
-    }
-    
-    // rest after. 
-    if( activity.resta > 0 ){
-      G.appendChild(SVG_drawRect("REST", activity.width + activity.tp, 7 * unitY, activity.resta, 4 * unitY));
-      endActivity.add(activity.resta, "m");
-      G.appendChild(SVG_drawText("act_hour end_hour", activity.width + activity.tp + activity.resta, 11 * unitY, endActivity.format("HH:mm")));
-    }
-
-
-    activityStore.filter({fk_parent: activity.pk}).fetch().then(function (objects) {
-      if( objects.length < 0 ) { 
-        return; 
-      }
-         
-      var endDetailActivity = moment(activity.get("lbtStart"));
-
-      var Gdetails = document.createElementNS(svgNS, "g");
-      Gdetails.setAttributeNS(null, "transform", "translate(0," + 7 * unitY +")");
-      Gdetails.setAttributeNS(null, "class", "details");
-
-      G.appendChild(Gdetails);
-    
-      for(i = 0; i < objects.length; i++) {
-        var Rect = document.createElementNS(svgNS,"rect");
-        Rect.setAttributeNS(null, "class", objects[i].get("type"));
-        Rect.setAttributeNS(null, "x", CompressX(objects[i].x - activity.x));
-        Rect.setAttributeNS(null, "y", unitY);
-        Rect.setAttributeNS(null, "rx", 1);
-        Rect.setAttributeNS(null, "ry", 1);
-        Rect.setAttributeNS(null, "width", CompressX(objects[i].width));
-        Rect.setAttributeNS(null, "height", 4 * unitY);
-
-        Gdetails.appendChild(Rect);
-
-        if( i % 2 == 0 && i != 0 && i != objects.length -1 ) {
-          Gdetails.appendChild(SVG_drawText("dtl_station", objects[i].x + objects[i].width / 2 - activity.x, unitY -2, objects[i].station ));
-        }
-        if( i % 2 == 1 ) {
-          Gdetails.appendChild(SVG_drawText("dtl_hour start_hour", objects[i].x - activity.x, unitY + hourSize, endDetailActivity.format("HH:mm")));
-// useless since the distance tool allows to measure duration !          
-//          Gdetails.appendChild(SVG_drawText("duration", objects[i].x + objects[i].width / 2 - activity.x, 3 * unitY , "<- " + formatDurationInHoursMinutes(objects[i].width) + " ->"));
-        }
-          
-        endDetailActivity.add(objects[i].width, "m");
-
-        if( i % 2 == 1 ) {
-          Gdetails.appendChild(SVG_drawText("dtl_hour end_hour" , objects[i].x + objects[i].width - activity.x, 5 * unitY, endDetailActivity.format("HH:mm")));
-        }
-        
-      }
-    });
-  }
-
-  // ===============================================
-  // Data MODELs
-  // ===============================================
-
-
-  var ConfigurationModel = declare(Model, {
-    schema: {
-      id: { type: "numeric", default: 0 },
-      transportationTime: { type: "numeric", default: 0},
-      midnightOffset: { type: "numeric", default: 0},
-      reportTime: { type: "numeric", default: 0},
-      releaseTime: { type: "numeric", default: 0},
-      timezone: { type: "string", default: ""},
-      station: { type: "string", default: ""},
-      calendarStart: { type: "string", default: ""},
-      calendarEnd: { type: "string", default: ""},
-      MenuFile: { type: "boolean", default: false, },
-      MenuFileLoadSVGFile: { type: "boolean", default: false, },
-      MenuFileLoadXMLStationFile: { type: "boolean", default: false, },
-      MenuFileSaveSVGFile: { type: "boolean", default: true, },
-      MenuCalendar: { type: "boolean", default: true, },
-      MenuCalendarSetStartEnd: { type: "boolean", default: true, },
-      MenuCalendarSetStartPeriods: { type: "boolean", default: true, },
-      MenuBusinessObject: { type: "boolean", default: true, },
-      MenuBusinessObjectShowConstants: { type: "boolean", default: false, },
-      MenuBusinessObjectCreateCrewMember: { type: "boolean", default: false, },
-      MenuBusinessObjectCreateActivity: { type: "boolean", default: false, },
-      MenuBusinessObjectCreateActivityDayOff: { type: "boolean", default: false, },
-      MenuBusinessObjectCreateActivityTrip: { type: "boolean", default: false, },
-      MenuBusinessObjectCreateActivityTraining: { type: "boolean", default: false, },
-      MenuBusinessObjectCreateActivityOtherActivity: { type: "boolean", default: true, },
-      MenuGraphOption: { type: "boolean", default: true, },
-      MenuGraphOptionCalendar: { type: "boolean", default: false, },
-      MenuGraphOptionActivity: { type: "boolean", default: false, },
-      MenuHighLights: { type: "boolean", default: true, },
-      MenuHighLightsSpecificDateTime: { type: "boolean", default: false, },
-      MenuHighLightsDistance: { type: "boolean", default: false, },
-      MenuHighLightsWindow: { type: "boolean", default: true, },
-      SHCoordinates: { type: "boolean", default: true, },
-      SHCalendarHours: { type: "boolean", default: true, },
-      SHCalendarHourBars: { type: "boolean", default: true, },
-      SHCalendarDayX: { type: "boolean", default: true, },
-      SHCalendarDayYYYYMMDD: { type: "boolean", default: true, },
-      SHCalendarDayBars: { type: "boolean", default: true, },
-      XGraphCompression: { type: "numeric", default: 1, },
-      SHActivityHours: { type: "boolean", default: true, },
-      SHActivityDetails: { type: "boolean", default: true, },
-      SHActivityDetailHours: { type: "boolean", default: true, },
-      SHActivityDetailStations: { type: "boolean", default: true, },
-    },
-    validateOnSet: false,
-  });
-
-
-  var CalendarModel = declare(Model, {
-    schema: {
-      name: "string",
-      relative: "numeric",
-      pk: "numeric",
-      startperiod: { type: "boolean", default: false},
-      type: new ComputedProperty({
-        dependsOn: ["pk"],
-        getValue: function(pk){
-          return pk % 2 ? "uneven" : "even";
-        }
-      }),
-      ident: new ComputedProperty({ 
-        dependsOn: ["pk"],
-        getValue: function(pk){
-          return "cd" + pk;  // cd stands for Calendar Day.
-        }
-      }),
-      barident: new ComputedProperty({ 
-        dependsOn: ["pk"],
-        getValue: function(pk){
-          return "bcd" + pk;  // bcd stands for Bar Calendar Day.
-        }
-      }),
-      x: "numeric",
-      width: "numeric",
-    },
-    validateOnSet: false,
-    DrawSVG: function(){ 
-      if( IsDrawingEnable ) SVG_drawCalendarDate(this); 
-    },
-    ClearSVG: function(){
-      var item_lbl = svg.getElementById(this.get("ident"));
-      var item_bar = svg.getElementById(this.get("barident"));
-      
-      if( item_lbl) item_lbl.parentNode.removeChild(item_lbl);
-      if( item_bar) item_bar.parentNode.removeChild(item_bar);
-    },
-  });
-
-  var CrewMemberModel = declare(Model, {
-    schema: {
-      name: "string",
-      birthdate: "string",
-      pk: "numeric",
-      fk_yc: "numeric",
-      lineCount: "numeric",
-      ident: new ComputedProperty({ 
-        dependsOn: ["pk"],
-        getValue: function(pk){
-          return "cm" + pk; // cm stands for CrewMember.
-        }
-      }),
-      barident: new ComputedProperty({ 
-        dependsOn: ["pk"],
-        getValue: function(pk){
-          return "bcm" + pk; // bcm stands for Bar CrewMember.
-        }
-      }),
-    },
-    validateOnSet: false,
-    DrawSVG: function(){ 
-      if( IsDrawingEnable ) SVG_drawCrewMember(this); 
-    },
-    ClearSVG: function(){
-      var item_lbl = svg.getElementById(this.get("ident"));
-      var item_bar = svg.getElementById(this.get("barident"));
-      
-      if( item_lbl) item_lbl.parentNode.removeChild(item_lbl);
-      if( item_bar) item_bar.parentNode.removeChild(item_bar);
-    },
-    GetYCoord: function(){
-      return yCoordStore.getSync(this.fk_yc).y;
-    },
-  });
-
-  var ActivityModel = declare(Model, {
-    schema: {
-      pk: "numeric",
-      fk_cm: "numeric", // foreign key to CrewMember.
-      fk_parent: "numeric", // foreign key to parent activity.
-      name: "string",
-      fullname: "string", 
-      x: "numeric",
-      width: "numeric",
-      tp: "numeric",
-      resta: "numeric",
-      restb: "numeric",
-      type: "string",
-      lbtStart: "string", 
-      utcStart: "string",
-      utcEnd: "string",
-      block: "numeric",
-      credit: "numeric",
-      duty: "numeric",
-      tafbInPeriod: "numeric",
-      blockInPeriod: "numeric",
-      creditInPeriod: "numeric",
-      dutyInPeriod: "numeric",
-      station: "string",
-      lineNb: "numeric",
-
-      ident: new ComputedProperty({ 
-        dependsOn: ["pk", "type"],
-        getValue: function(pk, type){
-          return type.toLowerCase() + pk;  // DOxxx or TRPxxx or  .. 
-        }
-      }),
-    },
-    validateOnSet: false,
-    DrawSVG: function(crewmember){ 
-      if( IsDrawingEnable ) {
-        if( this.fk_parent == undefined ) {
-          SVG_drawActivity(this, crewmember); 
-        }  
-      }
-    },
-    ClearSVG: function(){
-      var item = svg.getElementById(this.get("ident"));
-    
-      // an activity belongs to a crewmember. If the crewmember was cleared,
-      // then the activity is also cleared !  
-      if( item ) item.parentNode.removeChild(item);
-    },
-    GetYCoord: function(){
-      return crewMemberStore.getSync(this.fk_cm).GetYCoord();
-    }
-  });
- 
-  var TripDetailModel = declare(Model, {
-    schema: {
-      pk: "numeric",
-      order: "numeric",
-      type: "string",
-      station: "string", 
-      legType: "string",
-
-      startDateTime: "string",
-      dhour: "numeric",
-      dminute: "numeric",
-      endDateTime: "string",
-
-      fk_activity: "numeric",
-
-      stationSelect: "numeric",
-      legTypeSelect: "numeric",
-      durationSelect: "numeric",
-      newLegButton: "numeric",
-      newLayButton: "numeric",
-      deleteButton: "numeric",
-
-    },
-    validateOnSet: false,
-  });
-
-  var StationModel = declare(Model, {
-    schema: {
-      id: "string",
-      code: "string",
-      name: "string",
-      dstShift: "string",
-      dstStartLst: "string",
-      dstEndLst: "string",
-      utcOffset: "string",
-      offset: "numeric",
-      regionList: "array",
-      /* do not work with query !!!
-      offset: new ComputedProperty({ 
-        dependsOn: ["utcOffet"],
-        getValue: function(utcOffset){
-          var data = offsetRegex.exec(utcOffset);
-
-          return moment.duration({hours: data[1], minutes: data[2]}).asMinutes() * -1;
-        }
-      }),*/
-    },
-    validateOnSet: false
-  });
-
-  var HighLightModel = declare(Model, {
-    schema: {
-      message: "string",
-      pk: "numeric",
-      x: "numeric",
-      fk_yc: "numeric",
-      ident: new ComputedProperty({ 
-        dependsOn: ["pk"],
-        getValue: function(pk){
-          return "hl" + pk;  // hl stands for HighLight
-        }
-      }),
-      barident: new ComputedProperty({ 
-        dependsOn: ["pk"],
-        getValue: function(pk){
-          return "bhl" + pk;  // bhl stands for Bar HighLight
-        }
-      }),
-    },
-    validateOnSet: false,
-    DrawSVG: function(){ 
-      if( IsDrawingEnable ) SVG_drawHighlight(this); 
-    },
-    ClearSVG: function(){
-      var item_lbl = svg.getElementById(this.get("ident"));
-      var item_bar = svg.getElementById(this.get("barident"));
-      
-      // a hightligh  belongs to a calendar day. If a day was cleared,
-      // then the hightlight is also cleared !  
-      if( item_lbl ) item_lbl.parentNode.removeChild(item_lbl);
-      if( item_bar ) item_bar.parentNode.removeChild(item_bar);
-    },
-    GetYCoord: function(){
-      return yCoordStore.getSync(this.fk_yc).y;
-    },
-  });
- 
-  var DistanceModel = declare(Model, {
-    schema: {
-      pk: "numeric",
-      fk_act1: "numeric",
-      act1_event: "numeric",
-      fk_act2: "numeric",
-      act2_event: "numeric",
-      fk_yc: "numeric",
-      ident: new ComputedProperty({ 
-        dependsOn: ["pk"],
-        getValue: function(pk){
-          return "dst" + pk;  // hl stands for HighLight
-        }
-      }),
-    },
-    validateOnSet: false,
-    DrawSVG: function(){ 
-      if( IsDrawingEnable ) SVG_drawDistance(this); 
-    },
-    ClearSVG: function(){
-      var item_lbl = svg.getElementById(this.get("ident"));
-      
-      if( item_lbl ) item_lbl.parentNode.removeChild(item_lbl);
-    },
-    GetYCoord: function(){
-      return yCoordStore.getSync(this.fk_yc).y;
-    },
-  });
-
-  var YCoordModel = declare(Model, {
-    schema: {
-      pk: "numeric",
-      y: "numeric",
-      height: "numeric",
-      fk_hl: "numeric",
-      fk_dst: "numeric",
-      fk_cm: "numeric",
-    },
-    validateOnSet: false,
-  });
- 
-
-  // ===============================================
-  // Data STOREs and events.
-  // ===============================================
-
-  var TrackableMemory = declare([Memory, Trackable]); 
-  
-  // -----------------------------------------------
-  // configurationStore
-  // -----------------------------------------------
-  var configurationStore = new Memory({
-    Model: ConfigurationModel,
-    idProperty: "id",
-
-  });
-
-  configurationStore.on("add, update", function(event){
-    var cfg     = event.target;
-    var pattern = new RegExp("^Menu");
-
-    for(var property in cfg) {
-      console.log(property);
-      if( pattern.test(property) ) {
-        console.log(cfg.get(property));
-        registry.byId(property).set("disabled", cfg.get(property));
-      }
-    }
-  });
-
-  var config = configurationStore.Model();
-
-  configurationStore.addSync(config);
-
-  // -----------------------------------------------
-  // yCoordStore
-  // -----------------------------------------------
-  var yCoordStore = new TrackableMemory({
-    Model: YCoordModel,
-    idProperty: "pk",
-    nextPk: 1, 
-    nextY: 0,
-    len: 0,
-
-    StretchSVGHeight: function(){
-      // scale vertically the calendar to fit the number of crewmember.
-      var bar = svg.getElementById("calendar_bar");
-      var height = this.nextY;
-      if( OpenTimeLineCount > 0 ) {
-        height += MARGIN_TOP_CM + HEIGHT_LINE_CM * OpenTimeLineCount + MARGIN_BOTTOM_CM;
-      }
-
-      bar.setAttribute("transform", "scale(1," + height + ")");
-    },
-  });
-
-  yCoordStore.on("add", function(event){
-    yCoordStore.len += 1;
-    yCoordStore.nextPk += 1;
-    var inc = HEIGHT_LINE_HL;
-    if( event.target.fk_cm ) {
-      inc = MARGIN_TOP_CM + HEIGHT_LINE_CM + MARGIN_BOTTOM_CM;
-    }
-    yCoordStore.nextY += inc;
-
-    yCoordStore.StretchSVGHeight();
-   
-    console.log(event.target.y); 
-    yCoordStore.fetch().then(function(items) {
-      for (var i = items.length - 1; i >= 0; i--) {
-        if( items[i].y >= event.target.y && items[i].pk != event.target.pk ) {
-          console.log(items[i]);
-
-          items[i].y += inc;
-          yCoordStore.putSync(items[i]);    
-        }
-      }
-    });    
-  });
-
-  yCoordStore.on("update", function(event){
-    if( event.target.fk_cm ) {
-
-    var inc = HEIGHT_LINE_CM;
-    yCoordStore.nextY += inc;
-    
-    yCoordStore.StretchSVGHeight();
-
-    yCoordStore.fetch().then(function(items) {
-      for (var i = items.length - 1; i >= 0; i--) {
-        if( items[i].y >= event.target.y && items[i].pk != event.target.pk ) {
-          console.log(items[i]);
-
-          items[i].y += inc;
-          yCoordStore.putSync(items[i]);    
-        }
-      }
-    });    
-
-
-
-
-      var id = svg.getElementById(crewMemberStore.getSync(event.target.fk_cm).get("ident")); 
-      id.setAttribute("transform", "translate(0," + event.target.y + ")");
-
-      var bar = svg.getElementById(crewMemberStore.getSync(event.target.fk_cm).get("barident")); 
-      bar.setAttribute("transform", "translate(0," + event.target.y + ")");
-    }
-    else if( event.target.fk_dst ) {
-      // due to some translation, the distances must be redrawn. This is mandatory because there
-      // is no way to build some floating anchor to reference to in SVG.
-      var distance = distanceStore.getSync(event.target.fk_dst); 
-
-      distance.ClearSVG();
-      distance.DrawSVG();
-    }
-    else {
-      highLightStore.filter({fk_yc: event.target.pk}).forEach(function(item){
-        item.ClearSVG();
-        item.DrawSVG();
-      });
-    }
-  });
-
-  yCoordStore.on("delete", function(event){
-    yCoordStore.len -= 1;
-    var inc = HEIGHT_LINE_HL;
-    if( event.target.fk_cm ) {
-      var cm = crewMemberStore.getSync(event.target.fk_cm);
-      inc = MARGIN_TOP_CM + HEIGHT_LINE_CM * cm.lineCount + MARGIN_BOTTOM_CM;
-    }
-    yCoordStore.nextY -= inc;
-    
-    yCoordStore.StretchSVGHeight();
-   
-    yCoordStore.fetch().then(function(items) {
-      for (var i = items.length - 1; i >= 0; i--) {
-        if( items[i].y > event.target.y ) {
-          console.log(items[i]);
-
-          items[i].y -= inc;
-          yCoordStore.putSync(items[i]);    
-        }
-      }
-    });    
-
-  });
-
-
-  // -----------------------------------------------
-  // calendarStore
-  // -----------------------------------------------
-  var calendarStore = new TrackableMemory({
-    Model: CalendarModel,
-    idProperty: "pk",
-    nextPk: 1, 
-    len: 0,
-  });
-
-  calendarStore.on("add", function(event){
-    calendarStore.len += 1;
-    calendarStore.nextPk += 1;
-    event.target.DrawSVG();
-  });
-
-  calendarStore.on("update", function(event){
-    event.target.ClearSVG();
-    event.target.DrawSVG();
-  });
-
-  calendarStore.on("delete", function(event){
-    calendarStore.len -= 1;
-    event.target.ClearSVG();
-  });
-
-  var calendarStoreAdapter = new DstoreAdapter(calendarStore);
-  registry.byId("CalendarStartPeriods").set("labelAttr", "name");
-
-  registry.byId("DayOffDatesSelect").set("labelAttr", "name");
-  registry.byId("DayOffDatesSelect").setStore(calendarStoreAdapter);
-  registry.byId("HighlightDatesSelect").set("labelAttr", "name");
-  registry.byId("HighlightDatesSelect").setStore(calendarStoreAdapter);
-
-
-  // -----------------------------------------------
-  // crewMemberStore
-  // -----------------------------------------------
-
-  var crewMemberStore = new TrackableMemory({
-    Model: CrewMemberModel,
-    idProperty: "pk",
-    nextPk: 1, 
-    len: 0,
-  });
-
-  crewMemberStore.on("add", function(event){
-    crewMemberStore.len += 1;
-    crewMemberStore.nextPk = Math.max(event.target.pk, crewMemberStore.nextPk) + 1;
-    event.target.DrawSVG();
-  });
-  
-  crewMemberStore.on("update", function(event){
-    crewMemberStore.nextPk = Math.max(event.target.pk + 1, crewMemberStore.nextPk);
-    console.log(event);
-
-    event.target.ClearSVG();
-    event.target.DrawSVG();
-  });
-
-  crewMemberStore.on("delete", function(event){
-    crewMemberStore.len -= 1;
-    event.target.ClearSVG();
-
-    // Remove 
-    activityStore.filter({fk_cm: event.target.pk}).forEach(function(item) {
-      activityStore.removeSync(item.pk);
-    });
-
-    // Remove coords that reference this distance.
-    yCoordStore.filter({fk_cm: event.target.pk}).forEach(function(item) {
-      yCoordStore.removeSync(item.pk);
+    parser.parse().then(function() { 
+      dom.byId("loader").style.display = "none";
+      dom.byId("content").style.display = "block";
     });
 
 
-  });
+    registry.byId("TrainingRestBeforeH").set("store", zeroTo99Store);
+    registry.byId("TrainingRestAfterH").set("store", zeroTo99Store);
+    registry.byId("TrainingDurationHour").set("store", zeroTo99Store);
 
-  var crewMemberStoreAdapter = new DstoreAdapter(crewMemberStore);
-  registry.byId("DayOffCrewMemberSelect").set("store", crewMemberStoreAdapter);
-  registry.byId("TrainingCrewMemberSelect").set("store", crewMemberStoreAdapter);
-  registry.byId("TripCrewMemberSelect").set("store", crewMemberStoreAdapter);
+    registry.byId("TrainingRestBeforeH").set("regExp", '[0-9]+');
+    registry.byId("TrainingRestAfterH").set("regExp", '[0-9]+');
+    registry.byId("TrainingDurationHour").set("regExp", '[0-9]+');
+
+    registry.byId("TrainingRestBeforeM").set("store", zeroTo59Store);
+    registry.byId("TrainingRestAfterM").set("store", zeroTo59Store);
+    registry.byId("TrainingDurationMinute").set("store", zeroTo59Store);
+
+    registry.byId("TrainingRestBeforeM").set("value", 0);
+    registry.byId("TrainingRestAfterM").set("value", 0);
+
+
+    registry.byId("TripRestBeforeH").set("store", zeroTo99Store);
+    registry.byId("TripRestAfterH").set("store", zeroTo99Store);
+
+    registry.byId("TripRestBeforeH").set("regExp", '[0-9]+');
+    registry.byId("TripRestAfterH").set("regExp", '[0-9]+');
+
+    registry.byId("TripRestBeforeM").set("store", zeroTo59Store);
+    registry.byId("TripRestAfterM").set("store", zeroTo59Store);
+
+
+
+    registry.byId("transportationTime").set("store", zeroTo99Store);
+    registry.byId("reportTime").set("store", zeroTo99Store);
+    registry.byId("releaseTime").set("store", zeroTo99Store);
+    registry.byId("midnightOffset").set("store", zeroTo99Store);
+
+    registry.byId("transportationTime").set("regExp", '[0-9]+');
+    registry.byId("reportTime").set("regExp", '[0-9]+');
+    registry.byId("releaseTime").set("regExp", '[0-9]+');
+    registry.byId("midnightOffset").set("regExp", '[0-9]+');
+
+    // ===============================================
+    // Install gantt svg data at the right place.
+    // ===============================================
+    on.emit(window, "resize", {bubbles: true,cancelable: true});
+
+
+    // ===============================================
+    // Load timezones.
+    // ===============================================
+    var array = timezone.tz.names();
+
+    var timezoneStore = new Memory({
+      idProperty: "id",
+    });
+
+    for( i = 0; i < array.length; i++) {
+      timezoneStore.addSync({
+        id: i,
+        name: array[i],
+       });
+     }
+
+     var timezoneStoreAdapter = new DstoreAdapter(timezoneStore);
+     registry.byId("CalendarTimezone").set("store", timezoneStoreAdapter);
+
+
+
+     // ===============================================
+     // Display "detail" of activity, or highlight.
+     // ===============================================
+     function PopupActivityDetail(activityId) {
+       var myDialog = new Dialog({
+         title: "Detail activity",
+         style: "width: 300px",
+         content: "Activitiy id: " + activityId + "<br/>name: " + activityStore.getSync(activityId).name + "<br/>",
+       });
+
+       var myButton = new Button({
+         label: "Delete this activity",
+         onClick: function() {
+           activityStore.removeSync(activityId);
+           myDialog.hide();
+         }
+       }).placeAt(myDialog);
+
+       myDialog.show();
+     }
+
+     function PopupHighLightDetail(highLightId) {
+       var myDialog = new Dialog({
+         title: "Detail highlight",
+         style: "width: 300px",
+         content: "Highlight id: " + highLightId + "<br/>",
+       });
+
+       var myButton = new Button({
+         label: "Delete this highlight",
+         onClick: function() {
+           highLightStore.removeSync(highLightId);
+           myDialog.hide();
+         }
+       }).placeAt(myDialog);
+
+       myDialog.show();
+     }
+
+     function PopupCrewMemberDetail(crewMemberId) {
+       var myDialog = new Dialog({
+         title: "Detail crew member",
+         style: "width: 300px",
+         content: "Crewmember id: " + crewMemberId + "<br/>name: " + crewMemberStore.getSync(crewMemberId).name + "<br/>",
+       });
+
+       var myButton = new Button({
+         label: "Delete this crew member",
+         onClick: function() {
+           crewMemberStore.removeSync(crewMemberId);
+           myDialog.hide();
+         }
+       }).placeAt(myDialog);
+
+       myDialog.show();
+     }
+
+
+
+     // ===============================================
+     // Start Date Time + duration Hour Minute => 
+     // End Date Time (readonly).
+     // Here, dojo/date is used, as only local dates
+     // are handled. 
+     // ===============================================
+     function UpdateEndDateTime(prefixId) {
+       var mydate = moment(registry.byId(prefixId + "StartDate").get("value"));
+       var mytime = moment(registry.byId(prefixId + "StartTime").get("value"));
+
+       // rebuild the start date from StartDate and StartTime field values, 
+       mydate.minutes(mytime.minutes());
+       mydate.hours(mytime.hours());
+
+       // add duration to determine end datetime of the activity..
+       var duration = moment.duration({
+         hours: registry.byId(prefixId + "DurationHour").get("value"), 
+         minutes: registry.byId(prefixId + "DurationMinute").get("value")
+       });
+       mydate.add(duration);
+
+       // update end date and time fields.
+       registry.byId(prefixId + "EndDate").set("value", mydate.toDate());
+       registry.byId(prefixId + "EndTime").set("value", mydate.toDate());
+     } 
+
+
+
+     // ===============================================
+     // return the X position in SVG, based on starting
+     // calendar and the date provided in argument.
+     // ===============================================
+     function getPositionX(date) {
+       return (date.unix() - Xorig) / 60;
+     }
+
+     // ===============================================
+     //  apply the compression factor on axe X.
+     // ===============================================
+     function CompressX(x) {
+       return x / config.XGraphCompression;
+     }
+
+     // ===============================================
+     // SVG drawing
+     // ===============================================
+
+     // Assumption on the SVG:
+     // - One pixel per minute, so a day is 1440px width.
+     // - Group node (g) is generally used to be able to shift concept in the 
+     //   right position, so drawing the inner concept is logically simpler.
+     //
+     // An attempt to use dojox.gfx module to draw SVG was done, but some problems 
+     // occured to identify existing node, in order to add new objects.
+
+     var svg     = dom.byId("graph"); // .getSVGDocument();
+     var svgNS   = "http://www.w3.org/2000/svg";
+     var xlinkNS = "http://www.w3.org/1999/xlink";
+
+     var Xorig            = 0; // unix time of the start of the calendar.
+     var MARGIN_TOP_CM    = 20;
+     var HEIGHT_LINE_CM   = 140;
+     var MARGIN_BOTTOM_CM = 20;
+     var HEIGHT_LINE_HL   = 40;
+     var IsDrawingEnable  = true; // flag used to disable the drawing.
+
+     // Draw a rectangle.
+     function SVG_drawRect(className, x, y, width, height) {
+       var rectangle = document.createElementNS(svgNS, "rect");
+
+       rectangle.setAttributeNS(null, "class", className);
+       rectangle.setAttributeNS(null, "x", CompressX(x));
+       rectangle.setAttributeNS(null, "y", y);
+       rectangle.setAttributeNS(null, "width", CompressX(width));
+       rectangle.setAttributeNS(null, "height", height);
+
+       return rectangle;
+     }
+
+     // Draw a line.
+     function SVG_drawLine(className, x1, y1, x2, y2) {
+       var line = document.createElementNS(svgNS, "line");
+
+       line.setAttributeNS(null, "class", className);
+       line.setAttributeNS(null, "x1", CompressX(x1));
+       line.setAttributeNS(null, "y1", y1);
+       line.setAttributeNS(null, "x2", CompressX(x2));
+       line.setAttributeNS(null, "y2", y2);
+
+       return line;
+     }
+
+
+     // Draw a text. 
+     function SVG_drawText(className, x, y, label) {
+       var text = document.createElementNS(svgNS, "text");
+
+       text.setAttributeNS(null, "class", className);
+       text.setAttributeNS(null, "x", CompressX(x));
+       text.setAttributeNS(null, "y", y);
+
+       text.appendChild(document.createTextNode(label));
+
+       return text;
+     }
+
+
+     // Draw a highlight in calendar.
+     function SVG_drawHighlight(item) {
+       var calendarId    = svg.getElementById("calendar");
+       var calendarBarId = svg.getElementById("calendar_bar");
+
+       var G       = document.createElementNS(svgNS, "g");
+       G.setAttributeNS(null,"transform","translate(0, " + item.GetYCoord() + ")");
+       G.setAttributeNS(null, "id", item.get("ident"));
+       calendarId.appendChild(G);
+
+       var lblText = SVG_drawText("highlight_label", item.x + 10, HEIGHT_LINE_HL / 2, item.get("message"));
+       on(lblText, "dblclick", function(evt) {
+         PopupHighLightDetail(item.pk);
+       });
+       G.appendChild(lblText);
+
+       // a scale is used to extend the bars, that"s why they are defined into
+       // a specific group.
+       var Gbar     = document.createElementNS(svgNS, "g");
+       Gbar.setAttributeNS(null, "id", item.get("barident"));
+       calendarBarId.appendChild(Gbar);
+
+       Gbar.appendChild(SVG_drawRect("highlight", item.x, 0, 1, 1));
+     }
+
+     function getActivityDistancePosition(event, activity) {
+       var x = activity.x;
+
+       switch( event ) {
+         case 1: x = x - activity.tp - activity.restb; break;
+         case 2: x = x - activity.tp; break;
+         case 4: x = x + activity.width; break;
+         case 5: x = x + activity.width + activity.tp; break;
+         case 6: x = x + activity.width + activity.tp + activity.resta; break;
+       }
+
+       return x;
+     }
+
+
+     // Draw a distance in calendar.
+     function SVG_drawDistance(item) {
+       var calendarId    = svg.getElementById("calendar");
+
+       var G       = document.createElementNS(svgNS, "g");
+       G.setAttributeNS(null, "id", item.get("ident"));
+       calendarId.appendChild(G);
+
+       var from = activityStore.getSync(item.fk_act1);
+       var to   = activityStore.getSync(item.fk_act2);
+
+       var x1 = getActivityDistancePosition(item.act1_event, from);
+       var x2 = getActivityDistancePosition(item.act2_event, to);
+
+       var y = item.GetYCoord();
+       var yy = y + HEIGHT_LINE_HL / 2;
+
+       var cm1 = crewMemberStore.getSync(from.fk_cm);
+       var cm2 = crewMemberStore.getSync(to.fk_cm);
+
+       var y1 = cm1.GetYCoord();
+       var y2 = cm2.GetYCoord(); 
+
+       if( x2 < x1 ) {
+         var tmp = x1;
+         x1 = x2;
+         x2 = tmp;
+
+         tmp = y1;
+         y1 = y2;
+         y2 = tmp;
+       }
+
+       var dur = x2 - x1;
+       var min = dur % 60;
+
+       var label = Math.floor(dur / 60) + "h";
+       label += min > 9 ? min : "0" + min;
+
+
+       var lblText = SVG_drawText("distance_label", (x1 + x2) / 2 , yy - 3, label);
+       on(lblText, "dblclick", function(evt) {
+         PopupHighLightDetail(item.pk);
+       });
+       G.appendChild(lblText);
+       G.appendChild(SVG_drawLine("distance", x1, yy, x2, yy));
+
+       var inc = HEIGHT_LINE_CM / 10;
+       var xinc = inc * config.XGraphCompression; 
+
+       // draw arrow.
+       G.appendChild(SVG_drawLine("distance", x1, yy, x1 + xinc, yy + inc));
+       G.appendChild(SVG_drawLine("distance", x1, yy, x1 + xinc, yy - inc ));
+
+       // draw second arrow.
+       G.appendChild(SVG_drawLine("distance", x2, yy, x2 - xinc, yy + inc));
+       G.appendChild(SVG_drawLine("distance", x2, yy, x2 - xinc, yy - inc));
+
+       // draw vertical lines.
+       var Y1 = MARGIN_TOP_CM + HEIGHT_LINE_CM * cm1.lineCount + MARGIN_BOTTOM_CM; 
+       var Y2 = MARGIN_TOP_CM + HEIGHT_LINE_CM * cm2.lineCount + MARGIN_BOTTOM_CM; 
+
+       G.appendChild(SVG_drawLine("distance", x1, y1 < y ? y1 - Y1 : y1 + Y1, x1, y1 < y ? yy + 2 * inc : yy - 2 * inc));
+       G.appendChild(SVG_drawLine("distance", x2, y2 < y ? y2 - Y2 : y2 + Y2, x2, y2 < y ? yy + 2 * inc : yy - 2 * inc));
+     }
+
+
+     // Draw a calendar date. The drawing belongs to id calendar in the SVG.
+     // Each "date" is embedded in a g node, with a translation on X, according
+     // to the position. This way, each drawing into the g node is strictly the 
+     // same for each day, except labels.
+     function SVG_drawCalendarDate(item) {
+       var calendarId    = svg.getElementById("calendar");
+       var calendarBarId = svg.getElementById("calendar_bar");
+
+       var G       = document.createElementNS(svgNS, "g");
+       G.setAttributeNS(null, "transform", "translate(" + CompressX(item.x) + ",0)");
+       G.setAttributeNS(null, "id", item.get("ident"));
+       calendarId.appendChild(G);
+
+       G.appendChild(SVG_drawText("day_label relative", 720, -70, "Day " + item.get("relative")));
+
+       G.appendChild(SVG_drawText("day_label yyyymmdd", 720, -20, item.get("name")));
+
+       var minutes = 120;
+       var time = moment(item.get("name"));
+       var duration = moment.duration(minutes, "minutes");
+
+       for(var i = 0; i < item.width; i += minutes) { 
+         G.appendChild(SVG_drawText("hour_label", i, 0, time.format("H:mm")));
+         time.add(duration);   
+       }
+
+       // a scale is used to extend the bars, that's why they are defined into
+       // a specific group.
+       var Gbar     = document.createElementNS(svgNS, "g");
+       Gbar.setAttributeNS(null, "transform", "translate(" + CompressX(item.x) + ",0)");
+       Gbar.setAttributeNS(null, "class", item.get("startperiod") ? "start_period" : item.get("type"));
+       Gbar.setAttributeNS(null, "id", item.get("barident"));
+       calendarBarId.appendChild(Gbar);
+
+       Gbar.appendChild(SVG_drawRect("day_bar", 0, 0, item.width, 1));
+       Gbar.appendChild(SVG_drawRect("line", 0, 0, 1, 1));
+       Gbar.appendChild(SVG_drawRect("line", item.width, 0, 1, 1));
+
+       for(var i = 60; i < item.width; i += minutes) { 
+         Gbar.appendChild(SVG_drawRect("hour_bar", i, 0, 60, 1));
+       }
+     }
+
+
+     // Draw a crewmember. The drawing is embedded into a g node 
+     // with a translation on y, and belongs to crewmembers id.
+     // There is no x translation, so every activity attached to the 
+     // crewmember will be add into the g node.
+     function SVG_drawCrewMember(item) {
+       var crewMemberId    = svg.getElementById("crewmembers");
+       var crewMemberBarId = svg.getElementById("crewmember_bar");
+
+       console.log(item);
+
+       var G = document.createElementNS(svgNS, "g");
+       var y = item.GetYCoord();
+
+       G.setAttributeNS(null,"transform","translate(0, " + y + ")");
+       G.setAttributeNS(null,"id", item.get("ident"));
+       crewMemberId.appendChild(G);
+
+       var crewText = SVG_drawText("crewmember", -50, MARGIN_TOP_CM + HEIGHT_LINE_CM / 2, item.name);
+
+       on(crewText, "dblclick", function(evt) {
+         PopupCrewMemberDetail(item.pk);
+       });
+       G.appendChild(crewText);
+
+       var Gbar = document.createElementNS(svgNS, "g");
+       Gbar.setAttributeNS(null,"transform","translate(0, " + y + ")");
+       Gbar.setAttributeNS(null,"id", item.get("barident"));
+       crewMemberBarId.appendChild(Gbar);
+
+       Gbar.appendChild(SVG_drawRect("line", 0, 0, 1, 1));
+
+       var height = item.GetHeight(); 
+       //    if( y + height == yCoordStore.nextY ) {
+       //    }
+       Gbar.appendChild(SVG_drawRect("line", 0, height, 1, 1));
+     }
+
+
+     // Draw an activity. As the others, the drawing is embedded into a g node 
+     // with a translation on y, and belongs to crewmember or opentime line.
+     // Therefore no y translation is necessary, a x is used to draw the activity on
+     // the rigth place in the calendar.
+     function SVG_drawActivity(activity) { // , line) {
+
+       var unitY = HEIGHT_LINE_CM / 14; 
+
+       var parentId = svg.getElementById(activity.GetCrewMemberIdent()); // line ? svg.getElementById(line.get("ident")) : svg.getElementById("opentime");  
+
+       var G = document.createElementNS(svgNS, "g");
+       var yLine = MARGIN_TOP_CM + HEIGHT_LINE_CM * ( activity.lineNb - 1 );
+       G.setAttributeNS(null, "transform", "translate(" + CompressX(activity.x) + "," + yLine +")");
+       G.setAttributeNS(null, "id", activity.get("ident"));
+
+       on(G, "dblclick", function(evt) {
+         PopupActivityDetail(activity.pk);
+       });
+
+       parentId.appendChild(G);
+
+       var Rect = document.createElementNS(svgNS,"rect");
+       Rect.setAttributeNS(null, "class", activity.get("type"));
+       Rect.setAttributeNS(null, "x", 0);
+       Rect.setAttributeNS(null, "y", 0);
+       Rect.setAttributeNS(null, "rx", Math.min(CompressX(2 * unitY), 20));
+       Rect.setAttributeNS(null, "ry", Math.min(CompressX(2 * unitY), 20));
+       Rect.setAttributeNS(null, "width", CompressX(activity.width));
+       Rect.setAttributeNS(null, "height", HEIGHT_LINE_CM);
+       G.appendChild(Rect);
+
+       G.appendChild(SVG_drawText("label", 10, 5 * unitY, activity.get("name")));
+
+       var startActivity = moment(activity.get("lbtStart"));
+       var endActivity   = startActivity.clone();
+       endActivity.add(activity.width, "m");
+       var hourSize = 9;  // see font-size of class .hour_start.
+
+       G.appendChild(SVG_drawText("act_hour start_hour", 0 , hourSize, startActivity.format("HH:mm")));
+       G.appendChild(SVG_drawText("act_hour end_hour", activity.width , 14 * unitY, endActivity.format("HH:mm")));
+
+       // transporation time
+       if( activity.tp > 0 ) {
+         // before.
+         G.appendChild(SVG_drawRect("TP", activity.tp * -1, 3 * unitY, activity.tp, 4 * unitY));
+         startActivity.subtract(activity.tp, "m");
+         G.appendChild(SVG_drawText("act_hour start_hour", activity.tp * -1, 3 * unitY + hourSize, startActivity.format("HH:mm")));
+
+         // after.
+         G.appendChild(SVG_drawRect("TP", activity.width, 7 * unitY, activity.tp, 4 * unitY));
+         endActivity.add(activity.tp, "m");
+         G.appendChild(SVG_drawText("act_hour end_hour", activity.width + activity.tp , 11 * unitY, endActivity.format("HH:mm")));
+       }
+
+       // rest before
+       if( activity.restb > 0 ) {
+         G.appendChild(SVG_drawRect("REST", ( activity.restb + activity.tp ) * -1, 3 * unitY, activity.restb, 4 * unitY));
+         startActivity.subtract(activity.restb, "m");
+         G.appendChild(SVG_drawText("act_hour start_hour", ( activity.restb + activity.tp ) * -1 , 3 * unitY + hourSize, startActivity.format("HH:mm")));
+       }
+
+       // rest after. 
+       if( activity.resta > 0 ) {
+         G.appendChild(SVG_drawRect("REST", activity.width + activity.tp, 7 * unitY, activity.resta, 4 * unitY));
+         endActivity.add(activity.resta, "m");
+         G.appendChild(SVG_drawText("act_hour end_hour", activity.width + activity.tp + activity.resta, 11 * unitY, endActivity.format("HH:mm")));
+       }
+
+
+       activityStore.filter({fk_parent: activity.pk}).fetch().then(function (objects) {
+         if( objects.length < 0 ) { 
+           return; 
+         }
+
+         var endDetailActivity = moment(activity.get("lbtStart"));
+
+         var Gdetails = document.createElementNS(svgNS, "g");
+         Gdetails.setAttributeNS(null, "transform", "translate(0," + 7 * unitY +")");
+         Gdetails.setAttributeNS(null, "class", "details");
+
+         G.appendChild(Gdetails);
+
+         for(i = 0; i < objects.length; i++) {
+           var Rect = document.createElementNS(svgNS,"rect");
+           Rect.setAttributeNS(null, "class", objects[i].get("type"));
+           Rect.setAttributeNS(null, "x", CompressX(objects[i].x - activity.x));
+           Rect.setAttributeNS(null, "y", unitY);
+           Rect.setAttributeNS(null, "rx", 1);
+           Rect.setAttributeNS(null, "ry", 1);
+           Rect.setAttributeNS(null, "width", CompressX(objects[i].width));
+           Rect.setAttributeNS(null, "height", 4 * unitY);
+
+           Gdetails.appendChild(Rect);
+
+           if( i % 2 == 0 && i != 0 && i != objects.length -1 ) {
+             Gdetails.appendChild(SVG_drawText("dtl_station", objects[i].x + objects[i].width / 2 - activity.x, unitY -2, objects[i].station ));
+           }
+           if( i % 2 == 1 ) {
+             Gdetails.appendChild(SVG_drawText("dtl_hour start_hour", objects[i].x - activity.x, unitY + hourSize, endDetailActivity.format("HH:mm")));
+             // useless since the distance tool allows to measure duration !          
+             //          Gdetails.appendChild(SVG_drawText("duration", objects[i].x + objects[i].width / 2 - activity.x, 3 * unitY , "<- " + formatDurationInHoursMinutes(objects[i].width) + " ->"));
+           }
+
+           endDetailActivity.add(objects[i].width, "m");
+
+           if( i % 2 == 1 ) {
+             Gdetails.appendChild(SVG_drawText("dtl_hour end_hour" , objects[i].x + objects[i].width - activity.x, 5 * unitY, endDetailActivity.format("HH:mm")));
+           }
+
+         }
+       });
+     }
+
+     // ===============================================
+     // Data MODELs
+     // ===============================================
+
+     var ConfigurationModel = declare(Model, {
+       validateOnSet : false,
+       schema        : {
+         id                                            : { type : "numeric", default : 0 },
+         transportationTime                            : { type : "numeric", default : 0},
+         midnightOffset                                : { type : "numeric", default : 0},
+         reportTime                                    : { type : "numeric", default : 0},
+         releaseTime                                   : { type : "numeric", default : 0},
+         timezone                                      : { type : "string",  default : ""},
+         station                                       : { type : "string",  default : ""},
+         calendarStart                                 : { type : "string",  default : ""},
+         calendarEnd                                   : { type : "string",  default : ""},
+         MenuFile                                      : { type : "boolean", default : false, },
+         MenuFileLoadSVGFile                           : { type : "boolean", default : false, },
+         MenuFileLoadXMLStationFile                    : { type : "boolean", default : false, },
+         MenuFileSaveSVGFile                           : { type : "boolean", default : true, },
+         MenuCalendar                                  : { type : "boolean", default : true, },
+         MenuCalendarSetStartEnd                       : { type : "boolean", default : true, },
+         MenuCalendarSetStartPeriods                   : { type : "boolean", default : true, },
+         MenuBusinessObject                            : { type : "boolean", default : true, },
+         MenuBusinessObjectShowConstants               : { type : "boolean", default : false, },
+         MenuBusinessObjectCreateCrewMember            : { type : "boolean", default : false, },
+         MenuBusinessObjectCreateActivity              : { type : "boolean", default : false, },
+         MenuBusinessObjectCreateActivityDayOff        : { type : "boolean", default : false, },
+         MenuBusinessObjectCreateActivityTrip          : { type : "boolean", default : false, },
+         MenuBusinessObjectCreateActivityTraining      : { type : "boolean", default : false, },
+         MenuBusinessObjectCreateActivityOtherActivity : { type : "boolean", default : true, },
+         MenuGraphOption                               : { type : "boolean", default : true, },
+         MenuGraphOptionCalendar                       : { type : "boolean", default : false, },
+         MenuGraphOptionActivity                       : { type : "boolean", default : false, },
+         MenuHighLights                                : { type : "boolean", default : true, },
+         MenuHighLightsSpecificDateTime                : { type : "boolean", default : false, },
+         MenuHighLightsDistance                        : { type : "boolean", default : false, },
+         MenuHighLightsWindow                          : { type : "boolean", default : true, },
+         SHCoordinates                                 : { type : "boolean", default : true, },
+         SHCalendarHours                               : { type : "boolean", default : true, },
+         SHCalendarHourBars                            : { type : "boolean", default : true, },
+         SHCalendarDayX                                : { type : "boolean", default : true, },
+         SHCalendarDayYYYYMMDD                         : { type : "boolean", default : true, },
+         SHCalendarDayBars                             : { type : "boolean", default : true, },
+         XGraphCompression                             : { type : "numeric", default : 1, },
+         SHActivityHours                               : { type : "boolean", default : true, },
+         SHActivityDetails                             : { type : "boolean", default : true, },
+         SHActivityDetailHours                         : { type : "boolean", default : true, },
+         SHActivityDetailStations                      : { type : "boolean", default : true, },
+       },
+     });
+
+
+     var CalendarModel = declare(Model, {
+       validateOnSet : false,
+       schema        : {
+         pk            : "numeric",
+         x             : "numeric",
+         width         : "numeric",
+         name          : "string",
+         relative      : "numeric",
+         startperiod   : { type : "boolean", default : false },
+         type          : new ComputedProperty({
+                           dependsOn : ["pk"],
+                           getValue  : function(pk) {
+                             return pk % 2 ? "uneven" : "even";
+                           }
+                         }),
+         ident         : new ComputedProperty({ 
+                           dependsOn : ["pk"],
+                           getValue  : function(pk) {
+                             return "cd" + pk;  // cd stands for Calendar Day.
+                           }
+                         }),
+         barident      : new ComputedProperty({ 
+                           dependsOn : ["pk"],
+                           getValue  : function(pk) {
+                             return "bcd" + pk;  // bcd stands for Bar Calendar Day.
+                           }
+                         }),
+       },
+       DrawSVG       : function() { 
+                         if( IsDrawingEnable ) SVG_drawCalendarDate(this); 
+                       },
+       ClearSVG      : function() {
+                         var item_lbl = svg.getElementById(this.get("ident"));
+                         var item_bar = svg.getElementById(this.get("barident"));
+
+                         if( item_lbl) item_lbl.parentNode.removeChild(item_lbl);
+                         if( item_bar) item_bar.parentNode.removeChild(item_bar);
+                       },
+     });
+
+
+     var CrewMemberModel = declare(Model, {
+       validateOnSet : false,
+       schema        : {
+         name      : "string",
+         birthdate : "string",
+         pk        : "numeric",
+         fk_yc     : "numeric",
+         lineCount : "numeric",
+         ident     : new ComputedProperty({
+                       dependsOn : ["pk"],
+                       getValue  : function(pk) {
+                         return "cm" + pk; // cm stands for CrewMember.
+                       }
+                     }),
+         barident  : new ComputedProperty({ 
+                       dependsOn : ["pk"],
+                       getValue  : function(pk) {
+                         return "bcm" + pk; // bcm stands for Bar CrewMember.
+                       }
+                     }),
+       },
+       DrawSVG       : function() { 
+                         if( IsDrawingEnable ) SVG_drawCrewMember(this); 
+                       },
+       ClearSVG      : function() {
+                         var item_lbl = svg.getElementById(this.get("ident"));
+                         var item_bar = svg.getElementById(this.get("barident"));
+
+                         if( item_lbl) item_lbl.parentNode.removeChild(item_lbl);
+                         if( item_bar) item_bar.parentNode.removeChild(item_bar);
+                       },
+       GetYCoord     : function() {
+                         return yCoordStore.getSync(this.fk_yc).y;
+                       },
+       GetHeight     : function() {
+                         return yCoordStore.getSync(this.fk_yc).height;
+                       },
+     });
+
+
+     var ActivityModel = declare(Model, {
+       validateOnSet      : false,
+       schema             : {
+         pk             : "numeric",
+         fk_cm          : "numeric", // foreign key to CrewMember.
+         fk_parent      : "numeric", // foreign key to parent activity.
+         name           : "string",
+         fullname       : "string",
+         x              : "numeric",
+         width          : "numeric",
+         tp             : "numeric",
+         resta          : "numeric",
+         restb          : "numeric",
+         type           : "string",
+         lbtStart       : "string",
+         utcStart       : "string",
+         utcEnd         : "string",
+         block          : "numeric",
+         credit         : "numeric",
+         duty           : "numeric",
+         tafbInPeriod   : "numeric",
+         blockInPeriod  : "numeric",
+         creditInPeriod : "numeric",
+         dutyInPeriod   : "numeric",
+         station        : "string",
+         lineNb         : "numeric",
+         ident          : new ComputedProperty({
+                            dependsOn    : ["pk", "type"],
+                            getValue     : function(pk, type) {
+                              return type.toLowerCase() + pk;  // DOxxx or TRPxxx or  .. 
+                            }
+                          }),
+       },
+       DrawSVG            : function() { 
+                              if( IsDrawingEnable ) {
+                                if( this.fk_parent == undefined ) {
+                                  SVG_drawActivity(this); // , crewmember); 
+                                }  
+                              }
+                            },
+       ClearSVG           : function() {
+                              var item = svg.getElementById(this.get("ident"));
+
+                              // an activity belongs to a crewmember. If the crewmember was cleared,
+                              // then the activity is also cleared !  
+                              if( item ) item.parentNode.removeChild(item);
+                            },
+       GetYCoord          : function() {
+                              return crewMemberStore.getSync(this.fk_cm).GetYCoord();
+                            },
+       GetCrewMemberIdent : function() {
+                              console.log("GetCrewMemberIdent"); 
+                              console.log(this.fk_cm);          
+                              return this.fk_cm ? crewMemberStore.getSync(this.fk_cm).get("ident") : "opentime"; 
+                            },
+     });
+
+
+     var TripDetailModel = declare(Model, {
+       validateOnSet : false,
+       schema        : {
+         pk             : "numeric",
+         order          : "numeric",
+         type           : "string",
+         station        : "string",
+         legType        : "string",
+         startDateTime  : "string",
+         dhour          : "numeric",
+         dminute        : "numeric",
+         endDateTime    : "string",
+         fk_activity    : "numeric",
+         stationSelect  : "numeric",
+         legTypeSelect  : "numeric",
+         durationSelect : "numeric",
+         newLegButton   : "numeric",
+         newLayButton   : "numeric",
+         deleteButton   : "numeric",
+       },
+     });
+
+
+     var StationModel = declare(Model, {
+       validateOnSet : false,
+       schema        : {
+         id             : "string",
+         code           : "string",
+         name           : "string",
+         dstShift       : "string",
+         dstStartLst    : "string",
+         dstEndLst      : "string",
+         utcOffset      : "string",
+         offset         : "numeric",
+         regionList     : "array",
+         /* do not work with query !!!
+         offset         : new ComputedProperty({ 
+                            dependsOn : ["utcOffet"],
+                            getValue  : function(utcOffset) {
+                              var data = offsetRegex.exec(utcOffset);
+
+                              return moment.duration({hours: data[1], minutes: data[2]}).asMinutes() * -1;
+                            }
+         }),
+         */
+       },
+     });
+
+
+     var HighLightModel = declare(Model, {
+       validateOnSet : false,
+       schema        : {
+         message  : "string",
+         pk       : "numeric",
+         x        : "numeric",
+         fk_yc    : "numeric",
+         ident    : new ComputedProperty({
+                      dependsOn : ["pk"],
+                      getValue  : function(pk) {
+                        return "hl" + pk;  // hl stands for HighLight
+                      }
+                    }),
+         barident : new ComputedProperty({ 
+                      dependsOn : ["pk"],
+                      getValue  : function(pk) {
+                        return "bhl" + pk;  // bhl stands for Bar HighLight
+                      }
+                    }),
+       },
+       DrawSVG       : function() { 
+                         if( IsDrawingEnable ) SVG_drawHighlight(this); 
+                       },
+       ClearSVG      : function() {
+                         var item_lbl = svg.getElementById(this.get("ident"));
+                         var item_bar = svg.getElementById(this.get("barident"));
+
+                         // a hightligh  belongs to a calendar day. If a day was cleared,
+                         // then the hightlight is also cleared !  
+                         if( item_lbl ) item_lbl.parentNode.removeChild(item_lbl);
+                         if( item_bar ) item_bar.parentNode.removeChild(item_bar);
+                       },
+       GetYCoord     : function() {
+                         return yCoordStore.getSync(this.fk_yc).y;
+                       },
+     });
+
+
+     var DistanceModel = declare(Model, {
+       validateOnSet : false,
+       schema        : {
+         pk         : "numeric",
+         fk_act1    : "numeric",
+         act1_event : "numeric",
+         fk_act2    : "numeric",
+         act2_event : "numeric",
+         fk_yc      : "numeric",
+         ident      : new ComputedProperty({
+                        dependsOn : ["pk"],
+                        getValue: function(pk) {
+                          return "dst" + pk;  // hl stands for HighLight
+                        }
+                      }),
+       },
+       DrawSVG       : function() { 
+                         if( IsDrawingEnable ) SVG_drawDistance(this); 
+                       },
+       ClearSVG      : function() {
+                         var item_lbl = svg.getElementById(this.get("ident"));
+
+                         if( item_lbl ) item_lbl.parentNode.removeChild(item_lbl);
+                       },
+       GetYCoord     : function() {
+                         return yCoordStore.getSync(this.fk_yc).y;
+                       },
+     });
+
+
+     var YCoordModel = declare(Model, {
+       validateOnSet : false,
+       schema        : {
+         pk     : "numeric",
+         y      : "numeric",
+         height : "numeric",
+         fk_hl  : "numeric",
+         fk_dst : "numeric",
+         fk_cm  : "numeric",
+       },
+     });
+
+
+     var EventActivityModel = declare(Model, {
+       validateOnSet : false,
+       schema        : {
+         pk     : "numeric",
+         x      : "numeric",
+         label  : "string",
+         fk_act : "numeric",
+       },
+     });
+
+
+     // ===============================================
+     // Data STOREs and events.
+     // ===============================================
+
+     var TrackableMemory = declare([Memory, Trackable]); 
+
+     // -----------------------------------------------
+     // configurationStore
+     // -----------------------------------------------
+     var configurationStore = new Memory({
+       Model      : ConfigurationModel,
+       idProperty : "id",
+     });
+
+     configurationStore.on("add, update", function(event) {
+       var cfg     = event.target;
+       var pattern = new RegExp("^Menu");
+
+       for(var property in cfg) {
+         console.log(property);
+         if( pattern.test(property) ) {
+           console.log(cfg.get(property));
+           registry.byId(property).set("disabled", cfg.get(property));
+         }
+       }
+     });
+
+     var config = configurationStore.Model();
+
+     configurationStore.addSync(config);
+
+     // -----------------------------------------------
+     // eventActivityStore
+     // -----------------------------------------------
+     var eventActivityStore = new TrackableMemory({
+       Model      : EventActivityModel,
+       idProperty : "pk",
+       nextPk     : 1,
+       len        : 0,
+     });
+
+     eventActivityStore.on("add", function(event) {
+       eventActivityStore.len += 1;
+       eventActivityStore.nextPk = Math.max(event.target.pk + 1, eventActivityStore.nextPk); 
+     });
+
+     eventActivityStore.on("update", function(event) {
+       eventActivityStore.nextPk = Math.max(event.target.pk + 1, eventActivityStore.nextPk); 
+     });
+
+     eventActivityStore.on("delete", function(event) {
+       eventActivityStore.len -= 1;
+     });
+
+
+     // -----------------------------------------------
+     // yCoordStore
+     // -----------------------------------------------
+     var yCoordStore = new TrackableMemory({
+       Model            : YCoordModel,
+       idProperty       : "pk",
+       nextPk           : 1,
+       nextY            : 0,
+       len              : 0,
+       StretchSVGHeight : function() {
+                            // scale vertically the calendar to fit the number of crewmember.
+                            var height = this.nextY;
+                            if( OpenTimeLineCount > 0 ) {
+                              height += MARGIN_TOP_CM + HEIGHT_LINE_CM * OpenTimeLineCount + MARGIN_BOTTOM_CM;
+                            }
+
+                            svg.getElementById("calendar_bar").setAttribute("transform", "scale(1," + height + ")");
+
+                            svg.getElementById("opentime").setAttribute("transform","translate(0, " + this.nextY + ")");
+                          },
+     });
+
+     yCoordStore.on("add", function(event) {
+       yCoordStore.len += 1;
+       yCoordStore.nextPk = Math.max(event.target.pk + 1, yCoordStore.nextPk); 
+
+       console.log(event.target.y); 
+       yCoordStore.sort('y').fetch().then(function(items) {
+         var nextY = 0;
+         for (var i = 0 ; i < items.length ; i++) {
+           items[i].y = nextY;
+           nextY += items[i].height;
+         }
+         yCoordStore.nextY = nextY;
+       });    
+
+       yCoordStore.StretchSVGHeight();
+       console.log(yCoordStore);
+     });
+
+     yCoordStore.on("update", function(event) {
+       yCoordStore.nextPk = Math.max(event.target.pk + 1, yCoordStore.nextPk); 
+
+       yCoordStore.sort('y').fetch().then(function(items) {
+         var nextY = 0;
+         for (var i = 0 ; i < items.length ; i++) {
+           items[i].y = nextY;
+           nextY += items[i].height;
+         }
+
+         yCoordStore.nextY = nextY;
+       });    
+
+       yCoordStore.StretchSVGHeight();
+       console.log(yCoordStore);
+
+       topic.publish("refreshGraph");
+     });
+
+     yCoordStore.on("delete", function(event) {
+       yCoordStore.len -= 1;
+
+       yCoordStore.sort('y').fetch().then(function(items) {
+         var nextY = 0;
+         for (var i = 0 ; i < items.length ; i++) {
+           items[i].y = nextY;
+           nextY += items[i].height;
+         }
+         yCoordStore.nextY = nextY;
+       });    
+
+       yCoordStore.StretchSVGHeight();
+       console.log(yCoordStore);
+     });
+
+
+     // -----------------------------------------------
+     // calendarStore
+     // -----------------------------------------------
+     var calendarStore = new TrackableMemory({
+       Model      : CalendarModel,
+       idProperty : "pk",
+       nextPk     : 1,
+       len        : 0,
+     });
+
+     calendarStore.on("add", function(event) {
+       calendarStore.len += 1;
+       calendarStore.nextPk += 1;
+       event.target.DrawSVG();
+     });
+
+     calendarStore.on("update", function(event) {
+       event.target.ClearSVG();
+       event.target.DrawSVG();
+     });
+
+     calendarStore.on("delete", function(event) {
+       calendarStore.len -= 1;
+       event.target.ClearSVG();
+     });
+
+     var calendarStoreAdapter = new DstoreAdapter(calendarStore);
+     registry.byId("CalendarStartPeriods").set("labelAttr", "name");
+
+     registry.byId("DayOffDatesSelect").set("labelAttr", "name");
+     registry.byId("DayOffDatesSelect").setStore(calendarStoreAdapter);
+     registry.byId("HighlightDatesSelect").set("labelAttr", "name");
+     registry.byId("HighlightDatesSelect").setStore(calendarStoreAdapter);
+
+
+     // -----------------------------------------------
+     // crewMemberStore
+     // -----------------------------------------------
+
+     var crewMemberStore = new TrackableMemory({
+       Model      : CrewMemberModel,
+       idProperty : "pk",
+       nextPk     : 1,
+       len        : 0,
+     });
+
+     crewMemberStore.on("add", function(event) {
+       crewMemberStore.len += 1;
+       crewMemberStore.nextPk = Math.max(event.target.pk, crewMemberStore.nextPk) + 1;
+       event.target.DrawSVG();
+     });
+
+     crewMemberStore.on("update", function(event) {
+       crewMemberStore.nextPk = Math.max(event.target.pk + 1, crewMemberStore.nextPk);
+       console.log(event);
+
+       var Y = yCoordStore.getSync(event.target.fk_yc); 
+
+       Y.height = MARGIN_TOP_CM + HEIGHT_LINE_CM * event.target.lineCount + MARGIN_BOTTOM_CM; 
+
+       yCoordStore.putSync(Y);      
+
+       console.log("je passe icicicicitttttt");
+       console.log(yCoordStore);          
+
+       event.target.ClearSVG();
+       event.target.DrawSVG();
+
+       // Redraw activity.
+       activityStore.filter({fk_cm: event.target.pk}).forEach(function(item) {
+         item.ClearSVG();
+         item.DrawSVG(event.target.pk);
+       });
+     });
+
+     crewMemberStore.on("delete", function(event) {
+       crewMemberStore.len -= 1;
+       event.target.ClearSVG();
+
+       // Remove 
+       activityStore.filter({fk_cm: event.target.pk}).forEach(function(item) {
+         activityStore.removeSync(item.pk);
+       });
+
+       // Remove coords that reference this distance.
+       yCoordStore.filter({fk_cm: event.target.pk}).forEach(function(item) {
+         yCoordStore.removeSync(item.pk);
+       });
+     });
+
+     var crewMemberStoreAdapter = new DstoreAdapter(crewMemberStore);
+     registry.byId("DayOffCrewMemberSelect").set("store", crewMemberStoreAdapter);
+     registry.byId("TrainingCrewMemberSelect").set("store", crewMemberStoreAdapter);
+     registry.byId("TripCrewMemberSelect").set("store", crewMemberStoreAdapter);
 
 
   // -----------------------------------------------
@@ -1533,19 +1567,19 @@ require([
     len: 0,
   });
 
-  activityStore.on("add", function(event){
+  activityStore.on("add", function(event) {
     activityStore.len += 1;
     activityStore.nextPk = Math.max(event.target.pk, activityStore.nextPk) + 1;
-    event.target.DrawSVG(crewMemberStore.getSync(event.target.fk_cm));
+    event.target.DrawSVG(); // crewMemberStore.getSync(event.target.fk_cm));
   });
 
-  activityStore.on("update", function(event){
+  activityStore.on("update", function(event) {
     activityStore.nextPk = Math.max(event.target.pk + 1, activityStore.nextPk); 
     event.target.ClearSVG();
-    event.target.DrawSVG(crewMemberStore.getSync(event.target.fk_cm));
+    event.target.DrawSVG(); //crewMemberStore.getSync(event.target.fk_cm));
   });
 
-  activityStore.on("delete", function(event){
+  activityStore.on("delete", function(event) {
     // Remove distance highlight that reference this activity.
     distanceStore.filter({fk_act1: event.target.pk}).forEach(function(item) {
       distanceStore.removeSync(item.pk);
@@ -1563,11 +1597,24 @@ require([
     event.target.ClearSVG();
   });
 
-  function IsActivityOverlap(crewmember, x , width){
-    var isOverlap = false;
+
+
+/* 
+ * Determine if the new activity is overlapping with other activities
+ * related to a specific crewmember. If there is a collision, then
+ * the new activity will be assigned a new line. 
+ * @param crewMemberPk crew member primary key. if 0, that's opentime.
+ * @param x            new activity starting datetime.
+ * @param width        new activity length.
+ * @return The line number where the new activity will be drawn.
+ */
+  function GetActivityLineNumber(crewMemberPk, x , width) {
     var lineNb = 1;
+console.log("GetActivityLineNumber: crewMemberPk: ");
+console.log(crewMemberPk);
     
-    activityStore.filter({fk_cm: crewmember}).forEach(function(object){
+    activityStore.filter({fk_cm: crewMemberPk}).forEach(function(object) {
+console.log("GetActivityLineNumber: loop into activities");
       var A = x;
       var B = x + width;
 
@@ -1575,23 +1622,29 @@ require([
       var D = object.x + object.width;
 
       if( !(( B <= C ) || ( A >= D ))) {    
-        isOverlap = true;
-        lineNb += 1;
+        lineNb = Math.max(lineNb, object.lineNb + 1);
       }
     });
 
-    var cm = crewMemberStore.getSync(crewmember);
-
-    if ( cm.lineCount < lineNb ) {
-      cm.lineCount = lineNb;
-      crewMemberStore.putSync(cm);
+    if ( crewMemberPk ) { // a true crewMember.
+      var cm = crewMemberStore.getSync(crewMemberPk);
+      if( cm.lineCount < lineNb ) {
+console.log("GetActivityLineNumber: je passe la");
+        cm.lineCount = lineNb;
+        crewMemberStore.putSync(cm);
+      }
+    }
+    else { // opentime
+      if( OpenTimeLineCount < lineNb ) {    
+        OpenTimeLineCount = lineNb;          
+        topic.publish("refreshGraph");
+      }  
     }
 
-    // return isOverlap;
     return lineNb;
   }
 
-  var activityStoreAdapter = new DstoreAdapter(activityStore);
+  var activityStoreAdapter = new DstoreAdapter(activityStore.filter({fk_parent: undefined}));
 
   registry.byId("DistanceFromSelect").set("labelAttr", "fullname");
   registry.byId("DistanceFromSelect").set("searchAttr", "fullname");
@@ -1614,7 +1667,7 @@ require([
     releaseTime: 15,
     startDateTime: new moment(),
 
-    _updDur: function(array){
+    _updDur: function(array) {
       var self = this;
 
       var currentDate = moment(self.startDateTime);
@@ -1629,7 +1682,7 @@ require([
       registry.byId("TripEndTime").set("value", currentDate.toDate());
     },
  
-    updateDuration : function(){
+    updateDuration : function() {
       var self = this; 
       // based on the assumption that the store will have a reasonable size,
       // there is no need to re 
@@ -1715,7 +1768,7 @@ require([
 
             objects[i].lblType = objects[i].type == "leg" ? "Leg" : "Lay over";
 
-            if( objects.length <= 3 ){
+            if( objects.length <= 3 ) {
               objects[i].deleteButton = 0; 
             }
 
@@ -1738,12 +1791,12 @@ require([
     }
   });
 
-  tripDetailStore.on('add', function(event){
+  tripDetailStore.on('add', function(event) {
      tripDetailStore.len += 1;
      tripDetailStore.nextPk += 1;
    }); 
 
-   tripDetailStore.on('delete', function(event){
+   tripDetailStore.on('delete', function(event) {
      tripDetailStore.len -= 1;
    }); 
 
@@ -1768,19 +1821,19 @@ require([
     len: 0,
   });
 
-  highLightStore.on("add", function(event){
+  highLightStore.on("add", function(event) {
     highLightStore.len += 1;
     highLightStore.nextPk = Math.max(event.target.pk, highLightStore.nextPk) + 1;
     event.target.DrawSVG();
   });
   
-  highLightStore.on("update", function(event){
+  highLightStore.on("update", function(event) {
     highLightStore.nextPk = Math.max(event.target.pk + 1, highLightStore.nextPk);
     event.target.ClearSVG();
     event.target.DrawSVG();
   });
 
-  highLightStore.on("delete", function(event){
+  highLightStore.on("delete", function(event) {
     // Remove coords that reference this highlight.
     yCoordStore.filter({fk_hl: event.target.pk}).fetch().then( function(items) {
       // remove only if it remains only one item.    
@@ -1803,19 +1856,19 @@ require([
     len: 0,
   });
 
-  distanceStore.on("add", function(event){
+  distanceStore.on("add", function(event) {
     distanceStore.len += 1;
     distanceStore.nextPk = Math.max(event.target.pk, distanceStore.nextPk) + 1;
     event.target.DrawSVG();
   });
   
-  distanceStore.on("update", function(event){
+  distanceStore.on("update", function(event) {
     distanceStore.nextPk = Math.max(event.target.pk + 1, distanceStore.nextPk);
     event.target.ClearSVG();
     event.target.DrawSVG();
   });
 
-  distanceStore.on("delete", function(event){
+  distanceStore.on("delete", function(event) {
     // Remove coords that reference this distance.
     yCoordStore.filter({fk_dst: event.target.pk}).forEach(function(item) {
       yCoordStore.removeSync(item.pk);
@@ -1831,25 +1884,28 @@ require([
   // ===============================================
   // Redraw SVG
   // ===============================================
-  function RemoveIntroMessage(){
+  function RemoveIntroMessage() {
     var intro = svg.getElementById("intro");
-    if(intro){
+    if(intro) {
       intro.parentNode.removeChild(intro);
     } 
   }
 
-  function AdjustCrewmemberBarScaleX(x){
+  function AdjustCrewmemberBarScaleX(x) {
     var bar = svg.getElementById("crewmember_bar");
     bar.setAttribute("transform", "scale(" + x + ",1)");
   }
 
-  function RedrawSVG(){
+
+  topic.subscribe("refreshGraph", function() {
+  // function RedrawSVG() {
+    console.log("refreshGraph");          
     IsDrawingEnable = true;
 
     RemoveIntroMessage();
 
     var x = 0;
-    calendarStore.forEach(function(item){
+    calendarStore.forEach(function(item) {
       // on.emit(item, "update", { bubbles: true, cancelable: true });
       item.ClearSVG();
       item.DrawSVG();
@@ -1857,32 +1913,32 @@ require([
     });
     AdjustCrewmemberBarScaleX(x);
 
-    highLightStore.forEach(function(item){
+    highLightStore.forEach(function(item) {
       item.ClearSVG();
       item.DrawSVG();
     });
-    distanceStore.forEach(function(item){
+    distanceStore.forEach(function(item) {
       item.ClearSVG();
       item.DrawSVG();
     });
-    crewMemberStore.forEach(function(item){
+    crewMemberStore.forEach(function(item) {
       item.ClearSVG();
       item.DrawSVG();
     });
-    activityStore.forEach(function(item){
+    activityStore.forEach(function(item) {
       item.ClearSVG();
       item.DrawSVG(crewMemberStore.getSync(item.fk_cm));
     });
-  }
+  });
 
   // ===============================================
   // SAVING STORES TO SVG
   // ===============================================
-  function SaveStore(store, id, obj_name){
+  function SaveStore(store, id, obj_name) {
     var InsertionPointId = svg.getElementById(id);
     var schema           = store.Model().schema;
 
-    store.forEach(function(item){
+    store.forEach(function(item) {
       var objNode = document.createElementNS("", obj_name);
 
       InsertionPointId.appendChild(objNode);
@@ -1893,7 +1949,7 @@ require([
           var node = document.createElementNS("", property);
           var data = item.get(property);
 
-          if( data instanceof Array ){
+          if( data instanceof Array ) {
 
             data = item.get(property).slice();
 
@@ -1914,11 +1970,11 @@ require([
     });
   }
 
-  function LoadStore(store, svgNode, nodeName){
+  function LoadStore(store, svgNode, nodeName) {
     var childrenNodes = svgNode.childNodes; // getElementsByTagName(nodeName);
     var schema = store.Model().schema;
 
-    for(var i = 0; i < childrenNodes.length; i ++){
+    for(var i = 0; i < childrenNodes.length; i ++) {
       var data = childrenNodes[i];
       var def = {};
 
@@ -1927,7 +1983,7 @@ require([
           var type = typeof(schema[property]) == "object" ? schema[property].type : schema[property];
           var elements = data.getElementsByTagName(property); // [0].textContent;
 
-          if( elements.length > 0 ){ 
+          if( elements.length > 0 ) { 
             if( type == "numeric" ) {
               if( !isNaN(elements[0].textContent) ) def[property] = Number(elements[0].textContent);
             }
@@ -1940,7 +1996,7 @@ require([
     }
   }
 
-  function SaveStores(){
+  function SaveStores() {
    
     SaveStore(configurationStore, "ConfigurationStore", "configuration");
     SaveStore(calendarStore, "CalendarStore", "calendar");
@@ -1952,7 +2008,7 @@ require([
     SaveStore(stationStore, "StationStore" , "station"); 
   }
 
-  function LoadSvgStores(svgNode){
+  function LoadSvgStores(svgNode) {
     RemoveIntroMessage();
 
     IsDrawingEnable = false;
@@ -1968,7 +2024,7 @@ require([
     var start = moment(config.calendarStart);
     Xorig = start.unix();
 
-    timezoneStore.filter({name: config.timezone}).fetchRange({start: 0, end: 1}).then(function(results){
+    timezoneStore.filter({name: config.timezone}).fetchRange({start: 0, end: 1}).then(function(results) {
       if( results.length > 0 ) {
         registry.byId("CalendarTimezone").set("value", results[0].id);
       }
@@ -1982,14 +2038,14 @@ require([
     LoadStore(distanceStore, svgNode.getElementById("DistanceStore"), "distance");
     LoadStationStore(svgNode.getElementById("StationStore"), MODE_SVG);
 
-    stationStore.filter({name: config.station}).fetchRange({start: 0, end: 1}).then(function(results){
+    stationStore.filter({name: config.station}).fetchRange({start: 0, end: 1}).then(function(results) {
       if( results.length > 0 ) {
         registry.byId("CalendarStation").set("value", results[0].id);
       }
     });
 
-
-    RedrawSVG();
+    topic.publish("refreshGraph");
+    //    RedrawSVG();
   }
 
 
@@ -2019,11 +2075,11 @@ require([
     return mode == MODE_SVG ? key : mappingStationSvgXml[key];
   }
 
-  function LoadStationStore(parentNode, mode){
+  function LoadStationStore(parentNode, mode) {
     var rootStationStoreChildren = parentNode.getElementsByTagName("station");
     var offsetRegex = /^(-?\d{2})h(\d{2})$/;
  
-    for(var i = 0; i < rootStationStoreChildren.length; i ++){
+    for(var i = 0; i < rootStationStoreChildren.length; i ++) {
       var obj = rootStationStoreChildren[i];
 
       var data = offsetRegex.exec(obj.getElementsByTagName(convertionSvgXml("utcOffset", mode))[0].textContent);
@@ -2034,7 +2090,7 @@ require([
       var regionList = obj.getElementsByTagName(convertionSvgXml("item", mode)); 
 
       var regions = [];
-      for(var j = 0; j < regionList.length; j++){
+      for(var j = 0; j < regionList.length; j++) {
         regions.push(regionList[j].textContent);
       }
 
@@ -2082,7 +2138,7 @@ require([
 
        if( columnName == "station") {
          var nextRow = grid.down(cell.row, 1);
-         if( nextRow.data.type == "lay" ){
+         if( nextRow.data.type == "lay" ) {
            nextRow = grid.down(cell.row, 2);
            nextRow.data.station = event.value;
            grid.collection.putSync(nextRow.data);
@@ -2207,12 +2263,12 @@ require([
   // -----------------------------------------------
   // Show/Hide dialog
   // -----------------------------------------------
-  registry.byId("SHCoordinates").on("change", function(isChecked){
+  registry.byId("SHCoordinates").on("change", function(isChecked) {
     svg.getElementById("coordinateX").setAttribute("display", isChecked ? "block" : "none");
     svg.getElementById("coordinateY").setAttribute("display", isChecked ? "block" : "none");
   }, true);
   
-  registry.byId("SHCalendarHours").on("change", function(isChecked){
+  registry.byId("SHCalendarHours").on("change", function(isChecked) {
     var divs = svg.getElementsByClassName("hour_label");
 
     for (var i = 0; i < divs.length; i++) {
@@ -2220,7 +2276,7 @@ require([
     }
   }, true);
   
-  registry.byId("SHCalendarDayX").on("change", function(isChecked){
+  registry.byId("SHCalendarDayX").on("change", function(isChecked) {
     var divs = svg.getElementsByClassName("relative");
 
     for (var i = 0; i < divs.length; i++) {
@@ -2228,7 +2284,7 @@ require([
     }
   }, true);
   
-  registry.byId("SHCalendarDayYYYYMMDD").on("change", function(isChecked){
+  registry.byId("SHCalendarDayYYYYMMDD").on("change", function(isChecked) {
     var divs = svg.getElementsByClassName("yyyymmdd");
 
     for (var i = 0; i < divs.length; i++) {
@@ -2236,7 +2292,7 @@ require([
     }
   }, true);
 
-  registry.byId("SHCalendarDayBars").on("change", function(isChecked){
+  registry.byId("SHCalendarDayBars").on("change", function(isChecked) {
     var divs = svg.getElementsByClassName("day_bar");
 
     for (var i = 0; i < divs.length; i++) {
@@ -2244,7 +2300,7 @@ require([
     }
   }, true);
 
-  registry.byId("SHCalendarHourBars").on("change", function(isChecked){
+  registry.byId("SHCalendarHourBars").on("change", function(isChecked) {
     var divs = svg.getElementsByClassName("hour_bar");
 
     for (var i = 0; i < divs.length; i++) {
@@ -2252,18 +2308,19 @@ require([
     }
   }, true);
 
-  registry.byId("XGraphCompression").on("change", function(value){
+  registry.byId("XGraphCompression").on("change", function(value) {
     config.XGraphCompression = value;
 
     configurationStore.putSync(config);          
           
-    RedrawSVG();
+    // RedrawSVG();
+    topic.publish("refreshGraph");
   }, true);
 
   // -----------------------------------------------
   // Show/Hide activity dialog
   // -----------------------------------------------
-  registry.byId("SHActivityHours").on("change", function(isChecked){
+  registry.byId("SHActivityHours").on("change", function(isChecked) {
     var divs = svg.getElementsByClassName("act_hour");
 
     for (var i = 0; i < divs.length; i++) {
@@ -2271,7 +2328,7 @@ require([
     }
   }, true);
 
-   registry.byId("SHActivityDetails").on("change", function(isChecked){
+   registry.byId("SHActivityDetails").on("change", function(isChecked) {
     var divs = svg.getElementsByClassName("details");
 
     for (var i = 0; i < divs.length; i++) {
@@ -2279,7 +2336,7 @@ require([
     }
   }, true);
 
-   registry.byId("SHActivityDetailHours").on("change", function(isChecked){
+   registry.byId("SHActivityDetailHours").on("change", function(isChecked) {
     var divs = svg.getElementsByClassName("dtl_hour");
 
     for (var i = 0; i < divs.length; i++) {
@@ -2287,7 +2344,7 @@ require([
     }
   }, true);
  
-  registry.byId("SHActivityDetailStations").on("change", function(isChecked){
+  registry.byId("SHActivityDetailStations").on("change", function(isChecked) {
     var divs = svg.getElementsByClassName("dtl_station");
 
     for (var i = 0; i < divs.length; i++) {
@@ -2298,12 +2355,12 @@ require([
   // -----------------------------------------------
   // Load XML station file dialog
   // -----------------------------------------------
-  registry.byId("LoadStation").on("click", function(){
+  registry.byId("LoadStation").on("click", function() {
     var upload = registry.byId("uploader");
 
     var f = upload._files[0];
           
-    if( f.type != "text/xml" ){
+    if( f.type != "text/xml" ) {
       alert("Please provide an xml file");
       return;
     }          
@@ -2334,12 +2391,12 @@ require([
   // -----------------------------------------------
   // Load SVG file dialog
   // -----------------------------------------------
-  registry.byId("LoadSvg").on("click", function(){
+  registry.byId("LoadSvg").on("click", function() {
     var upload = registry.byId("uploader2");
 
     var f = upload._files[0];
           
-    if( f.type != "image/svg+xml" ){
+    if( f.type != "image/svg+xml" ) {
       alert("Please provide an svg file");
       return;
     }          
@@ -2366,12 +2423,12 @@ require([
   // Constants dialog
   // -----------------------------------------------
 
-  registry.byId("ShowConstantsDialog").on("show", function(){
+  registry.byId("ShowConstantsDialog").on("show", function() {
     viewInForm(config, dom.byId("ShowConstantsForm"));
   }, true);
 
-  registry.byId("SaveConstants").on("click", function(){
-    if( !registry.byId("ShowConstantsForm").validate() ){
+  registry.byId("SaveConstants").on("click", function() {
+    if( !registry.byId("ShowConstantsForm").validate() ) {
       return;
     }
 
@@ -2386,12 +2443,12 @@ require([
   // Show/Hide calendar dialog
   // -----------------------------------------------
 
-  registry.byId("ShowHideCalendarDialog").on("show", function(){
+  registry.byId("ShowHideCalendarDialog").on("show", function() {
     viewInForm(config, dom.byId("ShowHideCalendarForm"));
   }, true);
 
-  registry.byId("SaveShowHideCalendar").on("click", function(){
-    if( !registry.byId("ShowHideCalendarForm").validate() ){
+  registry.byId("SaveShowHideCalendar").on("click", function() {
+    if( !registry.byId("ShowHideCalendarForm").validate() ) {
       return;
     }
 
@@ -2406,12 +2463,12 @@ require([
   // Show/Hide activity dialog
   // -----------------------------------------------
 
-  registry.byId("ShowHideActivityDialog").on("show", function(){
+  registry.byId("ShowHideActivityDialog").on("show", function() {
     viewInForm(config, dom.byId("ShowHideActivityForm"));
   }, true);
 
-  registry.byId("SaveShowHideActivity").on("click", function(){
-    if( !registry.byId("ShowHideActivityForm").validate() ){
+  registry.byId("SaveShowHideActivity").on("click", function() {
+    if( !registry.byId("ShowHideActivityForm").validate() ) {
       return;
     }
 
@@ -2425,7 +2482,7 @@ require([
   // -----------------------------------------------
   // Save file dialog
   // -----------------------------------------------
-  registry.byId("SaveFile").on("click", function(){
+  registry.byId("SaveFile").on("click", function() {
 
     SaveStores();
 
@@ -2452,13 +2509,13 @@ require([
   // -----------------------------------------------
   // Calendar range set up dialog
   // -----------------------------------------------
-  registry.byId("CalendarTimezone").on("focus", function(){
+  registry.byId("CalendarTimezone").on("focus", function() {
     if( this.get("value") ) {
       registry.byId("CalendarStation").set("disabled", false);
     }          
   }, true);
 
-  registry.byId("CalendarTimezone").on("change", function(){
+  registry.byId("CalendarTimezone").on("change", function() {
     var item = timezoneStore.getSync(this.get("value"));
 
     console.log("timezone :" + item); 
@@ -2467,7 +2524,6 @@ require([
       registry.byId("CalendarStation").set("disabled", false);
 
       if( !registry.byId("CalendarStation").get("value") ) {
-//        moment.tz.setDefault(item.name);
         var zone = moment.tz.zone(item.name);
 
         console.log("zone: ");  
@@ -2490,7 +2546,7 @@ require([
   }, true);
 
 
-  registry.byId("CalendarStart").on("change", function(){
+  registry.byId("CalendarStart").on("change", function() {
     registry.byId("CalendarEnd").constraints.min = date.add(this.get("value"), "day", 1);
     registry.byId("CalendarEnd").dropDownDefaultValue = this.get("value");     
 
@@ -2500,7 +2556,7 @@ require([
     registry.byId("TripStartDate").dropDownDefaultValue = this.get("value");
   }, true);
   
-  registry.byId("CalendarEnd").on("change", function(){
+  registry.byId("CalendarEnd").on("change", function() {
     var maxDate = date.add(this.get("value"), "day", -1);
 
     registry.byId("CalendarStart").constraints.max = maxDate;
@@ -2509,12 +2565,12 @@ require([
     registry.byId("TripStartDate").constraints.max = maxDate;
   }, true);
 
-  registry.byId("SetCalendarDialog").on("show", function(){
+  registry.byId("SetCalendarDialog").on("show", function() {
     viewInForm(config, dom.byId("SetCalendarForm"));
   }, true);
 
-  registry.byId("SetCalendar").on("click", function(){
-    if( !registry.byId("SetCalendarForm").validate() ){
+  registry.byId("SetCalendar").on("click", function() {
+    if( !registry.byId("SetCalendarForm").validate() ) {
       return;
     }
     RemoveIntroMessage();
@@ -2526,7 +2582,7 @@ require([
     var end   = moment(config.calendarEnd); 
     var range = end.diff(start, "days");
 
-    calendarStore.fetch().then(function (days){
+    calendarStore.fetch().then(function (days) {
       for (var i = days.length - 1; i >= 0; i--) {
         calendarStore.remove(days[i].pk);
       }
@@ -2553,10 +2609,10 @@ require([
       });
 
       // look for DST
-      if( width != 1440 ){ 
+      if( width != 1440 ) { 
         var InitialState =  start.isDST();
 
-        while( start.isDST() == InitialState ){
+        while( start.isDST() == InitialState ) {
           start.add(1, "minutes");
         }
 
@@ -2567,6 +2623,7 @@ require([
         yCoordStore.addSync({
           pk: pkY,
           fk_hl: pkHL,
+          height: HEIGHT_LINE_HL,
           y: 0,
         });
 
@@ -2600,9 +2657,9 @@ require([
   // -----------------------------------------------
   // Manage Set Start Periods dialog
   // -----------------------------------------------
-  registry.byId("SetStartPeriodsDialog").on("show", function(){
+  registry.byId("SetStartPeriodsDialog").on("show", function() {
     var arrChecked = [];
-    calendarStore.forEach(function(item){
+    calendarStore.forEach(function(item) {
       if( item.startperiod ) {
         arrChecked.push(item.pk);
       }
@@ -2613,7 +2670,7 @@ require([
   }, true);
 
   // Redraw start periods
-  registry.byId("SetStartPeriods").on("click", function(){
+  registry.byId("SetStartPeriods").on("click", function() {
 
 
     var newStarts = registry.byId("CalendarStartPeriods").value;
@@ -2621,7 +2678,7 @@ require([
 
     var i = 0; 
 
-    calendarStore.forEach(function(item){
+    calendarStore.forEach(function(item) {
       item.set("relative", item.pk - ref);
       if( i < newStarts.length && newStarts[i] == item.pk ) {
         console.log("SetStartPeriods");
@@ -2644,7 +2701,7 @@ require([
   // -----------------------------------------------
   // Create Crewmember dialog
   // -----------------------------------------------
-  registry.byId("CreateCrewMember").on("click", function(){
+  registry.byId("CreateCrewMember").on("click", function() {
     var pkY = yCoordStore.nextPk;
     var pkCM = crewMemberStore.nextPk;
 
@@ -2653,6 +2710,7 @@ require([
       pk: pkY,
       fk_cm: pkCM,
       y: yCoordStore.nextY,
+      height: MARGIN_TOP_CM + HEIGHT_LINE_CM + MARGIN_BOTTOM_CM,
     });
 
     
@@ -2673,8 +2731,8 @@ require([
   // -----------------------------------------------
   // Create Day Off dialog
   // -----------------------------------------------
-  registry.byId("CreateDayOff").on("click", function(){
-    if( !registry.byId("CreateDayOffForm").validate() ){
+  registry.byId("CreateDayOff").on("click", function() {
+    if( !registry.byId("CreateDayOffForm").validate() ) {
       return;
     }
 
@@ -2686,13 +2744,13 @@ require([
     // local variables before reseting the form.
     registry.byId("CreateDayOffForm").reset();
     
-    days.forEach(function(day){
+    days.forEach(function(day) {
       var calendarDay = calendarStore.getSync(day); 
 
       var x     = calendarDay.get("x");
       var width = calendarDay.get("width") + 1;
 
-      var lineNb = IsActivityOverlap(crewmemberId, x, width);
+      var lineNb = GetActivityLineNumber(crewmemberId, x, width);
           
       if( lineNb > 1 ) {  
         alert("DO starting " + calendarDay.get("name") + " is overlapping with another activity."); 
@@ -2721,7 +2779,7 @@ require([
   // -----------------------------------------------
   function TryEnableDuration() {
     if(   registry.byId("TrainingStartTime").get("value") != null 
-       && registry.byId("TrainingStartDate").get("value") != null ){
+       && registry.byId("TrainingStartDate").get("value") != null ) {
       registry.byId("TrainingDurationHour").readOnly = false;
       registry.byId("TrainingDurationHour").set("value", 0);
       registry.byId("TrainingDurationMinute").readOnly = false;
@@ -2731,38 +2789,38 @@ require([
     }
   }
 
-  registry.byId("TrainingStartDate").on("click,mousedown", function(){
+  registry.byId("TrainingStartDate").on("click,mousedown", function() {
     TryEnableDuration();          
   });
 
-  registry.byId("TrainingStartDate").on("change", function(value){
+  registry.byId("TrainingStartDate").on("change", function(value) {
     TryEnableDuration();          
   });
 
-  registry.byId("TrainingStartTime").on("click,mousedown", function(){
+  registry.byId("TrainingStartTime").on("click,mousedown", function() {
     TryEnableDuration();          
   });
 
-  registry.byId("TrainingStartTime").on("change", function(value){
+  registry.byId("TrainingStartTime").on("change", function(value) {
     TryEnableDuration();          
   });
 
-  registry.byId("TrainingDurationHour").on("click", function(){
+  registry.byId("TrainingDurationHour").on("click", function() {
     UpdateEndDateTime("Training");
   });
-  registry.byId("TrainingDurationHour").on("change", function(val){
+  registry.byId("TrainingDurationHour").on("change", function(val) {
     UpdateEndDateTime("Training");
   });
   
-  registry.byId("TrainingDurationMinute").on("click", function(){
+  registry.byId("TrainingDurationMinute").on("click", function() {
     UpdateEndDateTime("Training");
   });
-  registry.byId("TrainingDurationMinute").on("change", function(val){
+  registry.byId("TrainingDurationMinute").on("change", function(val) {
     UpdateEndDateTime("Training");
   });
 
-  registry.byId("CreateTraining").on("click", function(){
-    if( !registry.byId("CreateTrainingForm").validate() ){
+  registry.byId("CreateTraining").on("click", function() {
+    if( !registry.byId("CreateTrainingForm").validate() ) {
       return;
     }
 
@@ -2782,29 +2840,33 @@ require([
     var width = Number(registry.byId("TrainingDurationHour").get("value")) * 60 + Number(registry.byId("TrainingDurationMinute").get("value"));
 
     var endTraining = startTraining.clone().add(width, 'm');
-    var crewmemberId = Number(registry.byId("TrainingCrewMemberSelect").get("value"));
+    var crewMemberPk = Number(registry.byId("TrainingCrewMemberSelect").get("value"));
+
+
+    var lineNb = GetActivityLineNumber(crewmemberId, x, width);
     
-    if( IsActivityOverlap(crewmemberId, x, width) ){
-      alert("Cannot create training because of an overlap with another activity."); 
+    var fullname = crewMemberPk ? crewMemberStore.getSync(crewmemberId).name : "Open time";
+    fullname += " -- " + mydate.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TrainingName").get("value");
+
+    if( lineNb > 1 ) {
+      alert("The new traininig is overlapping with another activity."); 
     }
-    else { 
-      activityStore.addSync({
-        name: registry.byId("TrainingName").get("value"),
-        fullname: crewMemberStore.getSync(crewmemberId).name + " -- " + mydate.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TrainingName").get("value"),  
-        type: "TRN",
-        pk: activityStore.nextPk,
-        fk_cm: crewmemberId,
-        x: x,
-        lbtStart: mydate.format("YYYY-MM-DD HH:mm"),
-        utcStart: startTraining.utc().format("YYYY-MM-DD HH:mm"),
-        utcEnd: endTraining.utc().format("YYYY-MM-DD HH:mm"), 
-        width: width,
-        tp: registry.byId("TrainingTransportationTime").checked ? Number(config.transportationTime) : 0,  // registry.byId("TransportationTimeDuration").get("value") : 0,
-        resta: Number(registry.byId("TrainingRestAfterH").get("value")) * 60 + Number(registry.byId("TrainingRestAfterM").get("value")),
-        restb: Number(registry.byId("TrainingRestBeforeH").get("value")) * 60 + Number(registry.byId("TrainingRestBeforeM").get("value")),
-        lineNb: 1,
-      });
-    }
+    activityStore.addSync({
+      name: registry.byId("TrainingName").get("value"),
+      fullname: fullname,  
+      type: "TRN",
+      pk: activityStore.nextPk,
+      fk_cm: crewMemberPk,
+      x: x,
+      lbtStart: mydate.format("YYYY-MM-DD HH:mm"),
+      utcStart: startTraining.utc().format("YYYY-MM-DD HH:mm"),
+      utcEnd: endTraining.utc().format("YYYY-MM-DD HH:mm"), 
+      width: width,
+      tp: registry.byId("TrainingTransportationTime").checked ? Number(config.transportationTime) : 0,  // registry.byId("TransportationTimeDuration").get("value") : 0,
+      resta: Number(registry.byId("TrainingRestAfterH").get("value")) * 60 + Number(registry.byId("TrainingRestAfterM").get("value")),
+      restb: Number(registry.byId("TrainingRestBeforeH").get("value")) * 60 + Number(registry.byId("TrainingRestBeforeM").get("value")),
+      lineNb: lineNb,
+    });
   });
 
  
@@ -2812,8 +2874,8 @@ require([
   // Create Highlight dialog
   // -----------------------------------------------
    
-  registry.byId("CreateHighlight").on("click", function(){
-    if( !registry.byId("CreateHighlightForm").validate() ){
+  registry.byId("CreateHighlight").on("click", function() {
+    if( !registry.byId("CreateHighlightForm").validate() ) {
       return;
     }
 
@@ -2826,8 +2888,8 @@ require([
     // local variables before reseting the form.
     registry.byId("CreateHighlightForm").reset();
 
-    if( days.length == 0 ){
-      calendarStore.forEach(function(item){
+    if( days.length == 0 ) {
+      calendarStore.forEach(function(item) {
         days.push(item.pk);
       }); 
     }
@@ -2839,17 +2901,18 @@ require([
       pk: pkY,
       fk_hl: highLightStore.nextPk,
       y: 0,
+      height: HEIGHT_LINE_HL,
     });
 
 
-    for(i = 0; i < days.length; i++){
+    for(i = 0; i < days.length; i++) {
       var calDay = calendarStore.getSync(days[i]);
       
       var when = moment(calDay.get("name"));
       when.hour(time.getHours());
       when.minute(time.getMinutes());
 
-      if( when.isValid() ){   
+      if( when.isValid() ) {   
         highLightStore.addSync({
           message: label,
           x: getPositionX(when),
@@ -2884,8 +2947,8 @@ require([
     UpdateEvent(val, "DistanceToEventSelect");
   });
    
-  registry.byId("CreateDistance").on("click", function(){
-    if( !registry.byId("CreateDistanceForm").validate() ){
+  registry.byId("CreateDistance").on("click", function() {
+    if( !registry.byId("CreateDistanceForm").validate() ) {
       return;
     }
 
@@ -2906,6 +2969,7 @@ require([
       pk: pkY,
       fk_dst: pkDST,
       y: Math.min(act1.GetYCoord(), act2.GetYCoord()),
+      height: HEIGHT_LINE_HL,
     });
 
 
@@ -2943,7 +3007,7 @@ require([
 
   function TryEnableGrid() {
     if(   registry.byId("TripStartTime").get("value") != null 
-       && registry.byId("TripStartDate").get("value") != null ){
+       && registry.byId("TripStartDate").get("value") != null ) {
       tripDetailStore.reportTime = config.reportTime;
       tripDetailStore.releaseTime = config.releaseTime;
 
@@ -2985,23 +3049,23 @@ require([
   }
 
 
-  registry.byId("TripStartDate").on("click,mousedown", function(){
+  registry.byId("TripStartDate").on("click,mousedown", function() {
     TryEnableGrid();          
   });
 
-  registry.byId("TripStartDate").on("change", function(value){
+  registry.byId("TripStartDate").on("change", function(value) {
     TryEnableGrid();          
   });
 
-  registry.byId("TripStartTime").on("click,mousedown", function(){
+  registry.byId("TripStartTime").on("click,mousedown", function() {
     TryEnableGrid();          
   });
 
-  registry.byId("TripStartTime").on("change", function(value){
+  registry.byId("TripStartTime").on("change", function(value) {
     TryEnableGrid();          
   });
 
-  registry.byId("MenuBusinessObjectCreateActivityTrip").on("click", function(){
+  registry.byId("MenuBusinessObjectCreateActivityTrip").on("click", function() {
     registry.byId("TripRestBeforeM").set("value", 0);
     registry.byId("TripRestAfterM").set("value", 0);
    
@@ -3013,9 +3077,9 @@ require([
 
 
 
- registry.byId("CreateTripDialog").on("hide", function(){
+ registry.byId("CreateTripDialog").on("hide", function() {
 
-    tripDetailStore.fetch().then(function (items){
+    tripDetailStore.fetch().then(function (items) {
       for (var i = items.length - 1; i >= 0; i--) {
         tripDetailStore.remove(items[i].pk);
       }           
@@ -3038,8 +3102,8 @@ require([
   }
 
 
-  registry.byId("CreateTrip").on("click", function(){
-    if( !registry.byId("CreateTripForm").validate() ){
+  registry.byId("CreateTrip").on("click", function() {
+    if( !registry.byId("CreateTripForm").validate() ) {
       return;
     }
 
@@ -3062,94 +3126,111 @@ require([
 
     var crewmemberId = Number(registry.byId("TripCrewMemberSelect").get("value"));
 
-    if( IsActivityOverlap(crewmemberId, x, width) ){
-      alert("Cannot create Trip because of an overlap with another activity."); 
-    }
-    else { 
-      // It is IMPORTANT to create detail items before the trip because to draw trip,
-      // we need the details. And because the drawing is linked with the add event, the 
-      // trip must be added after details.
-      // obtain uniq pk for the trip activity.
-      var fk_parent = activityStore.nextPk;
+    
 
-      // to skip to the next uniq id, 
-      activityStore.nextPk +=1;
-      
-      var xDetail        = x;
-      var credit         = 0;
-      var block          = 0;
-      var duty           = 0;
-      var creditInPeriod = 0;
-      var blockInPeriod  = 0;
-      var dutyInPeriod   = 0;
-      
-      tripDetailStore.sort('order').fetch().then(function (items){
-        var j = 0;
-        for (var i = 0; i < items.length ; i++) {
-          var width = Number(items[i].dhour * 60) + Number(items[i].dminute);
-          var inPeriod = getInPeriod(xDetail, width);
-          var type = items[i].type;
-          if( type == "leg" ) {
-            j += 1; 
-            type += items[i].legType;
-            if( items[i].legType == "A" ) {
-              credit += width;
-              creditInPeriod += inPeriod;
-            }
-            block += width;
-            blockInPeriod += inPeriod;
+    var lineNb = GetActivityLineNumber(crewmemberId, x, width);
+   
+    if( lineNb > 1 ) {
+      alert("The new trip is overlapping with another activity."); 
+    }
+    // It is IMPORTANT to create detail items before the trip because to draw trip,
+    // we need the details. And because the drawing is linked with the add event, the 
+    // trip must be added after details.
+    // obtain uniq pk for the trip activity.
+    var fk_parent = activityStore.nextPk;
+
+    // to skip to the next uniq id, 
+    activityStore.nextPk +=1;
+    
+    var xDetail        = x;
+    var credit         = 0;
+    var block          = 0;
+    var duty           = 0;
+    var creditInPeriod = 0;
+    var blockInPeriod  = 0;
+    var dutyInPeriod   = 0;
+
+    
+    tripDetailStore.sort('order').fetch().then(function (items) {
+      var j = 0;
+
+      var iLeg = 0;
+      var iLay = 0;
+
+      var name;
+
+      for (var i = 0; i < items.length ; i++) {
+        var width = Number(items[i].dhour * 60) + Number(items[i].dminute);
+        var inPeriod = getInPeriod(xDetail, width);
+        var type = items[i].type;
+        if( type == "leg" ) {
+          j += 1; 
+          type += items[i].legType;
+          if( items[i].legType == "A" ) {
+            credit += width;
+            creditInPeriod += inPeriod;
           }
-          if( type != "lay" ) {
-            duty += width;
-            dutyInPeriod += inPeriod;
-          } 
+          block += width;
+          blockInPeriod += inPeriod;
+          iLeg += 1;
+          name = type + iLeg;
+        }
+        else {
+          iLay += 1;
+          name = type + iLay;
+        }
+        if( type != "lay" ) {
+          duty += width;
+          dutyInPeriod += inPeriod;
+        } 
 
 
-          activityStore.addSync({
-            name: registry.byId("TripName").get("value") + "--" + j,
-            fullname: crewMemberStore.getSync(crewmemberId).name + " -- " + mydate.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TripName").get("value") + " -- " + i,  
-            type: type.toUpperCase(),
-            pk: activityStore.nextPk,
-            fk_parent: fk_parent,
-            fk_cm: crewmemberId,
-            x: xDetail,
-            width: width,
-            station: items[i].station,
-          });
-          xDetail += width;
-        }           
-      });
+        activityStore.addSync({
+          name: name,
+          fullname: name + " -- " + mydate.format("YYYY-MM-DD HH:mm"),  
+          type: type.toUpperCase(),
+          pk: activityStore.nextPk,
+          fk_parent: fk_parent,
+          fk_cm: crewmemberId,
+          x: xDetail,
+          width: width,
+          station: items[i].station,
+        });
+        xDetail += width;
+      }           
+    });
 
-      var tmp = activityStore.nextPk;     
+    var tmp = activityStore.nextPk;     
 
-          
+    var fullname = crewmemberId ? crewMemberStore.getSync(crewmemberId).name : "Open time";
+        
+    fullname += " -- " + mydate.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TripName").get("value"),  
 
-      activityStore.addSync({
-        name: registry.byId("TripName").get("value"),
-        fullname: crewMemberStore.getSync(crewmemberId).name + " -- " + mydate.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TripName").get("value"),  
-        type: "TRP",
-        pk: fk_parent,
-        fk_cm: crewmemberId,
-        x: x,
-        lbtStart: mydate.format("YYYY-MM-DD HH:mm"),
-        utcStart: startTrip.utc().format("YYYY-MM-DD HH:mm"),
-        utcEnd: endTrip.utc().format("YYYY-MM-DD HH:mm"), 
-        width: width,
-        tp: registry.byId("TripTransportationTime").checked ? Number(config.transportationTime) : 0,
-        resta: Number(registry.byId("TripRestAfterH").get("value")) * 60 + Number(registry.byId("TripRestAfterM").get("value")),
-        restb: Number(registry.byId("TripRestBeforeH").get("value")) * 60 + Number(registry.byId("TripRestBeforeM").get("value")),
-        block: block,
-        credit: credit,
-        duty: duty,
-        tafbInPeriod: getInPeriod(x, width),
-        blockInPeriod: blockInPeriod,
-        creditInPeriod: creditInPeriod,
-        dutyInPeriod: dutyInPeriod,
-        lineNb: 1,
-      });
-     console.log(activityStore);
-      activityStore.nextPk = tmp;          
-    }
+    activityStore.addSync({
+      name: registry.byId("TripName").get("value"),
+      fullname: crewMemberStore.getSync(crewmemberId).name + " -- " + mydate.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TripName").get("value"),  
+      type: "TRP",
+      pk: fk_parent,
+      fk_cm: crewmemberId,
+      x: x,
+      lbtStart: mydate.format("YYYY-MM-DD HH:mm"),
+      utcStart: startTrip.utc().format("YYYY-MM-DD HH:mm"),
+      utcEnd: endTrip.utc().format("YYYY-MM-DD HH:mm"), 
+      width: width,
+      tp: registry.byId("TripTransportationTime").checked ? Number(config.transportationTime) : 0,
+      resta: Number(registry.byId("TripRestAfterH").get("value")) * 60 + Number(registry.byId("TripRestAfterM").get("value")),
+      restb: Number(registry.byId("TripRestBeforeH").get("value")) * 60 + Number(registry.byId("TripRestBeforeM").get("value")),
+      block: block,
+      credit: credit,
+      duty: duty,
+      tafbInPeriod: getInPeriod(x, width),
+      blockInPeriod: blockInPeriod,
+      creditInPeriod: creditInPeriod,
+      dutyInPeriod: dutyInPeriod,
+      lineNb: lineNb,
+    });
+console.log(activityStore);
+    activityStore.nextPk = tmp;          
   });
 
 
@@ -3169,7 +3250,7 @@ require([
 
 
 
-  function viewInForm(object, form){
+  function viewInForm(object, form) {
     for(var i = 0; i < form.elements.length; i++ ) {
       if(form.elements[i].name) {
         var element = form.elements[i];
@@ -3194,7 +3275,7 @@ require([
           }
           else  {
             var input = query("input[name=" + name + "]", form)[0];
-            if(input){
+            if(input) {
               console.log(name + "---" + value);
               // here is a little hack. dijit dialog create an hidden input with the right name.
               // but the one used to display is the sibling before. So I reference the parent and
@@ -3213,7 +3294,7 @@ require([
     }
   }
           
-  function setFromForm(object, form){
+  function setFromForm(object, form) {
     for(var i = 0; i < form.elements.length; i++ ) {
       if(form.elements[i].name) {
         // console.log(form.elements[i].name);
@@ -3360,7 +3441,7 @@ require([
     /**
      * Sets attributes of an element.
      */
-    function setAttributes(element, attributes){
+    function setAttributes(element, attributes) {
       for (var i in attributes)
         element.setAttributeNS(null, i, attributes[i]);
     }
@@ -3368,7 +3449,7 @@ require([
     /**
      * Handle mouse wheel event.
      */
-    on(root, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt){
+    on(root, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
       if(!enableZoom)
         return;
 
@@ -3408,8 +3489,8 @@ require([
     /**
      * Handle mouse move event.
      */
-    on(root, touch.move, function(evt){
-      if( evt.preventDefault ){
+    on(root, touch.move, function(evt) {
+      if( evt.preventDefault ) {
         evt.preventDefault();
       }
 
@@ -3444,8 +3525,8 @@ require([
     /**
      * Handle click event.
      */
-    on(root, touch.press, function(evt){
-      if( evt.preventDefault ){
+    on(root, touch.press, function(evt) {
+      if( evt.preventDefault ) {
         evt.preventDefault();
       }
 
@@ -3480,8 +3561,8 @@ require([
     /**
      * Handle mouse button release event.
      */
-    on(root, touch.release, function(evt){
-      if( evt.preventDefault ){ 
+    on(root, touch.release, function(evt) {
+      if( evt.preventDefault ) { 
         evt.preventDefault();
       }
 
@@ -3489,7 +3570,7 @@ require([
 
       var svgDoc = evt.target.ownerDocument;
 
-      if( state == "pan" || state == "drag" ){
+      if( state == "pan" || state == "drag" ) {
         // Quit pan mode
         state = "";
       }
@@ -3511,30 +3592,30 @@ require([
     <div id="MenuFile" data-dojo-type="dijit/PopupMenuBarItem">
       <span>File</span>
       <div data-dojo-type="dijit/DropDownMenu">
-        <div id="MenuFileLoadSVGFile"        data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){LoadSvgDialog.show();}">Load SVG file</div>
-        <div id="MenuFileLoadXMLStationFile" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){LoadStationDialog.show();}">Load XML station file</div>
-        <div id="MenuFileSaveSVGFile"        data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){SaveFileDialog.show();}">Save SVG file</div>
+        <div id="MenuFileLoadSVGFile"        data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {LoadSvgDialog.show();}">Load SVG file</div>
+        <div id="MenuFileLoadXMLStationFile" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {LoadStationDialog.show();}">Load XML station file</div>
+        <div id="MenuFileSaveSVGFile"        data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {SaveFileDialog.show();}">Save SVG file</div>
       </div>
     </div>
     <div id="MenuCalendar" data-dojo-type="dijit/PopupMenuBarItem">
       <span>Calendar</span>
       <div data-dojo-type="dijit/DropDownMenu">
-        <div id="MenuCalendarSetStartEnd"     data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){SetCalendarDialog.show();}">Set [Start, End[</div>
-        <div id="MenuCalendarSetStartPeriods" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){SetStartPeriodsDialog.show();}">Set start period(s)</div>
+        <div id="MenuCalendarSetStartEnd"     data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {SetCalendarDialog.show();}">Set [Start, End[</div>
+        <div id="MenuCalendarSetStartPeriods" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {SetStartPeriodsDialog.show();}">Set start period(s)</div>
       </div>
     </div>
     <div id="MenuBusinessObject" data-dojo-type="dijit/PopupMenuBarItem">
       <span>Business objects</span>
       <div data-dojo-type="dijit/DropDownMenu">
-        <div id="MenuBusinessObjectShowConstants"    data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){ShowConstantsDialog.show();}">Show constants</div>
-        <div id="MenuBusinessObjectCreateCrewMember" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateCrewMemberDialog.show();}">Create crewmember</div>
+        <div id="MenuBusinessObjectShowConstants"    data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {ShowConstantsDialog.show();}">Show constants</div>
+        <div id="MenuBusinessObjectCreateCrewMember" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateCrewMemberDialog.show();}">Create crewmember</div>
         <div data-dojo-type="dijit/PopupMenuItem">
           <span>Create activity</span>
           <div id="MenuBusinessObjectCreateActivity" data-dojo-type="dijit/DropDownMenu">
-            <div id="MenuBusinessObjectCreateActivityDayOff"        data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateDayOffDialog.show();}">Day off</div>
-            <div id="MenuBusinessObjectCreateActivityTraining"      data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateTrainingDialog.show();}">Training</div>
+            <div id="MenuBusinessObjectCreateActivityDayOff"        data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateDayOffDialog.show();}">Day off</div>
+            <div id="MenuBusinessObjectCreateActivityTraining"      data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateTrainingDialog.show();}">Training</div>
             <div id="MenuBusinessObjectCreateActivityTrip"          data-dojo-type="dijit/MenuItem" data-dojo-props="">Trip</div>
-            <div id="MenuBusinessObjectCreateActivityOtherActivity" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){alert('not yet available');}">Other activity</div>
+            <div id="MenuBusinessObjectCreateActivityOtherActivity" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {alert('not yet available');}">Other activity</div>
           </div>
         </div>
       </div>
@@ -3543,7 +3624,7 @@ require([
       <span>Graph options</span>
       <div data-dojo-type="dijit/DropDownMenu">
         <div data-dojo-type="dijit/PopupMenuItem">
-          <span>Graph factor compression on axe X</span>
+          <span>Graph factor compression on X axis</span>
           <select data-dojo-type="dijit/form/Select" name="XGraphCompression" id="XGraphCompression" style="width: 3em;">
             <option value=".25">0.25</option>
             <option value=".5">0.5</option>
@@ -3556,16 +3637,16 @@ require([
             <option value="10">10</option>
           </select>
         </div>
-        <div id="MenuGraphOptionCalendar" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){ShowHideCalendarDialog.show();}">Calendar Date/Hours</div>
-        <div id="MenuGraphOptionActivity" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){ShowHideActivityDialog.show();}">Activity details</div>
+        <div id="MenuGraphOptionCalendar" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {ShowHideCalendarDialog.show();}">Calendar Date/Hours</div>
+        <div id="MenuGraphOptionActivity" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {ShowHideActivityDialog.show();}">Activity details</div>
       </div>
     </div>
     <div id="MenuHighLights" data-dojo-type="dijit/PopupMenuBarItem">
       <span>Highlights</span>
       <div data-dojo-type="dijit/DropDownMenu">
-        <div id="MenuHighLightsSpecificDateTime" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateHighlightDialog.show();}">Specific datetime(s)</div>
-        <div id="MenuHighLightsDistance"         data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){CreateDistanceDialog.show();}">Distance</div>
-        <div id="MenuHighLightsWindow"           data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function(){alert('not yet available');}">Window</div>
+        <div id="MenuHighLightsSpecificDateTime" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateHighlightDialog.show();}">Specific datetime(s)</div>
+        <div id="MenuHighLightsDistance"         data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateDistanceDialog.show();}">Distance</div>
+        <div id="MenuHighLightsWindow"           data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {alert('not yet available');}">Window</div>
       </div>
     </div>
 
@@ -3696,7 +3777,7 @@ require([
 }
       </style>
 
-      <g id="viewport">
+      <g id="viewport" transform="matrix(0.75, 0, 0, 0.75, 160, 110)">
         <!--
         ====================================================================================
         CALENDAR
@@ -3725,10 +3806,10 @@ require([
 
         <!--
         ====================================================================================
-        ACTIVITIES
+        OPENTIME
         ====================================================================================
         -->
-        <g id="activities"></g>
+        <g id="opentime"></g>
       </g>
 
       <!--
@@ -3758,7 +3839,7 @@ require([
     </svg>
   </div>
   
-  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateTrainingDialog" title="Create training" style="display: none;" data-dojo-props="onHide: function(){CreateTrainingForm.reset();}" >
+  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateTrainingDialog" title="Create training" style="display: none;" data-dojo-props="onHide: function() {CreateTrainingForm.reset();}" >
     <div data-dojo-type="dijit/form/Form" id="CreateTrainingForm" data-dojo-id="CreateTrainingForm" encType="multipart/form-data" action="" method="">
       <table class="dijitDialogPaneContentArea">
         <tr>
@@ -3987,7 +4068,7 @@ require([
 
 
 
-  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateDayOffDialog" title="Create day off" style="display: none;" data-dojo-props="onHide: function(){CreateDayOffForm.reset();}" >
+  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateDayOffDialog" title="Create day off" style="display: none;" data-dojo-props="onHide: function() {CreateDayOffForm.reset();}" >
     <div data-dojo-type="dijit/form/Form" id="CreateDayOffForm" data-dojo-id="CreateDayOffForm" encType="multipart/form-data" action="" method="">
       <table class="dijitDialogPaneContentArea">
         <tr>
@@ -4008,7 +4089,7 @@ require([
 
 
 
-  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateCrewMemberDialog" title="Create crew member" style="display: none;" data-dojo-props="onHide: function(){CreateCrewMemberForm.reset();}" >
+  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateCrewMemberDialog" title="Create crew member" style="display: none;" data-dojo-props="onHide: function() {CreateCrewMemberForm.reset();}" >
     <div data-dojo-type="dijit/form/Form" id="CreateCrewMemberForm" data-dojo-id="CreateCrewMemberForm" encType="multipart/form-data" action="" method="">
       <table class="dijitDialogPaneContentArea">
         <tr>
@@ -4057,7 +4138,7 @@ require([
   </div>
 
 
-  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateHighlightDialog" title="Create highlight" style="display: none;" data-dojo-props="onHide: function(){CreateHighlightForm.reset();}" >
+  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateHighlightDialog" title="Create highlight" style="display: none;" data-dojo-props="onHide: function() {CreateHighlightForm.reset();}" >
     <div data-dojo-type="dijit/form/Form" id="CreateHighlightForm" data-dojo-id="CreateHighlightForm" encType="multipart/form-data" action="" method="">
       <table class="dijitDialogPaneContentArea">
         <tr>
@@ -4083,7 +4164,7 @@ require([
   </div>
 
 
-  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateDistanceDialog" title="Distance" style="display: none;" data-dojo-props="onHide: function(){CreateDistanceForm.reset();}" >
+  <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateDistanceDialog" title="Distance" style="display: none;" data-dojo-props="onHide: function() {CreateDistanceForm.reset();}" >
     <div data-dojo-type="dijit/form/Form" id="CreateDistanceForm" data-dojo-id="CreateDistanceForm" encType="multipart/form-data" action="" method="">
       <table class="dijitDialogPaneContentArea">
         <tr>
@@ -4123,7 +4204,7 @@ require([
   </div>
 
 
-  <div data-dojo-type="dijit/Dialog" id="CreateTripDialog" data-dojo-id="CreateTripDialog" title="Create trip" style="display: none;" data-dojo-props="onHide: function(){CreateTripForm.reset();}" >
+  <div data-dojo-type="dijit/Dialog" id="CreateTripDialog" data-dojo-id="CreateTripDialog" title="Create trip" style="display: none;" data-dojo-props="onHide: function() {CreateTripForm.reset();}" >
     <div data-dojo-type="dijit/form/Form" id="CreateTripForm" data-dojo-id="CreateTripForm" encType="multipart/form-data" action="" method="">
       <table class="dijitDialogPaneContentArea">
         <tr>
