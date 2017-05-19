@@ -405,7 +405,7 @@ require([
 
         self._buttonDelete.on("click", function() {
           if( self.value.order != self.grid.collection.len -1 ) {
-            self.grid.collection.filter({order: self.value.order + 1}).forEach( function (object) {
+            self.grid.collection.filter({order: self.value.order + 1}).forEach( function(object) {
               self.grid.collection.remove(object.pk);
             });
           } 
@@ -413,7 +413,7 @@ require([
             // as this is the last leg/layover in the ordered list, I need to delete the current
             // leg/layover and the previous station, because the next one is untouchable, required
             // as the destination station.
-            self.grid.collection.filter({order: self.value.order - 1}).forEach( function (object) {
+            self.grid.collection.filter({order: self.value.order - 1}).forEach( function(object) {
               self.grid.collection.remove(object.pk);
             });
           }
@@ -543,7 +543,10 @@ require([
          label: "Delete this activity",
          onClick: function() {
            activityStore.removeSync(activityId);
+
            myDialog.hide();
+
+           topic.publish("refreshGraph");
          }
        }).placeAt(myDialog);
 
@@ -561,25 +564,31 @@ require([
          label: "Delete this highlight",
          onClick: function() {
            highLightStore.removeSync(highLightId);
+
            myDialog.hide();
+
+           topic.publish("refreshGraph");
          }
        }).placeAt(myDialog);
 
        myDialog.show();
      }
 
-     function PopupCrewMemberDetail(crewMemberId) {
+     function PopupCrewMemberDetail(crewMemberPk) {
        var myDialog = new Dialog({
          title: "Detail crew member",
          style: "width: 300px",
-         content: "Crewmember id: " + crewMemberId + "<br/>name: " + crewMemberStore.getSync(crewMemberId).name + "<br/>",
+         content: "Crewmember id: " + crewMemberPk + "<br/>name: " + crewMemberStore.getSync(crewMemberPk).name + "<br/>",
        });
 
        var myButton = new Button({
          label: "Delete this crew member",
          onClick: function() {
-           crewMemberStore.removeSync(crewMemberId);
+           crewMemberStore.removeSync(crewMemberPk);
+
            myDialog.hide();
+
+           topic.publish("refreshGraph");
          }
        }).placeAt(myDialog);
 
@@ -652,7 +661,6 @@ require([
      var HEIGHT_LINE_CM   = 140;
      var MARGIN_BOTTOM_CM = 20;
      var HEIGHT_LINE_HL   = 40;
-     var IsDrawingEnable  = true; // flag used to disable the drawing.
 
      // Draw a rectangle.
      function SVG_drawRect(className, x, y, width, height) {
@@ -699,25 +707,25 @@ require([
      function SVG_drawHighlight(item) {
        var calendarId    = svg.getElementById("calendar");
        var calendarBarId = svg.getElementById("calendar_bar");
-
-       var G       = document.createElementNS(svgNS, "g");
-       G.setAttributeNS(null,"transform","translate(0, " + item.GetYCoord() + ")");
-       G.setAttributeNS(null, "id", item.get("ident"));
-       calendarId.appendChild(G);
+       var group         = document.createElementNS(svgNS, "g");
+       
+       group.setAttributeNS(null,"transform","translate(0, " + item.GetYCoord() + ")");
+       group.setAttributeNS(null, "id", item.get("ident"));
+       calendarId.appendChild(group);
 
        var lblText = SVG_drawText("highlight_label", item.x + 10, HEIGHT_LINE_HL / 2, item.get("message"));
        on(lblText, "dblclick", function(evt) {
          PopupHighLightDetail(item.pk);
        });
-       G.appendChild(lblText);
+       group.appendChild(lblText);
 
        // a scale is used to extend the bars, that"s why they are defined into
        // a specific group.
-       var Gbar     = document.createElementNS(svgNS, "g");
-       Gbar.setAttributeNS(null, "id", item.get("barident"));
-       calendarBarId.appendChild(Gbar);
+       var groupBar     = document.createElementNS(svgNS, "g");
+       groupBar.setAttributeNS(null, "id", item.get("barident"));
+       calendarBarId.appendChild(groupBar);
 
-       Gbar.appendChild(SVG_drawRect("highlight", item.x, 0, 1, 1));
+       groupBar.appendChild(SVG_drawRect("highlight", item.x, 0, 1, 1));
      }
 
      function getActivityDistancePosition(event, activity) {
@@ -851,36 +859,30 @@ require([
      // There is no x translation, so every activity attached to the 
      // crewmember will be add into the g node.
      function SVG_drawCrewMember(item) {
-       var crewMemberId    = svg.getElementById("crewmembers");
-       var crewMemberBarId = svg.getElementById("crewmember_bar");
-
-       console.log(item);
-
-       var G = document.createElementNS(svgNS, "g");
-       var y = item.GetYCoord();
-
-       G.setAttributeNS(null,"transform","translate(0, " + y + ")");
-       G.setAttributeNS(null,"id", item.get("ident"));
-       crewMemberId.appendChild(G);
-
        var crewText = SVG_drawText("crewmember", -50, MARGIN_TOP_CM + HEIGHT_LINE_CM / 2, item.name);
 
        on(crewText, "dblclick", function(evt) {
          PopupCrewMemberDetail(item.pk);
        });
-       G.appendChild(crewText);
 
-       var Gbar = document.createElementNS(svgNS, "g");
-       Gbar.setAttributeNS(null,"transform","translate(0, " + y + ")");
-       Gbar.setAttributeNS(null,"id", item.get("barident"));
-       crewMemberBarId.appendChild(Gbar);
+       var group = document.createElementNS(svgNS, "g");
+       var y     = item.GetYCoord();
 
-       Gbar.appendChild(SVG_drawRect("line", 0, 0, 1, 1));
+       group.appendChild(crewText);
 
-       var height = item.GetHeight(); 
-       //    if( y + height == yCoordStore.nextY ) {
-       //    }
-       Gbar.appendChild(SVG_drawRect("line", 0, height, 1, 1));
+       group.setAttributeNS(null,"transform","translate(0, " + y + ")");
+       group.setAttributeNS(null,"id", item.get("ident"));
+       
+       svg.getElementById("crewmembers").appendChild(group);
+
+       var groupBar = document.createElementNS(svgNS, "g");
+
+       groupBar.setAttributeNS(null,"transform","translate(0, " + y + ")");
+       groupBar.setAttributeNS(null,"id", item.get("barident"));
+       groupBar.appendChild(SVG_drawRect("line", 0, 0               , 1, 1));
+       groupBar.appendChild(SVG_drawRect("line", 0, item.GetHeight(), 1, 1));
+
+       svg.getElementById("crewmember_bar").appendChild(groupBar);
      }
 
 
@@ -953,7 +955,7 @@ require([
        }
 
 
-       activityStore.filter({fk_parent: activity.pk}).fetch().then(function (objects) {
+       activityStore.filter({fk_parent: activity.pk}).fetch().then(function(objects) {
          if( objects.length < 0 ) { 
            return; 
          }
@@ -998,10 +1000,15 @@ require([
      }
 
      // ===============================================
-     // Data MODELs
+     // Data MODELs and STOREs
      // ===============================================
 
-     var ConfigurationModel = declare(Model, {
+     var TrackableMemory = declare([Memory, Trackable]); 
+
+     // -----------------------------------------------
+     // Configuration Model
+     // -----------------------------------------------
+     var configurationModel = declare(Model, {
        validateOnSet : false,
        schema        : {
          id                                            : { type : "numeric", default : 0 },
@@ -1049,8 +1056,121 @@ require([
        },
      });
 
+     var configurationStore = new Memory({
+       Model      : configurationModel,
+       idProperty : "id",
+     });
 
-     var CalendarModel = declare(Model, {
+     configurationStore.on("add, update", function(event) {
+       var cfg     = event.target;
+       var pattern = new RegExp("^Menu");
+
+       for(var property in cfg) {
+         console.log(property);
+         if( pattern.test(property) ) {
+           console.log(cfg.get(property));
+           registry.byId(property).set("disabled", cfg.get(property));
+         }
+       }
+     });
+
+     var config = configurationStore.Model();
+
+     configurationStore.addSync(config);
+
+
+     // -----------------------------------------------
+     // yCoord Model and Store.
+     // -----------------------------------------------
+     var yCoordModel = declare(Model, {
+       schema        : {
+         pk     : "numeric",
+         y      : "numeric",
+         height : "numeric",
+         fk_hl  : "numeric",
+         fk_dst : "numeric",
+         fk_cm  : "numeric",
+       },
+       validateOnSet : false,
+     });
+
+     var yCoordStore = new TrackableMemory({
+       Model             : yCoordModel,
+       idProperty        : "pk",
+       nextPk            : 1,
+       nextY             : 0,
+       StretchSVGHeight  : function() {
+                             var self = this;
+                             // scale vertically the calendar to fit the number of crewmember.
+                             var height = self.nextY;
+
+                             if( OpenTimeLineCount > 0 ) {
+                               height += MARGIN_TOP_CM + HEIGHT_LINE_CM * OpenTimeLineCount + MARGIN_BOTTOM_CM;
+                             }
+
+                             svg.getElementById("calendar_bar").setAttribute("transform", "scale(1," + height + ")");
+                             svg.getElementById("opentime").setAttribute("transform","translate(0, " + self.nextY + ")");
+                           },
+       GetNextPKSequence : function() {
+                            var self = this;
+
+                            return self.nextPk;
+                          },
+       GetNextY          : function() {
+                             var self = this;
+
+                             return self.nextY;
+                           },  
+     });
+
+
+     yCoordStore.on("add", function(event) {
+       // 1 - increment primary key sequence
+       yCoordStore.nextPk += 1;
+
+       // 2 - 
+       yCoordStore.sort('y').fetch().then(function(items) {
+         var nextY = 0;
+         for (var i = 0 ; i < items.length ; i++) {
+           items[i].y = nextY;
+           nextY += items[i].height;
+         }
+         yCoordStore.nextY = nextY;
+       });    
+     });
+
+
+     yCoordStore.on("update", function(event) {
+       yCoordStore.nextPk = Math.max(event.target.pk + 1, yCoordStore.nextPk); 
+
+       yCoordStore.sort('y').fetch().then(function(items) {
+         var nextY = 0;
+         for (var i = 0 ; i < items.length ; i++) {
+           items[i].y = nextY;
+           nextY += items[i].height;
+         }
+
+         yCoordStore.nextY = nextY;
+       });    
+     });
+
+
+     yCoordStore.on("delete", function(event) {
+       yCoordStore.sort('y').fetch().then(function(items) {
+         var nextY = 0;
+         for (var i = 0 ; i < items.length ; i++) {
+           items[i].y = nextY;
+           nextY += items[i].height;
+         }
+         yCoordStore.nextY = nextY;
+       });    
+     });
+
+
+     // -----------------------------------------------
+     // Calendar Model
+     // -----------------------------------------------
+     var calendarModel = declare(Model, {
        validateOnSet : false,
        schema        : {
          pk            : "numeric",
@@ -1079,11 +1199,14 @@ require([
                          }),
        },
        DrawSVG       : function() { 
-                         if( IsDrawingEnable ) SVG_drawCalendarDate(this); 
+                         var self = this;
+                         
+                         SVG_drawCalendarDate(self); 
                        },
        ClearSVG      : function() {
-                         var item_lbl = svg.getElementById(this.get("ident"));
-                         var item_bar = svg.getElementById(this.get("barident"));
+                         var self = this;
+                         var item_lbl = svg.getElementById(self.get("ident"));
+                         var item_bar = svg.getElementById(self.get("barident"));
 
                          if( item_lbl) item_lbl.parentNode.removeChild(item_lbl);
                          if( item_bar) item_bar.parentNode.removeChild(item_bar);
@@ -1091,7 +1214,44 @@ require([
      });
 
 
-     var CrewMemberModel = declare(Model, {
+     var calendarStore = new TrackableMemory({
+       Model      : calendarModel,
+       idProperty : "pk",
+       nextPk     : 1,
+     });
+
+
+     calendarStore.on("add", function(event) {
+       calendarStore.nextPk += 1;
+//       event.target.DrawSVG();
+     });
+
+
+     calendarStore.on("update", function(event) {
+       calendarStore.nextPk = Math.max(event.target.pk + 1, calendarStore.nextPk); 
+//       event.target.ClearSVG();
+//       event.target.DrawSVG();
+     });
+
+/*
+     calendarStore.on("delete", function(event) {
+       event.target.ClearSVG();
+     });
+*/
+
+     var calendarStoreAdapter = new DstoreAdapter(calendarStore);
+     registry.byId("CalendarStartPeriods").set("labelAttr", "name");
+
+     registry.byId("DayOffDatesSelect").set("labelAttr", "name");
+     registry.byId("DayOffDatesSelect").setStore(calendarStoreAdapter);
+     registry.byId("HighlightDatesSelect").set("labelAttr", "name");
+     registry.byId("HighlightDatesSelect").setStore(calendarStoreAdapter);
+
+
+     // -----------------------------------------------
+     // crewMember Model and Store
+     // -----------------------------------------------
+     var crewMemberModel = declare(Model, {
        validateOnSet : false,
        schema        : {
          name      : "string",
@@ -1113,25 +1273,95 @@ require([
                      }),
        },
        DrawSVG       : function() { 
-                         if( IsDrawingEnable ) SVG_drawCrewMember(this); 
+                         var self = this;
+
+                         SVG_drawCrewMember(self); 
                        },
        ClearSVG      : function() {
-                         var item_lbl = svg.getElementById(this.get("ident"));
-                         var item_bar = svg.getElementById(this.get("barident"));
+                         var self = this;
+
+                         var item_lbl = svg.getElementById(self.get("ident"));
+                         var item_bar = svg.getElementById(self.get("barident"));
 
                          if( item_lbl) item_lbl.parentNode.removeChild(item_lbl);
                          if( item_bar) item_bar.parentNode.removeChild(item_bar);
                        },
        GetYCoord     : function() {
-                         return yCoordStore.getSync(this.fk_yc).y;
+                         var self = this;
+          
+                         return yCoordStore.getSync(self.fk_yc).y;
                        },
        GetHeight     : function() {
-                         return yCoordStore.getSync(this.fk_yc).height;
+                         var self = this;
+
+                         return yCoordStore.getSync(self.fk_yc).height;
                        },
      });
 
 
-     var ActivityModel = declare(Model, {
+     var crewMemberStore = new TrackableMemory({
+       Model             : crewMemberModel,
+       idProperty        : "pk",
+       nextPk            : 1,
+       GetNextPKSequence : function() {
+                             var self = this;
+
+                             return self.nextPk;
+                           },
+     });
+
+     crewMemberStore.on("add", function(event) {
+       // 1 - inc pk sequence.
+       crewMemberStore.nextPk += 1;
+
+       // 2 - create y coord object.
+       var yCoordinate = yCoordStore.addSync({
+         pk     : yCoordStore.GetNextPKSequence(),
+         fk_cm  : event.target.pk,
+         y      : yCoordStore.GetNextY(),
+         height : MARGIN_TOP_CM + HEIGHT_LINE_CM + MARGIN_BOTTOM_CM,
+       });
+
+       // 3 - save foreign key of the Y coordinate object.
+       event.target.fk_yc = yCoordinate.pk;
+     });
+
+
+     crewMemberStore.on("update", function(event) {
+       crewMemberStore.nextPk = Math.max(event.target.pk + 1, crewMemberStore.nextPk);
+
+       var yCoordinate = yCoordStore.getSync(event.target.fk_yc); 
+
+       yCoordinate.height = MARGIN_TOP_CM + HEIGHT_LINE_CM * event.target.lineCount + MARGIN_BOTTOM_CM; 
+
+       yCoordStore.putSync(yCoordinate);      
+     });
+
+
+     crewMemberStore.on("delete", function(event) {
+       // Remove 
+       activityStore.filter({fk_cm: event.target.pk}).forEach(function(item) {
+         activityStore.removeSync(item.pk);
+       });
+
+       // Remove coords that reference this distance.
+       yCoordStore.filter({fk_cm: event.target.pk}).forEach(function(item) {
+         yCoordStore.removeSync(item.pk);
+       });
+     });
+
+
+     var crewMemberStoreAdapter = new DstoreAdapter(crewMemberStore);
+
+     registry.byId("DayOffCrewMemberSelect").set("store", crewMemberStoreAdapter);
+     registry.byId("TrainingCrewMemberSelect").set("store", crewMemberStoreAdapter);
+     registry.byId("TripCrewMemberSelect").set("store", crewMemberStoreAdapter);
+
+
+     // -----------------------------------------------
+     // activity Model and Store
+     // -----------------------------------------------
+     var activityModel = declare(Model, {
        validateOnSet      : false,
        schema             : {
          pk             : "numeric",
@@ -1165,28 +1395,247 @@ require([
                           }),
        },
        DrawSVG            : function() { 
-                              if( IsDrawingEnable ) {
-                                if( this.fk_parent == undefined ) {
-                                  SVG_drawActivity(this); // , crewmember); 
-                                }  
+                              var self = this;
+
+                              if( this.fk_parent == undefined ) {
+                                SVG_drawActivity(self);
                               }
                             },
        ClearSVG           : function() {
-                              var item = svg.getElementById(this.get("ident"));
+                              var self = this;
+                              var item = svg.getElementById(self.get("ident"));
 
                               // an activity belongs to a crewmember. If the crewmember was cleared,
                               // then the activity is also cleared !  
                               if( item ) item.parentNode.removeChild(item);
                             },
        GetYCoord          : function() {
-                              return crewMemberStore.getSync(this.fk_cm).GetYCoord();
+                              var self = this;
+
+                              return crewMemberStore.getSync(self.fk_cm).GetYCoord();
                             },
        GetCrewMemberIdent : function() {
-                              console.log("GetCrewMemberIdent"); 
-                              console.log(this.fk_cm);          
-                              return this.fk_cm ? crewMemberStore.getSync(this.fk_cm).get("ident") : "opentime"; 
+                              var self = this;
+
+                              return self.fk_cm ? crewMemberStore.getSync(self.fk_cm).get("ident") : "opentime"; 
                             },
      });
+
+
+     var activityStore = new TrackableMemory({
+       Model             : activityModel,
+       idProperty        : "pk",
+       nextPk            : 1,
+       GetNextPKSequence : function() {
+                             var self = this;
+
+                             return self.nextPk;
+                           },
+     });
+
+
+     activityStore.on("add", function(event) {
+       activityStore.nextPk += 1;
+     });
+
+
+     activityStore.on("update", function(event) {
+       activityStore.nextPk = Math.max(event.target.pk + 1, activityStore.nextPk); 
+     });
+
+
+     activityStore.on("delete", function(event) {
+       // Remove distance highlight that reference this activity.
+       distanceStore.filter({fk_act1: event.target.pk}).forEach(function(item) {
+         distanceStore.removeSync(item.pk);
+       });
+       distanceStore.filter({fk_act2: event.target.pk}).forEach(function(item) {
+         distanceStore.removeSync(item.pk);
+       });
+
+       // Remove details (legs, layovers and stations) in case of trip.
+       activityStore.filter({fk_parent: event.target.pk}).forEach(function(item) {
+         activityStore.removeSync(item.pk);
+       });
+     });
+
+
+     var activityStoreAdapter = new DstoreAdapter(activityStore.filter({fk_parent: undefined}));
+
+     registry.byId("DistanceFromSelect").set("labelAttr", "fullname");
+     registry.byId("DistanceFromSelect").set("searchAttr", "fullname");
+     registry.byId("DistanceFromSelect").set("store", activityStoreAdapter);
+     registry.byId("DistanceToSelect").set("labelAttr", "fullname");
+     registry.byId("DistanceToSelect").set("searchAttr", "fullname");
+     registry.byId("DistanceToSelect").set("store", activityStoreAdapter);
+
+
+     // -----------------------------------------------
+     // hightLight Model and Store
+     // -----------------------------------------------
+     var highLightModel = declare(Model, {
+       validateOnSet : false,
+       schema        : {
+         message  : "string",
+         pk       : "numeric",
+         x        : "numeric",
+         fk_yc    : "numeric",
+         ident    : new ComputedProperty({
+                      dependsOn : ["pk"],
+                      getValue  : function(pk) {
+                        return "hl" + pk;  // hl stands for HighLight
+                      }
+                    }),
+         barident : new ComputedProperty({ 
+                      dependsOn : ["pk"],
+                      getValue  : function(pk) {
+                        return "bhl" + pk;  // bhl stands for Bar HighLight
+                      }
+                    }),
+       },
+       DrawSVG       : function() { 
+                         var self = this;
+
+                         SVG_drawHighlight(self); 
+                       },
+       ClearSVG      : function() {
+                         var self = this;
+
+                         var item_lbl = svg.getElementById(self.get("ident"));
+                         var item_bar = svg.getElementById(self.get("barident"));
+
+                         // a hightligh  belongs to a calendar day. If a day was cleared,
+                         // then the hightlight is also cleared !  
+                         if( item_lbl ) item_lbl.parentNode.removeChild(item_lbl);
+                         if( item_bar ) item_bar.parentNode.removeChild(item_bar);
+                       },
+       GetYCoord     : function() {
+                         var self = this;
+
+                         return yCoordStore.getSync(self.fk_yc).y;
+                       },
+     });
+
+
+     var highLightStore = new Memory({
+       Model             : highLightModel,
+       idProperty        : "pk",
+       nextPk            : 1,
+       GetNextPKSequence : function() {
+                             var self = this;
+
+                             return self.nextPk;
+                           },
+     });
+
+
+     highLightStore.on("add", function(event) {
+       // 1 - increment primary key sequence.
+       highLightStore.nextPk += 1;
+
+       // for recurent hl, there is only one yCoord object, created before the creation
+       // of each recurent hl. So there is no need for the following.
+       if( typeof(event.target.fk_yc) === 'undefined' ){
+         // 2 - create y coord object.
+         var yCoordinate = yCoordStore.addSync({
+           pk     : yCoordStore.GetNextPKSequence(),
+           fk_hl  : event.target.pk,
+           y      : 0,
+           height : HEIGHT_LINE_HL,
+         });
+
+         // 3 - save coordinate primary key into highlight object.
+         event.target.fk_yc = yCoordinate.pk;
+       }
+     });
+
+
+     highLightStore.on("update", function(event) {
+       highLightStore.nextPk = Math.max(event.target.pk + 1, highLightStore.nextPk);
+     });
+
+
+     highLightStore.on("delete", function(event) {
+       // Remove coords that reference this highlight.
+       yCoordStore.filter({fk_hl: event.target.pk}).fetch().then( function(items) {
+         // remove only if it remains only one item.    
+         if( items.length == 1 ) {
+           yCoordStore.removeSync(items[0].pk);
+         }
+       });
+     });
+
+
+     // -----------------------------------------------
+     // distance Model and Store
+     // -----------------------------------------------
+     var distanceModel = declare(Model, {
+       validateOnSet : false,
+       schema        : {
+         pk         : "numeric",
+         fk_act1    : "numeric",
+         act1_event : "numeric",
+         fk_act2    : "numeric",
+         act2_event : "numeric",
+         fk_yc      : "numeric",
+         ident      : new ComputedProperty({
+                        dependsOn : ["pk"],
+                        getValue: function(pk) {
+                          return "dst" + pk;  // hl stands for HighLight
+                        }
+                      }),
+       },
+       DrawSVG       : function() {
+                         var self = this;
+
+                         SVG_drawDistance(self); 
+                       },
+       ClearSVG      : function() {
+                         var self     = this;
+                         var item_lbl = svg.getElementById(self.get("ident"));
+
+                         if( item_lbl ) item_lbl.parentNode.removeChild(item_lbl);
+                       },
+       GetYCoord     : function() {
+                         var self = this;
+
+                         return yCoordStore.getSync(self.fk_yc).y;
+                       },
+     });
+
+
+     var distanceStore = new Memory({
+       Model      : distanceModel,
+       idProperty : "pk",
+       nextPk     : 1,
+     });
+
+
+     distanceStore.on("add", function(event) {
+       distanceStore.nextPk += 1;
+     });
+
+
+     distanceStore.on("update", function(event) {
+       distanceStore.nextPk = Math.max(event.target.pk + 1, distanceStore.nextPk);
+     });
+
+
+     distanceStore.on("delete", function(event) {
+       // Remove coords that reference this distance.
+       yCoordStore.filter({fk_dst: event.target.pk}).forEach(function(item) {
+         yCoordStore.removeSync(item.pk);
+       });
+     });
+
+
+
+
+
+
+
+
+
 
 
      var TripDetailModel = declare(Model, {
@@ -1238,88 +1687,10 @@ require([
      });
 
 
-     var HighLightModel = declare(Model, {
-       validateOnSet : false,
-       schema        : {
-         message  : "string",
-         pk       : "numeric",
-         x        : "numeric",
-         fk_yc    : "numeric",
-         ident    : new ComputedProperty({
-                      dependsOn : ["pk"],
-                      getValue  : function(pk) {
-                        return "hl" + pk;  // hl stands for HighLight
-                      }
-                    }),
-         barident : new ComputedProperty({ 
-                      dependsOn : ["pk"],
-                      getValue  : function(pk) {
-                        return "bhl" + pk;  // bhl stands for Bar HighLight
-                      }
-                    }),
-       },
-       DrawSVG       : function() { 
-                         if( IsDrawingEnable ) SVG_drawHighlight(this); 
-                       },
-       ClearSVG      : function() {
-                         var item_lbl = svg.getElementById(this.get("ident"));
-                         var item_bar = svg.getElementById(this.get("barident"));
-
-                         // a hightligh  belongs to a calendar day. If a day was cleared,
-                         // then the hightlight is also cleared !  
-                         if( item_lbl ) item_lbl.parentNode.removeChild(item_lbl);
-                         if( item_bar ) item_bar.parentNode.removeChild(item_bar);
-                       },
-       GetYCoord     : function() {
-                         return yCoordStore.getSync(this.fk_yc).y;
-                       },
-     });
-
-
-     var DistanceModel = declare(Model, {
-       validateOnSet : false,
-       schema        : {
-         pk         : "numeric",
-         fk_act1    : "numeric",
-         act1_event : "numeric",
-         fk_act2    : "numeric",
-         act2_event : "numeric",
-         fk_yc      : "numeric",
-         ident      : new ComputedProperty({
-                        dependsOn : ["pk"],
-                        getValue: function(pk) {
-                          return "dst" + pk;  // hl stands for HighLight
-                        }
-                      }),
-       },
-       DrawSVG       : function() { 
-                         if( IsDrawingEnable ) SVG_drawDistance(this); 
-                       },
-       ClearSVG      : function() {
-                         var item_lbl = svg.getElementById(this.get("ident"));
-
-                         if( item_lbl ) item_lbl.parentNode.removeChild(item_lbl);
-                       },
-       GetYCoord     : function() {
-                         return yCoordStore.getSync(this.fk_yc).y;
-                       },
-     });
-
-
-     var YCoordModel = declare(Model, {
-       validateOnSet : false,
-       schema        : {
-         pk     : "numeric",
-         y      : "numeric",
-         height : "numeric",
-         fk_hl  : "numeric",
-         fk_dst : "numeric",
-         fk_cm  : "numeric",
-       },
-     });
-
-
-     var EventActivityModel = declare(Model, {
+     // -----------------------------------------------
+     // eventActivity Model and Store
+     // -----------------------------------------------
+     var eventActivityModel = declare(Model, {
        validateOnSet : false,
        schema        : {
          pk     : "numeric",
@@ -1330,51 +1701,15 @@ require([
      });
 
 
-     // ===============================================
-     // Data STOREs and events.
-     // ===============================================
-
-     var TrackableMemory = declare([Memory, Trackable]); 
-
-     // -----------------------------------------------
-     // configurationStore
-     // -----------------------------------------------
-     var configurationStore = new Memory({
-       Model      : ConfigurationModel,
-       idProperty : "id",
-     });
-
-     configurationStore.on("add, update", function(event) {
-       var cfg     = event.target;
-       var pattern = new RegExp("^Menu");
-
-       for(var property in cfg) {
-         console.log(property);
-         if( pattern.test(property) ) {
-           console.log(cfg.get(property));
-           registry.byId(property).set("disabled", cfg.get(property));
-         }
-       }
-     });
-
-     var config = configurationStore.Model();
-
-     configurationStore.addSync(config);
-
-     // -----------------------------------------------
-     // eventActivityStore
-     // -----------------------------------------------
      var eventActivityStore = new TrackableMemory({
-       Model      : EventActivityModel,
+       Model      : eventActivityModel,
        idProperty : "pk",
        nextPk     : 1,
-       len        : 0,
      });
 
 
      eventActivityStore.on("add", function(event) {
-       eventActivityStore.len += 1;
-       eventActivityStore.nextPk = Math.max(event.target.pk + 1, eventActivityStore.nextPk); 
+       eventActivityStore.nextPk += 1;
      });
 
 
@@ -1384,237 +1719,20 @@ require([
 
 
      eventActivityStore.on("delete", function(event) {
-       eventActivityStore.len -= 1;
      });
 
-
-     // -----------------------------------------------
-     // yCoordStore
-     // -----------------------------------------------
-     var yCoordStore = new TrackableMemory({
-       Model            : YCoordModel,
-       idProperty       : "pk",
-       nextPk           : 1,
-       nextY            : 0,
-       len              : 0,
-       StretchSVGHeight : function() {
-                            // scale vertically the calendar to fit the number of crewmember.
-                            var height = this.nextY;
-
-                            if( OpenTimeLineCount > 0 ) {
-                              height += MARGIN_TOP_CM + HEIGHT_LINE_CM * OpenTimeLineCount + MARGIN_BOTTOM_CM;
-                            }
-
-                            svg.getElementById("calendar_bar").setAttribute("transform", "scale(1," + height + ")");
-                            svg.getElementById("opentime").setAttribute("transform","translate(0, " + this.nextY + ")");
-                          },
-     });
-
-
-     yCoordStore.on("add", function(event) {
-       yCoordStore.len += 1;
-       yCoordStore.nextPk = Math.max(event.target.pk + 1, yCoordStore.nextPk); 
-
-       console.log(event.target.y); 
-       yCoordStore.sort('y').fetch().then(function(items) {
-         var nextY = 0;
-         for (var i = 0 ; i < items.length ; i++) {
-           items[i].y = nextY;
-           nextY += items[i].height;
-         }
-         yCoordStore.nextY = nextY;
-       });    
-
-       yCoordStore.StretchSVGHeight();
-       console.log(yCoordStore);
-     });
-
-
-     yCoordStore.on("update", function(event) {
-       yCoordStore.nextPk = Math.max(event.target.pk + 1, yCoordStore.nextPk); 
-
-       yCoordStore.sort('y').fetch().then(function(items) {
-         var nextY = 0;
-         for (var i = 0 ; i < items.length ; i++) {
-           items[i].y = nextY;
-           nextY += items[i].height;
-         }
-
-         yCoordStore.nextY = nextY;
-       });    
-
-       yCoordStore.StretchSVGHeight();
-       console.log(yCoordStore);
-
-       topic.publish("refreshGraph");
-     });
-
-
-     yCoordStore.on("delete", function(event) {
-       yCoordStore.len -= 1;
-
-       yCoordStore.sort('y').fetch().then(function(items) {
-         var nextY = 0;
-         for (var i = 0 ; i < items.length ; i++) {
-           items[i].y = nextY;
-           nextY += items[i].height;
-         }
-         yCoordStore.nextY = nextY;
-       });    
-
-       yCoordStore.StretchSVGHeight();
-       console.log(yCoordStore);
-     });
 
 
      // -----------------------------------------------
      // calendarStore
      // -----------------------------------------------
-     var calendarStore = new TrackableMemory({
-       Model      : CalendarModel,
-       idProperty : "pk",
-       nextPk     : 1,
-       len        : 0,
-     });
-
-
-     calendarStore.on("add", function(event) {
-       calendarStore.len += 1;
-       calendarStore.nextPk += 1;
-       event.target.DrawSVG();
-     });
-
-
-     calendarStore.on("update", function(event) {
-       event.target.ClearSVG();
-       event.target.DrawSVG();
-     });
-
-
-     calendarStore.on("delete", function(event) {
-       calendarStore.len -= 1;
-       event.target.ClearSVG();
-     });
-
-
-     var calendarStoreAdapter = new DstoreAdapter(calendarStore);
-     registry.byId("CalendarStartPeriods").set("labelAttr", "name");
-
-     registry.byId("DayOffDatesSelect").set("labelAttr", "name");
-     registry.byId("DayOffDatesSelect").setStore(calendarStoreAdapter);
-     registry.byId("HighlightDatesSelect").set("labelAttr", "name");
-     registry.byId("HighlightDatesSelect").setStore(calendarStoreAdapter);
-
 
      // -----------------------------------------------
      // crewMemberStore
      // -----------------------------------------------
-     var crewMemberStore = new TrackableMemory({
-       Model      : CrewMemberModel,
-       idProperty : "pk",
-       nextPk     : 1,
-       len        : 0,
-     });
-
-
-     crewMemberStore.on("add", function(event) {
-       crewMemberStore.len += 1;
-       crewMemberStore.nextPk = Math.max(event.target.pk, crewMemberStore.nextPk) + 1;
-       event.target.DrawSVG();
-     });
-
-
-     crewMemberStore.on("update", function(event) {
-       crewMemberStore.nextPk = Math.max(event.target.pk + 1, crewMemberStore.nextPk);
-       console.log(event);
-
-       var Y = yCoordStore.getSync(event.target.fk_yc); 
-
-       Y.height = MARGIN_TOP_CM + HEIGHT_LINE_CM * event.target.lineCount + MARGIN_BOTTOM_CM; 
-
-       yCoordStore.putSync(Y);      
-
-       console.log("je passe icicicicitttttt");
-       console.log(yCoordStore);          
-
-       event.target.ClearSVG();
-       event.target.DrawSVG();
-
-       // Redraw activity.
-       activityStore.filter({fk_cm: event.target.pk}).forEach(function(item) {
-         item.ClearSVG();
-         item.DrawSVG(event.target.pk);
-       });
-     });
-
-
-     crewMemberStore.on("delete", function(event) {
-       crewMemberStore.len -= 1;
-       event.target.ClearSVG();
-
-       // Remove 
-       activityStore.filter({fk_cm: event.target.pk}).forEach(function(item) {
-         activityStore.removeSync(item.pk);
-       });
-
-       // Remove coords that reference this distance.
-       yCoordStore.filter({fk_cm: event.target.pk}).forEach(function(item) {
-         yCoordStore.removeSync(item.pk);
-       });
-     });
-
-
-     var crewMemberStoreAdapter = new DstoreAdapter(crewMemberStore);
-
-     registry.byId("DayOffCrewMemberSelect").set("store", crewMemberStoreAdapter);
-     registry.byId("TrainingCrewMemberSelect").set("store", crewMemberStoreAdapter);
-     registry.byId("TripCrewMemberSelect").set("store", crewMemberStoreAdapter);
-
-
      // -----------------------------------------------
      // activityStore
      // -----------------------------------------------
-     var activityStore = new TrackableMemory({
-       Model      : ActivityModel,
-       idProperty : "pk",
-       nextPk     : 1,
-       len        : 0,
-     });
-
-
-     activityStore.on("add", function(event) {
-       activityStore.len += 1;
-       activityStore.nextPk = Math.max(event.target.pk, activityStore.nextPk) + 1;
-       event.target.DrawSVG(); 
-     });
-
-
-     activityStore.on("update", function(event) {
-       activityStore.nextPk = Math.max(event.target.pk + 1, activityStore.nextPk); 
-       event.target.ClearSVG();
-       event.target.DrawSVG();
-     });
-
-
-     activityStore.on("delete", function(event) {
-       // Remove distance highlight that reference this activity.
-       distanceStore.filter({fk_act1: event.target.pk}).forEach(function(item) {
-         distanceStore.removeSync(item.pk);
-       });
-       distanceStore.filter({fk_act2: event.target.pk}).forEach(function(item) {
-         distanceStore.removeSync(item.pk);
-       });
-
-       // Remove details (legs, layovers and stations) in case of trip.
-       activityStore.filter({fk_parent: event.target.pk}).forEach(function(item) {
-         activityStore.removeSync(item.pk);
-       });
-
-       activityStore.len -= 1;
-       event.target.ClearSVG();
-     });
-
-
      /* 
       * Determine if the new activity is overlapping with other activities
       * related to a specific crewmember. If there is a collision, then
@@ -1648,6 +1766,7 @@ require([
            console.log("GetActivityLineNumber: je passe la");
            cm.lineCount = lineNb;
            crewMemberStore.putSync(cm);
+           topic.publish("refreshGraph");
          }
        }
        else { // opentime
@@ -1660,15 +1779,6 @@ require([
        return lineNb;
      }
 
-
-     var activityStoreAdapter = new DstoreAdapter(activityStore.filter({fk_parent: undefined}));
-
-     registry.byId("DistanceFromSelect").set("labelAttr", "fullname");
-     registry.byId("DistanceFromSelect").set("searchAttr", "fullname");
-     registry.byId("DistanceFromSelect").set("store", activityStoreAdapter);
-     registry.byId("DistanceToSelect").set("labelAttr", "fullname");
-     registry.byId("DistanceToSelect").set("searchAttr", "fullname");
-     registry.byId("DistanceToSelect").set("store", activityStoreAdapter);
 
 
      // -----------------------------------------------
@@ -1701,7 +1811,7 @@ require([
                            var self = this; 
                            // based on the assumption that the store will have a reasonable size,
                            // there is no need to re 
-                           self.sort('order').fetch().then(function (objects) {
+                           self.sort('order').fetch().then(function(objects) {
                              self._updDur(objects);
 
                              for( i = 0; i < objects.length ; ++i ) {
@@ -1714,7 +1824,7 @@ require([
                            // there is no need to re 
                            var self = this; 
 
-                           self.sort('order').fetch().then(function (objects) {
+                           self.sort('order').fetch().then(function(objects) {
                              for( i = 0; i < objects.length ; ++i ) {
                                objects[i].newLegButton   = 1;
                                objects[i].newLayButton   = 1;
@@ -1827,78 +1937,10 @@ require([
      // -----------------------------------------------
      // highLightStore
      // -----------------------------------------------
-     var highLightStore = new Memory({
-       Model      : HighLightModel,
-       idProperty : "pk",
-       nextPk     : 1,
-       len        : 0,
-     });
-
-
-     highLightStore.on("add", function(event) {
-       highLightStore.len += 1;
-       highLightStore.nextPk = Math.max(event.target.pk, highLightStore.nextPk) + 1;
-       event.target.DrawSVG();
-     });
-
-
-     highLightStore.on("update", function(event) {
-       highLightStore.nextPk = Math.max(event.target.pk + 1, highLightStore.nextPk);
-       event.target.ClearSVG();
-       event.target.DrawSVG();
-     });
-
-
-     highLightStore.on("delete", function(event) {
-       // Remove coords that reference this highlight.
-       yCoordStore.filter({fk_hl: event.target.pk}).fetch().then( function(items) {
-         // remove only if it remains only one item.    
-         if( items.length == 1 ) {
-           yCoordStore.removeSync(items[0].pk);
-         }
-       });
-
-       highLightStore.len -= 1;
-       event.target.ClearSVG();
-     });
-
 
      // -----------------------------------------------
      // distanceStore
      // -----------------------------------------------
-     var distanceStore = new Memory({
-       Model      : DistanceModel,
-       idProperty : "pk",
-       nextPk     : 1,
-       len        : 0,
-     });
-
-
-     distanceStore.on("add", function(event) {
-       distanceStore.len += 1;
-       distanceStore.nextPk = Math.max(event.target.pk, distanceStore.nextPk) + 1;
-       event.target.DrawSVG();
-     });
-
-
-     distanceStore.on("update", function(event) {
-       distanceStore.nextPk = Math.max(event.target.pk + 1, distanceStore.nextPk);
-       event.target.ClearSVG();
-       event.target.DrawSVG();
-     });
-
-
-     distanceStore.on("delete", function(event) {
-       // Remove coords that reference this distance.
-       yCoordStore.filter({fk_dst: event.target.pk}).forEach(function(item) {
-         yCoordStore.removeSync(item.pk);
-       });
-
-       distanceStore.len -= 1;
-       event.target.ClearSVG();
-     });
-
-
      // ===============================================
      // Redraw SVG
      // ===============================================
@@ -1917,11 +1959,7 @@ require([
 
 
      topic.subscribe("refreshGraph", function() {
-       // function RedrawSVG() {
-       console.log("refreshGraph");          
-       IsDrawingEnable = true;
-
-       RemoveIntroMessage();
+       yCoordStore.StretchSVGHeight();
 
        var x = 0;
        calendarStore.forEach(function(item) {
@@ -2033,7 +2071,6 @@ require([
      function LoadSvgStores(svgNode) {
        RemoveIntroMessage();
 
-       IsDrawingEnable = false;
 
        LoadStore(configurationStore, svgNode.getElementById("ConfigurationStore"),"configuration");
        // load single object (id 0) in config.
@@ -2149,11 +2186,11 @@ require([
          showHeader    : true,
          noDataMessage : 'Please fill in the "Start date time" field first.',
        },
-       'TripGrid',
+       'TripGrid'
      );
 
 
-     grid.on('dgrid-datachange', function (event) {
+     grid.on('dgrid-datachange', function(event) {
        var cell = grid.cell(event);
 
        var columnName =  cell.column.field;
@@ -2176,7 +2213,6 @@ require([
          grid.collection.putSync(cell.row.data);
          grid.collection.updateDuration();
        }
-
      });
 
      var columns = [{
@@ -2214,7 +2250,7 @@ require([
            style     : "width:7em;",
            required  : true,
          },
-         canEdit    : function (object, value) {
+         canEdit    : function(object, value) {
                         return object.type == "leg";
                       },
        },
@@ -2604,7 +2640,7 @@ require([
        var end   = moment(config.calendarEnd); 
        var range = end.diff(start, "days");
 
-       calendarStore.fetch().then(function (days) {
+       calendarStore.fetch().then(function(days) {
          for (var i = days.length - 1; i >= 0; i--) {
            calendarStore.remove(days[i].pk);
          }
@@ -2638,21 +2674,10 @@ require([
              start.add(1, "minutes");
            }
 
-           var pkY  = yCoordStore.nextPk;
-           var pkHL = highLightStore.nextPk;
-
-           // Add the new entry in the y coord store.
-           yCoordStore.addSync({
-             pk: pkY,
-             fk_hl: pkHL,
-             height: HEIGHT_LINE_HL,
-             y: 0,
-           });
-
            highLightStore.addSync({
-             message: InitialState ? "End DST" : "Start DST",
-             x: getPositionX(start),
-             pk: pkHL,
+             pk      : highLightStore.GetNextPKSequence(),
+             message : InitialState ? "End DST" : "Start DST",
+             x       : getPositionX(start),
            });
          }
 
@@ -2671,6 +2696,8 @@ require([
        config.MenuFileSaveSVGFile         = false;
 
        configurationStore.putSync(config);
+
+       topic.publish("refreshGraph");
 
        SetCalendarDialog.hide();
      });
@@ -2722,27 +2749,16 @@ require([
      // Create Crewmember dialog
      // -----------------------------------------------
      registry.byId("CreateCrewMember").on("click", function() {
-       var pkY  = yCoordStore.nextPk;
-       var pkCM = crewMemberStore.nextPk;
-
-       // Add the new entry in the y coord store.
-       yCoordStore.addSync({
-         pk     : pkY,
-         fk_cm  : pkCM,
-         y      : yCoordStore.nextY,
-         height : MARGIN_TOP_CM + HEIGHT_LINE_CM + MARGIN_BOTTOM_CM,
-       });
-
-
 
        // Add the new crew in the store. Event will trigger the drawing.
        crewMemberStore.addSync({
+         pk        : crewMemberStore.GetNextPKSequence(),
          name      : registry.byId("CrewMemberName").get("value"),
          birthdate : registry.byId("CrewMemberBirthDate").get("value").toISOString().substring(0, 10),
-         pk        : pkCM,
-         fk_yc     : pkY,
          lineCount : 1,
        });
+
+       topic.publish("refreshGraph");
 
        CreateCrewMemberDialog.hide();
      });
@@ -2757,7 +2773,7 @@ require([
        }
 
        CreateDayOffDialog.hide();
-       var crewmemberId = parseInt(registry.byId("DayOffCrewMemberSelect").get("value"));
+       var crewMemberPk = parseInt(registry.byId("DayOffCrewMemberSelect").get("value"));
        var days = registry.byId("DayOffDatesSelect").value; 
 
        // to avoid the "at least one item must be selected" message, form data are save in 
@@ -2770,17 +2786,17 @@ require([
          var x     = calendarDay.get("x");
          var width = calendarDay.get("width") + 1;
 
-         var lineNb = GetActivityLineNumber(crewmemberId, x, width);
+         var lineNb = GetActivityLineNumber(crewMemberPk, x, width);
 
          if( lineNb > 1 ) {  
            alert("DO starting " + calendarDay.get("name") + " is overlapping with another activity."); 
          }
          activityStore.addSync({
            name     : "DO",
-           fullname : crewMemberStore.getSync(crewmemberId).name + " -- " + moment(calendarDay.get("name")).format("YYYY-MM-DD") + " -- DO",
-           type     : "DO",
-           pk       : activityStore.nextPk,
-           fk_cm    : crewmemberId,
+           fullname : crewMemberStore.getSync(crewMemberPk).name + " -- " + moment(calendarDay.get("name")).format("YYYY-MM-DD") + " -- DO",
+           type     : "DO",           
+           pk       : activityStore.GetNextPKSequence(),
+           fk_cm    : crewMemberPk,
            x        : x,
            lbtStart : moment(calendarDay.get("name")).format("YYYY-MM-DD HH:mm"),
            utcStart : moment(calendarDay.get("name")).utc().format("YYYY-MM-DD HH:mm"),
@@ -2792,6 +2808,8 @@ require([
            lineNb   : lineNb,
          });
        });
+
+       topic.publish("refreshGraph");
      });
 
      // -----------------------------------------------
@@ -2862,10 +2880,9 @@ require([
        var endTraining = startTraining.clone().add(width, 'm');
        var crewMemberPk = Number(registry.byId("TrainingCrewMemberSelect").get("value"));
 
+       var lineNb = GetActivityLineNumber(crewMemberPk, x, width);
 
-       var lineNb = GetActivityLineNumber(crewmemberId, x, width);
-
-       var fullname = crewMemberPk ? crewMemberStore.getSync(crewmemberId).name : "Open time";
+       var fullname = crewMemberPk ? crewMemberStore.getSync(crewMemberPk).name : "Open time";
        fullname += " -- " + mydate.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TrainingName").get("value");
 
        if( lineNb > 1 ) {
@@ -2875,7 +2892,7 @@ require([
          name     : registry.byId("TrainingName").get("value"),
          fullname : fullname,
          type     : "TRN",
-         pk       : activityStore.nextPk,
+         pk       : activityStore.GetNextPKSequence(),
          fk_cm    : crewMemberPk,
          x        : x,
          lbtStart : mydate.format("YYYY-MM-DD HH:mm"),
@@ -2887,6 +2904,8 @@ require([
          restb    : Number(registry.byId("TrainingRestBeforeH").get("value")) * 60 + Number(registry.byId("TrainingRestBeforeM").get("value")),
          lineNb   : lineNb,
        });
+
+       topic.publish("refreshGraph");
      });
 
 
@@ -2914,16 +2933,11 @@ require([
          }); 
        }
 
-       var pkY  = yCoordStore.nextPk;
-
-       // Add the new entry in the y coord store.
-       yCoordStore.addSync({
-         pk     : pkY,
-         fk_hl  : highLightStore.nextPk,
+       var yCoordinate = yCoordStore.addSync({
+         pk     : yCoordStore.GetNextPKSequence(),
          y      : 0,
          height : HEIGHT_LINE_HL,
        });
-
 
        for(i = 0; i < days.length; i++) {
          var calDay = calendarStore.getSync(days[i]);
@@ -2934,13 +2948,15 @@ require([
 
          if( when.isValid() ) {   
            highLightStore.addSync({
+             pk      : highLightStore.GetNextPKSequence(),
              message : label,
              x       : getPositionX(when),
-             pk      : highLightStore.nextPk,
-             fk_yc   : pkY,
+             fk_yc   : yCoordinate.pk,
            });
          }
        }
+
+       topic.publish("refreshGraph");
      });  
 
 
@@ -3000,6 +3016,8 @@ require([
          pk         : pkDST,
          fk_yc      : pkY,
        });
+
+       topic.publish("refreshGraph");
      });  
 
 
@@ -3075,7 +3093,7 @@ require([
 
      registry.byId("CreateTripDialog").on("hide", function() {
 
-       tripDetailStore.fetch().then(function (items) {
+       tripDetailStore.fetch().then(function(items) {
          for (var i = items.length - 1; i >= 0; i--) {
            tripDetailStore.remove(items[i].pk);
          }           
@@ -3122,8 +3140,8 @@ require([
 
        var width        = getPositionX(endTrip) - x;
        var startTrip    = moment.tz(mydate, timezoneStore.get(config.timezone).name);
-       var crewmemberId = Number(registry.byId("TripCrewMemberSelect").get("value"));
-       var lineNb       = GetActivityLineNumber(crewmemberId, x, width);
+       var crewMemberPk = Number(registry.byId("TripCrewMemberSelect").get("value"));
+       var lineNb       = GetActivityLineNumber(crewMemberPk, x, width);
 
        if( lineNb > 1 ) {
          alert("The new trip is overlapping with another activity."); 
@@ -3146,18 +3164,12 @@ require([
        var dutyInPeriod   = 0;
 
 
-       tripDetailStore.sort('order').fetch().then(function (items) {
-         var j    = 0;
-         var iLeg = 0;
-         var iLay = 0;
-         var name;
-
+       tripDetailStore.sort('order').fetch().then(function(items) {
          for (var i = 0; i < items.length ; i++) {
            var width = Number(items[i].dhour * 60) + Number(items[i].dminute);
            var inPeriod = getInPeriod(xDetail, width);
            var type = items[i].type;
            if( type == "leg" ) {
-             j += 1; 
              type += items[i].legType;
              if( items[i].legType == "A" ) {
                credit         += width;
@@ -3165,46 +3177,26 @@ require([
              }
              block         += width;
              blockInPeriod += inPeriod;
-             iLeg          += 1;
-             name = type + iLeg;
-           }
-           else {
-             iLay += 1;
-             name = type + iLay;
            }
            if( type != "lay" ) {
              duty         += width;
              dutyInPeriod += inPeriod;
            } 
 
-
-           activityStore.addSync({
-             name      : name,
-             fullname  : name + " -- " + mydate.format("YYYY-MM-DD HH:mm"),
-             type      : type.toUpperCase(),
-             pk        : activityStore.nextPk,
-             fk_parent : fk_parent,
-             fk_cm     : crewmemberId,
-             x         : xDetail,
-             width     : width,
-             station   : items[i].station,
-           });
            xDetail += width;
          }           
        });
 
-       var tmp = activityStore.nextPk;     
+       var fullname = crewMemberPk ? crewMemberStore.getSync(crewMemberPk).name : "Open time";
 
-       var fullname = crewmemberId ? crewMemberStore.getSync(crewmemberId).name : "Open time";
+       fullname += " -- " + mydate.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TripName").get("value");  
 
-       fullname += " -- " + mydate.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TripName").get("value"),  
-
-       activityStore.addSync({
+       var trip = activityStore.addSync({
          name           : registry.byId("TripName").get("value"),
-         fullname       : crewMemberStore.getSync(crewmemberId).name + " -- " + mydate.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TripName").get("value"),
+         fullname       : fullname,
          type           : "TRP",
-         pk             : fk_parent,
-         fk_cm          : crewmemberId,
+         pk             : activityStore.GetNextPKSequence(),
+         fk_cm          : crewMemberPk,
          x              : x,
          lbtStart       : mydate.format("YYYY-MM-DD HH:mm"),
          utcStart       : startTrip.utc().format("YYYY-MM-DD HH:mm"),
@@ -3222,8 +3214,44 @@ require([
          dutyInPeriod   : dutyInPeriod,
          lineNb         : lineNb,
        });
-       console.log(activityStore);
-       activityStore.nextPk = tmp;          
+
+       xDetail        = x;
+
+       tripDetailStore.sort('order').fetch().then(function(items) {
+         var iLeg = 0;
+         var iLay = 0;
+         var name;
+
+         for (var i = 0; i < items.length ; i++) {
+           var width = Number(items[i].dhour * 60) + Number(items[i].dminute);
+           var type = items[i].type;
+           if( type == "leg" ) {
+             type += items[i].legType;
+             iLeg += 1;
+             name = type + iLeg;
+           }
+           else {
+             iLay += 1;
+             name = type + iLay;
+           }
+
+           activityStore.addSync({
+             name      : name,
+             fullname  : name + " -- " + mydate.format("YYYY-MM-DD HH:mm"),
+             type      : type.toUpperCase(),
+             pk        : activityStore.GetNextPKSequence(),
+             fk_parent : trip.pk,
+             fk_cm     : crewMemberPk,
+             x         : xDetail,
+             width     : width,
+             station   : items[i].station,
+           });
+           xDetail += width;
+         }           
+       });
+
+       topic.publish("refreshGraph");
+
      });
 
 
@@ -3794,8 +3822,8 @@ require([
           ====================================================================================
         -->
         <g id="coordinate">
-        <text x="10" y="20" id="coordinateX" style="position:fixed;"> </text> <!-- the white space is mandatatory. -->
-        <text x="10" y="40" id="coordinateY" style="position:fixed;"> </text>
+        <text x="10" y="20" id="coordinateX" style="position:fixed; display:none;"> </text> <!-- the white space is mandatatory. -->
+        <text x="10" y="40" id="coordinateY" style="position:fixed; display:none;"> </text>
         </g>
 
         <!--
@@ -3824,7 +3852,7 @@ require([
           </tr>
           <tr>
             <td><label for="TrnCm">Crew member</label></td>
-            <td><select data-dojo-type="dijit/form/FilteringSelect" name="TrnCm" id="TrainingCrewMemberSelect" required="false"></td>
+            <td><select data-dojo-type="dijit/form/FilteringSelect" name="TrnCm" id="TrainingCrewMemberSelect" required="false"/></td>
           </tr>
           <tr>
             <td><label for="transportationtime">Transportation time apply</label></td>
@@ -4188,8 +4216,8 @@ require([
             <td><input data-dojo-type="dijit/form/TextBox" name="name" id="TripName" required="true"></td>
           </tr>
           <tr>
-            <td><label for="TrnCm">Crew member</label></td>
-            <td><select data-dojo-type="dijit/form/FilteringSelect" name="TrnCm" id="TripCrewMemberSelect" /></td>
+            <td><label for="TrpCm">Crew member</label></td>
+            <td><select data-dojo-type="dijit/form/FilteringSelect" name="TrpCm" id="TripCrewMemberSelect" required="false"/></td>
           </tr>
           <tr>
             <td><label for="transportationtime">Transportation time apply</label></td>
