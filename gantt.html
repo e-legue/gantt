@@ -863,7 +863,7 @@ require([
 
        on(crewText, "dblclick", function(evt) {
          PopupCrewMemberDetail(item.pk);
-       });
+      });
 
        var group = document.createElementNS(svgNS, "g");
        var y     = item.GetYCoord();
@@ -999,6 +999,8 @@ require([
        });
      }
 
+
+
      // ===============================================
      // Data MODELs and STOREs
      // ===============================================
@@ -1016,10 +1018,10 @@ require([
          midnightOffset                                : { type : "numeric", default : 0},
          reportTime                                    : { type : "numeric", default : 0},
          releaseTime                                   : { type : "numeric", default : 0},
-         timezone                                      : { type : "string",  default : ""},
-         station                                       : { type : "string",  default : ""},
-         calendarStart                                 : { type : "string",  default : ""},
-         calendarEnd                                   : { type : "string",  default : ""},
+         CalendarTimezone                              : { type : "string",  default : "undefined"},
+         CalendarStation                               : { type : "string",  default : "undefined"},
+         CalendarStart                                 : { type : "string",  default : "undefined"},
+         CalendarEnd                                   : { type : "string",  default : "undefined"},
          MenuFile                                      : { type : "boolean", default : false, },
          MenuFileLoadSVGFile                           : { type : "boolean", default : false, },
          MenuFileLoadXMLStationFile                    : { type : "boolean", default : false, },
@@ -1042,7 +1044,6 @@ require([
          MenuHighLightsSpecificDateTime                : { type : "boolean", default : false, },
          MenuHighLightsDistance                        : { type : "boolean", default : false, },
          MenuHighLightsWindow                          : { type : "boolean", default : true, },
-         SHCoordinates                                 : { type : "boolean", default : true, },
          SHCalendarHours                               : { type : "boolean", default : true, },
          SHCalendarHourBars                            : { type : "boolean", default : true, },
          SHCalendarDayX                                : { type : "boolean", default : true, },
@@ -1054,6 +1055,33 @@ require([
          SHActivityDetailHours                         : { type : "boolean", default : true, },
          SHActivityDetailStations                      : { type : "boolean", default : true, },
        },
+       Apply         : function() {
+                         var self = this;
+                           
+                         if( self.CalendarStart ) {
+                           registry.byId("CalendarStart").set("value", self.CalendarStart);
+                           var start = moment(self.CalendarStart);
+                           Xorig = start.unix();
+                         }
+                         if( self.CalendarEnd ) {
+                           registry.byId("CalendarEnd").set("value", self.CalendarEnd);
+                         }
+console.log(config.CalendarStart);
+                         if( self.CalendarTimezone ) {
+                           timezoneStore.filter({name: self.CalendarTimezone}).fetchRange({start: 0, end: 1}).then(function(results) {
+                             if( results.length > 0 ) {
+                               registry.byId("CalendarTimezone").set("value", "" + results[0].id);
+                               console.log("**************************************************");
+                               console.log(reusults[0]);
+                               registry.byId("CalendarTimezone").set("value", timezoneStoreAdapter.getIdentity(results[0].id));
+
+                             }
+                           });
+                         }  
+
+                         registry.byId("XGraphCompression").set("value", self.XGraphCompression);
+
+                       },
      });
 
      var configurationStore = new Memory({
@@ -1076,7 +1104,45 @@ require([
 
      var config = configurationStore.Model();
 
+     config.Apply();
+
      configurationStore.addSync(config);
+
+     
+     // -----------------------------------------------
+     // station Model and Store
+     // -----------------------------------------------
+     var StationModel = declare(Model, {
+       validateOnSet : false,
+       schema        : {
+         id             : "string",
+         code           : "string",
+         name           : "string",
+         dstShift       : "string",
+         dstStartLst    : "string",
+         dstEndLst      : "string",
+         utcOffset      : "string",
+         offset         : "numeric",
+         regionList     : "array",
+         /* do not work with query !!!
+         offset         : new ComputedProperty({ 
+                            dependsOn : ["utcOffet"],
+                            getValue  : function(utcOffset) {
+                              var data = offsetRegex.exec(utcOffset);
+
+                              return moment.duration({hours: data[1], minutes: data[2]}).asMinutes() * -1;
+                            }
+         }),
+         */
+       },
+     });
+
+
+     var stationStore = new Memory({
+       Model      : StationModel,
+       idProperty : "id",
+     });
+
 
 
      // -----------------------------------------------
@@ -1121,49 +1187,42 @@ require([
 
                              return self.nextY;
                            },  
+       ComputeYAndHeigth : function() {
+//                             yCoordStore.sort({property: 'y'}, {property: 'fk_cm', descending: true }).fetch().then(function(items) {
+                             yCoordStore.sort('y').fetch().then(function(items) {
+                               var nextY = 0;
+                               for (var i = 0 ; i < items.length ; i++) {
+                                 items[i].y = nextY;
+                                 nextY += items[i].height;
+                             console.log(items[i]);
+                               }
+                               yCoordStore.nextY = nextY;
+                             });    
+                           },
      });
 
 
      yCoordStore.on("add", function(event) {
-       // 1 - increment primary key sequence
+       // 1 - increment primary key sequence.
        yCoordStore.nextPk += 1;
 
-       // 2 - 
-       yCoordStore.sort('y').fetch().then(function(items) {
-         var nextY = 0;
-         for (var i = 0 ; i < items.length ; i++) {
-           items[i].y = nextY;
-           nextY += items[i].height;
-         }
-         yCoordStore.nextY = nextY;
-       });    
+       // 2 - recompute y and height of each item.
+       yCoordStore.ComputeYAndHeigth();
      });
 
 
      yCoordStore.on("update", function(event) {
+       // 1 - set next primary key value.
        yCoordStore.nextPk = Math.max(event.target.pk + 1, yCoordStore.nextPk); 
 
-       yCoordStore.sort('y').fetch().then(function(items) {
-         var nextY = 0;
-         for (var i = 0 ; i < items.length ; i++) {
-           items[i].y = nextY;
-           nextY += items[i].height;
-         }
-
-         yCoordStore.nextY = nextY;
-       });    
+       // 2 - recompute y and height of each item.
+       yCoordStore.ComputeYAndHeigth();
      });
 
 
      yCoordStore.on("delete", function(event) {
-       yCoordStore.sort('y').fetch().then(function(items) {
-         var nextY = 0;
-         for (var i = 0 ; i < items.length ; i++) {
-           items[i].y = nextY;
-           nextY += items[i].height;
-         }
-         yCoordStore.nextY = nextY;
-       });    
+       // 1 - recompute y and height of each item.
+       yCoordStore.ComputeYAndHeigth();
      });
 
 
@@ -1397,7 +1456,7 @@ require([
        DrawSVG            : function() { 
                               var self = this;
 
-                              if( this.fk_parent == undefined ) {
+                              if( typeof(this.fk_parent) == "undefined" ) {
                                 SVG_drawActivity(self);
                               }
                             },
@@ -1419,6 +1478,66 @@ require([
 
                               return self.fk_cm ? crewMemberStore.getSync(self.fk_cm).get("ident") : "opentime"; 
                             },
+       CreateEvents       : function() {
+                              var self = this;
+
+                              if( self.restb > 0 ) {
+                                eventActivityStore.addSync({
+                                  pk : eventActivityStore.GetNextPKSequence(),
+                                  x  : self.x - self.restb - self.tp,
+                                  label : "Start of rest before activity",
+                                  fk_act : self.pk,
+                                });
+                              }
+                              if( self.tp > 0 ) {
+                                eventActivityStore.addSync({
+                                  pk : eventActivityStore.GetNextPKSequence(),
+                                  x  : self.x - self.tp,
+                                  label : "Start of transportation time before activity",
+                                  fk_act : self.pk,
+                                });
+                              }
+                              eventActivityStore.addSync({
+                                pk : eventActivityStore.GetNextPKSequence(),
+                                x  : self.x,
+                                label : "Start of activity",
+                                fk_act : self.pk,
+                              });
+
+                              activityStore.filter({fk_parent: self.pk}).fetch().then(function(objects) {
+                                for(i = 1; i < objects.length; i++) {
+                                  eventActivityStore.addSync({
+                                    pk : eventActivityStore.GetNextPKSequence(),
+                                    x  : objects[i].x - self.x,
+                                    label : "Start of " + objects[i].name,
+                                    fk_act : self.pk,
+                                  });
+                                }
+                              });
+
+                              eventActivityStore.addSync({
+                                pk : eventActivityStore.GetNextPKSequence(),
+                                x  : self.x + self.width,
+                                label : " End of activity",
+                                fk_act : self.pk,
+                              });
+                              if( self.tp > 0 ) {
+                                eventActivityStore.addSync({
+                                  pk : eventActivityStore.GetNextPKSequence(),
+                                  x  : self.x + self.width + self.tp,
+                                  label : "End of transportation time after activity",
+                                  fk_act : self.pk,
+                                });
+                              }
+                              if( self.resta > 0 ) {
+                                eventActivityStore.addSync({
+                                  pk : eventActivityStore.GetNextPKSequence(),
+                                  x  : self.x + self.width + self.tp + self.resta,
+                                  label : "End of rest after activity",
+                                  fk_act : self.pk,
+                                });
+                              }
+                            },          
      });
 
 
@@ -1535,7 +1654,7 @@ require([
 
        // for recurent hl, there is only one yCoord object, created before the creation
        // of each recurent hl. So there is no need for the following.
-       if( typeof(event.target.fk_yc) === 'undefined' ){
+       if( typeof(event.target.fk_yc) == 'undefined' ){
          // 2 - create y coord object.
          var yCoordinate = yCoordStore.addSync({
            pk     : yCoordStore.GetNextPKSequence(),
@@ -1556,13 +1675,19 @@ require([
 
 
      highLightStore.on("delete", function(event) {
-       // Remove coords that reference this highlight.
-       yCoordStore.filter({fk_hl: event.target.pk}).fetch().then( function(items) {
-         // remove only if it remains only one item.    
-         if( items.length == 1 ) {
-           yCoordStore.removeSync(items[0].pk);
-         }
-       });
+console.log("delete hl");
+console.log(event.target);
+
+        highLightStore.filter({fk_yc: event.target.fk_yc}).fetch().then( function(items) {
+          for (var i = 0 ; i < items.length ; i++) {
+console.log(items[i]);            
+          }
+          if( items.length == 0 ) {
+console.log("remove ycoord...");            
+            yCoordStore.removeSync(event.target.fk_yc);
+          }
+          
+        });
      });
 
 
@@ -1605,9 +1730,14 @@ require([
 
 
      var distanceStore = new Memory({
-       Model      : distanceModel,
-       idProperty : "pk",
-       nextPk     : 1,
+       Model             : distanceModel,
+       idProperty        : "pk",
+       nextPk            : 1,
+       GetNextPKSequence : function() {
+                             var self = this;
+
+                             return self.nextPk;
+                           },
      });
 
 
@@ -1629,64 +1759,6 @@ require([
      });
 
 
-
-
-
-
-
-
-
-
-
-     var TripDetailModel = declare(Model, {
-       validateOnSet : false,
-       schema        : {
-         pk             : "numeric",
-         order          : "numeric",
-         type           : "string",
-         station        : "string",
-         legType        : "string",
-         startDateTime  : "string",
-         dhour          : "numeric",
-         dminute        : "numeric",
-         endDateTime    : "string",
-         fk_activity    : "numeric",
-         stationSelect  : "numeric",
-         legTypeSelect  : "numeric",
-         durationSelect : "numeric",
-         newLegButton   : "numeric",
-         newLayButton   : "numeric",
-         deleteButton   : "numeric",
-       },
-     });
-
-
-     var StationModel = declare(Model, {
-       validateOnSet : false,
-       schema        : {
-         id             : "string",
-         code           : "string",
-         name           : "string",
-         dstShift       : "string",
-         dstStartLst    : "string",
-         dstEndLst      : "string",
-         utcOffset      : "string",
-         offset         : "numeric",
-         regionList     : "array",
-         /* do not work with query !!!
-         offset         : new ComputedProperty({ 
-                            dependsOn : ["utcOffet"],
-                            getValue  : function(utcOffset) {
-                              var data = offsetRegex.exec(utcOffset);
-
-                              return moment.duration({hours: data[1], minutes: data[2]}).asMinutes() * -1;
-                            }
-         }),
-         */
-       },
-     });
-
-
      // -----------------------------------------------
      // eventActivity Model and Store
      // -----------------------------------------------
@@ -1702,9 +1774,14 @@ require([
 
 
      var eventActivityStore = new TrackableMemory({
-       Model      : eventActivityModel,
-       idProperty : "pk",
-       nextPk     : 1,
+       Model             : eventActivityModel,
+       idProperty        : "pk",
+       nextPk            : 1,
+       GetNextPKSequence : function() {
+                             var self = this;
+
+                             return self.nextPk;
+                           },
      });
 
 
@@ -1724,14 +1801,10 @@ require([
 
 
      // -----------------------------------------------
-     // calendarStore
-     // -----------------------------------------------
-
-     // -----------------------------------------------
-     // crewMemberStore
      // -----------------------------------------------
      // -----------------------------------------------
-     // activityStore
+     // -----------------------------------------------
+     // -----------------------------------------------
      // -----------------------------------------------
      /* 
       * Determine if the new activity is overlapping with other activities
@@ -1781,10 +1854,32 @@ require([
 
 
 
+
      // -----------------------------------------------
-     // tripDetailStore
+     // trip detail Model and Store
      // -----------------------------------------------
 
+     var TripDetailModel = declare(Model, {
+       validateOnSet : false,
+       schema        : {
+         pk             : "numeric",
+         order          : "numeric",
+         type           : "string",
+         station        : "string",
+         legType        : "string",
+         startDateTime  : "string",
+         dhour          : "numeric",
+         dminute        : "numeric",
+         endDateTime    : "string",
+         fk_activity    : "numeric",
+         stationSelect  : "numeric",
+         legTypeSelect  : "numeric",
+         durationSelect : "numeric",
+         newLegButton   : "numeric",
+         newLayButton   : "numeric",
+         deleteButton   : "numeric",
+       },
+     });
      var tripDetailStore = new TrackableMemory({
        Model           : TripDetailModel,
        idProperty      : "pk",
@@ -1925,30 +2020,21 @@ require([
      }); 
 
 
-     // -----------------------------------------------
-     // stationStore
-     // -----------------------------------------------
-     var stationStore = new Memory({
-       Model      : StationModel,
-       idProperty : "id",
-     });
-
 
      // -----------------------------------------------
-     // highLightStore
      // -----------------------------------------------
-
      // -----------------------------------------------
-     // distanceStore
      // -----------------------------------------------
      // ===============================================
      // Redraw SVG
      // ===============================================
      function RemoveIntroMessage() {
+       dojo.query("#calendar").forEach(dojo.empty);
+       /*
        var intro = svg.getElementById("intro");
        if(intro) {
          intro.parentNode.removeChild(intro);
-       } 
+       } */
      }
 
 
@@ -1961,29 +2047,30 @@ require([
      topic.subscribe("refreshGraph", function() {
        yCoordStore.StretchSVGHeight();
 
+       dojo.query("#calendar").forEach(dojo.empty);
+       dojo.query("#calendar_bar").forEach(dojo.empty);
+       dojo.query("#crewmembers").forEach(dojo.empty);
+       dojo.query("#crewmember_bar").forEach(dojo.empty);
+       dojo.query("#opentime").forEach(dojo.empty);
+
        var x = 0;
        calendarStore.forEach(function(item) {
          // on.emit(item, "update", { bubbles: true, cancelable: true });
-         item.ClearSVG();
          item.DrawSVG();
          x = Math.max(x, item.get("x") + item.get("width")); 
        });
        AdjustCrewmemberBarScaleX(x);
 
        highLightStore.forEach(function(item) {
-         item.ClearSVG();
          item.DrawSVG();
        });
        distanceStore.forEach(function(item) {
-         item.ClearSVG();
          item.DrawSVG();
        });
        crewMemberStore.forEach(function(item) {
-         item.ClearSVG();
          item.DrawSVG();
        });
        activityStore.forEach(function(item) {
-         item.ClearSVG();
          item.DrawSVG(crewMemberStore.getSync(item.fk_cm));
        });
      });
@@ -2076,32 +2163,27 @@ require([
        // load single object (id 0) in config.
        config = configurationStore.getSync(0);
        console.log(config);          
-
-       registry.byId("CalendarStart").set("value", config.calendarStart);
-       registry.byId("CalendarEnd").set("value", config.calendarEnd);
-
-       var start = moment(config.calendarStart);
-       Xorig = start.unix();
-
-       timezoneStore.filter({name: config.timezone}).fetchRange({start: 0, end: 1}).then(function(results) {
-         if( results.length > 0 ) {
-           registry.byId("CalendarTimezone").set("value", results[0].id);
-         }
-       });
+       config.Apply();
 
        LoadStore(calendarStore, svgNode.getElementById("CalendarStore"),"calendar");
-       LoadStore(yCoordStore, svgNode.getElementById("YCoordStore"),"ycoord");
        LoadStore(crewMemberStore, svgNode.getElementById("CrewMemberStore"), "crew");
        LoadStore(activityStore, svgNode.getElementById("ActivityStore"), "activity");
        LoadStore(highLightStore, svgNode.getElementById("HighLightStore"), "highligth");
        LoadStore(distanceStore, svgNode.getElementById("DistanceStore"), "distance");
        LoadStationStore(svgNode.getElementById("StationStore"), MODE_SVG);
 
-       stationStore.filter({name: config.station}).fetchRange({start: 0, end: 1}).then(function(results) {
+       // should be last to avoid duplication when processing crewmember or hightligth or distance stores.
+       // it works due to the usage of putSync iso addSync in LoadStore function.
+       LoadStore(yCoordStore, svgNode.getElementById("YCoordStore"),"ycoord");
+
+       stationStore.filter({name: config.CalendarStation}).fetchRange({start: 0, end: 1}).then(function(results) {
          if( results.length > 0 ) {
-           registry.byId("CalendarStation").set("value", results[0].id);
+           registry.byId("CalendarStation").set("value", "" + results[0].id);
          }
        });
+
+       console.log(yCoordStore);
+       console.log(CrewMemberStore);
 
        topic.publish("refreshGraph");
      }
@@ -2318,14 +2400,6 @@ require([
      // ===============================================
      // EVENTS on dijit
      // ===============================================
-
-     // -----------------------------------------------
-     // Show/Hide dialog
-     // -----------------------------------------------
-     registry.byId("SHCoordinates").on("change", function(isChecked) {
-       svg.getElementById("coordinateX").setAttribute("display", isChecked ? "block" : "none");
-       svg.getElementById("coordinateY").setAttribute("display", isChecked ? "block" : "none");
-     }, true);
 
      registry.byId("SHCalendarHours").on("change", function(isChecked) {
        var divs = svg.getElementsByClassName("hour_label");
@@ -2627,6 +2701,7 @@ require([
        viewInForm(config, dom.byId("SetCalendarForm"));
      }, true);
 
+
      registry.byId("SetCalendar").on("click", function() {
        if( !registry.byId("SetCalendarForm").validate() ) {
          return;
@@ -2635,9 +2710,9 @@ require([
 
        setFromForm(config, dom.byId("SetCalendarForm"));
 
-       var start = moment(config.calendarStart);
+       var start = moment(config.CalendarStart);
        Xorig = start.unix();
-       var end   = moment(config.calendarEnd); 
+       var end   = moment(config.CalendarEnd); 
        var range = end.diff(start, "days");
 
        calendarStore.fetch().then(function(days) {
@@ -2791,7 +2866,7 @@ require([
          if( lineNb > 1 ) {  
            alert("DO starting " + calendarDay.get("name") + " is overlapping with another activity."); 
          }
-         activityStore.addSync({
+         var activity = activityStore.addSync({
            name     : "DO",
            fullname : crewMemberStore.getSync(crewMemberPk).name + " -- " + moment(calendarDay.get("name")).format("YYYY-MM-DD") + " -- DO",
            type     : "DO",           
@@ -2807,6 +2882,8 @@ require([
            restb    : 0,
            lineNb   : lineNb,
          });
+
+         activity.CreateEvents();
        });
 
        topic.publish("refreshGraph");
@@ -2873,7 +2950,7 @@ require([
        mydate.hours(mytime.hours());
        mydate.minutes(mytime.minutes());
        var x                = getPositionX(mydate);
-       var startTraining    = moment.tz(mydate, timezoneStore.get(config.timezone).name);
+       var startTraining    = moment.tz(mydate, timezoneStore.get(config.CalendarTimezone).name);
 
        var width = Number(registry.byId("TrainingDurationHour").get("value")) * 60 + Number(registry.byId("TrainingDurationMinute").get("value"));
 
@@ -2888,7 +2965,7 @@ require([
        if( lineNb > 1 ) {
          alert("The new traininig is overlapping with another activity."); 
        }
-       activityStore.addSync({
+       var activity = activityStore.addSync({
          name     : registry.byId("TrainingName").get("value"),
          fullname : fullname,
          type     : "TRN",
@@ -2904,6 +2981,8 @@ require([
          restb    : Number(registry.byId("TrainingRestBeforeH").get("value")) * 60 + Number(registry.byId("TrainingRestBeforeM").get("value")),
          lineNb   : lineNb,
        });
+       
+       activity.CreateEvents();
 
        topic.publish("refreshGraph");
      });
@@ -2935,7 +3014,7 @@ require([
 
        var yCoordinate = yCoordStore.addSync({
          pk     : yCoordStore.GetNextPKSequence(),
-         y      : 0,
+         y      : -1,
          height : HEIGHT_LINE_HL,
        });
 
@@ -3042,7 +3121,7 @@ require([
              pk      : 1,
              order   : 1,
              type    : "sta",
-             station : config.station,
+             station : config.CalendarStation,
            });
            tripDetailStore.addSync({
              pk      : 2,
@@ -3056,7 +3135,7 @@ require([
              pk      : 3,
              order   : 3,
              type    : "sta",
-             station : config.station,
+             station : config.CalendarStation,
            });
          }
          // allow to recompute end date time.
@@ -3139,7 +3218,7 @@ require([
        endTrip.minutes(mytime.minutes());
 
        var width        = getPositionX(endTrip) - x;
-       var startTrip    = moment.tz(mydate, timezoneStore.get(config.timezone).name);
+       var startTrip    = moment.tz(mydate, timezoneStore.get(config.CalendarTimezone).name);
        var crewMemberPk = Number(registry.byId("TripCrewMemberSelect").get("value"));
        var lineNb       = GetActivityLineNumber(crewMemberPk, x, width);
 
@@ -3250,6 +3329,8 @@ require([
          }           
        });
 
+       trip.CreateEvents();          
+
        topic.publish("refreshGraph");
 
      });
@@ -3267,35 +3348,42 @@ require([
            var value = object[name];
 
            console.log(name);
+           console.log(element);
            console.log(element.type);
            console.log(element.checked);
            console.log(object[name]);
-
-           if( element.type == "checkbox" ) {
-             console.log('on checked');
-             console.log(registry.byId(name));
-             registry.byId(name).set("checked", value);
-           }
-           else {
-             console.log('on value');
-             console.log(registry.byId(name));
-             if( registry.byId(name) ) {
-               registry.byId(name).set("value", value);
+           if( typeof(object[name]) != 'undefined' ) {
+             if( element.type == "checkbox" ) {
+               console.log('on checked');
+               console.log(registry.byId(name));
+               registry.byId(name).set("checked", value);
              }
-             else  {
-               var input = query("input[name=" + name + "]", form)[0];
-               if(input) {
-                 console.log(name + "---" + value);
-                 // here is a little hack. dijit dialog create an hidden input with the right name.
-                 // but the one used to display is the sibling before. So I reference the parent and
-                 // pick the first child with the right class.
-                 var dijitInputInner  = query(".dijitInputInner", input.parentNode)[0];
-                 var dijitPlaceHolder = query(".dijitPlaceHolder", input.parentNode)[0];
+             else {
+               console.log('on value');
+               console.log(registry.byId(name));
+               if( registry.byId(name) ) {
+                 registry.byId(name).set("value", value);
+               }
+               else  {
+  console.log("================================================");          
+  console.log("************************************************");          
+  console.log("j'aime pas ca:" + name);          
+  console.log("************************************************");          
+  console.log("================================================");          
+                 var input = query("input[name=" + name + "]", form)[0];
+                 if(input) {
+                   console.log(name + "---" + value);
+                   // here is a little hack. dijit dialog create an hidden input with the right name.
+                   // but the one used to display is the sibling before. So I reference the parent and
+                   // pick the first child with the right class.
+                   var dijitInputInner  = query(".dijitInputInner", input.parentNode)[0];
+                   var dijitPlaceHolder = query(".dijitPlaceHolder", input.parentNode)[0];
 
-                 console.log(dijitInputInner);
+                   console.log(dijitInputInner);
 
-                 if( dijitInputInner ) dijitInputInner.value = value;
-                 if( dijitPlaceHolder ) dijitPlaceHolder.style.display = "none";  
+                   if( dijitInputInner ) dijitInputInner.value = value;
+                   if( dijitPlaceHolder ) dijitPlaceHolder.style.display = "none";  
+                 }
                }
              }
            }
@@ -3506,14 +3594,6 @@ require([
 
        var g = getRoot(svgDoc);
 
-       // This is the section added to be able to display coordinates.
-       var pt = getEventPoint(evt).matrixTransform(g.getCTM().inverse());
-       var coordinateX = document.getElementById("coordinateX");
-       var coordinateY = document.getElementById("coordinateY");
-
-       coordinateX.firstChild.nodeValue = "X: " + Math.floor(pt.x);
-       coordinateY.firstChild.nodeValue = "Y: " + Math.floor(pt.y);
-
        if(state == "pan" && enablePan) {
          // Pan mode
          var p = getEventPoint(evt).matrixTransform(stateTf);
@@ -3629,7 +3709,7 @@ require([
         <div data-dojo-type="dijit/DropDownMenu">
           <div data-dojo-type="dijit/PopupMenuItem">
             <span>Graph factor compression on X axis</span>
-            <select data-dojo-type="dijit/form/Select" name="XGraphCompression" id="XGraphCompression" style="width: 3em;">
+            <select data-dojo-type="dijit/form/Select" name="XGraphCompression" id="XGraphCompression" data-dojo-id="XGraphCompression" style="width: 3em;">
               <option value=".25">0.25</option>
               <option value=".5">0.5</option>
               <option value="1" selected="selected">1</option>
@@ -3672,17 +3752,19 @@ require([
 
 .start_period {
   fill: green;
+  fill-opacity: 0.4;
 }
 
 .hour_bar {
-  fill-opacity: 0.1;
 }
 
 .even {
   fill: yellow;
+  fill-opacity: 0.5;
 }
 .uneven {
   fill: blue;
+  fill-opacity: 0.1;
 }
 
 .day_label {
@@ -3743,42 +3825,53 @@ require([
 
 .DO {
   fill: orange;
+  fill-opacity: 0.8;
 }
 
 .TRN {
   fill: green;
+  fill-opacity: 0.6;
 }
 
 .SBY {
   fill: cyan;
+  fill-opacity: 0.8;
 }
 
 .TRP {
   fill: blue;
+  fill-opacity: 0.6;
 }
 
 .LEGA {
   fill: magenta;
+  fill-opacity: 0.6;
 }
 
 .LEGD {
   fill: white;
+  fill-opacity: 0.6;
 }
 
 .LAY {
   fill: yellow;
+  fill-opacity: 0.7;
 }
 
 .STA {
   fill: gray;
+  fill-opacity: 0.6;
 }
 
 .TP {
   fill: pink;
+  fill-opacity: 0.6;
 }
 .REST {
   fill: purple;
+  fill-opacity: 0.6;
 }
+
         </style>
 
         <g id="viewport" transform="matrix(0.75, 0, 0, 0.75, 160, 110)">
@@ -3787,6 +3880,7 @@ require([
           CALENDAR
           ====================================================================================
         -->
+        <g id="calendar_bar" transform="scale(1,1)"></g>
         <g id="calendar">
         <g id="intro">
         <image x="220" y="20" width="140" height="195" xlink:href="https://i.ebayimg.com/00/s/MzkwWDI4MA==/z/YKQAAOSwYqxXi7cf/$_86.JPG" />
@@ -3796,7 +3890,6 @@ require([
         <text x="420" y="120" style="fill:black;font-size:20px;">- Use File menu to load an XML station file and then Calendar menu to set a period or</text>
         <text x="420" y="150" style="fill:black;font-size:20px;">- Use File menu to load a SVG file.</text>
         </g>
-        <g id="calendar_bar" transform="scale(1,1)"></g>
         </g>
 
         <!--
@@ -3804,8 +3897,8 @@ require([
           CREWMEMBERS
           ====================================================================================
         -->
-        <g id="crewmembers">
         <g id="crewmember_bar" transform="scale(1,1)"></g>
+        <g id="crewmembers">
         </g>
 
         <!--
@@ -3814,16 +3907,6 @@ require([
           ====================================================================================
         -->
         <g id="opentime"></g>
-        </g>
-
-        <!--
-          ====================================================================================
-          COORDINATES
-          ====================================================================================
-        -->
-        <g id="coordinate">
-        <text x="10" y="20" id="coordinateX" style="position:fixed; display:none;"> </text> <!-- the white space is mandatatory. -->
-        <text x="10" y="40" id="coordinateY" style="position:fixed; display:none;"> </text>
         </g>
 
         <!--
@@ -3908,19 +3991,19 @@ require([
         <table class="dijitDialogPaneContentArea">
           <tr>
             <td><label for="SHActivityHours">Show activity hour label</label></td>
-            <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHActivityHours" id="SHActivityHours" checked></td>
+            <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHActivityHours" id="SHActivityHours" data-dojo-id="SHActivityHours"></td>
           </tr>
           <tr>
             <td><label for="SHActivityDetails">Show activity details (leg/layover)</label></td>
-            <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHActivityDetails" id="SHActivityDetails" checked></td>
+            <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHActivityDetails" id="SHActivityDetails" data-dojo-id="SHActivityDetails"></td>
           </tr>
           <tr>
             <td><label for="SHActivityDetailHours">Show activity detail hours</label></td>
-            <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHActivityDetailHours" id="SHActivityDetailHours"></td>
+            <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHActivityDetailHours" id="SHActivityDetailHours" data-dojo-id="SHActivityDetailHours"></td>
           </tr>
           <tr>
             <td><label for="SHActivityDetailStations">Show activity detail stations</label></td>
-            <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHActivityDetailStations" id="SHActivityDetailStations"></td>
+            <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHActivityDetailStations" id="SHActivityDetailStations" data-dojo-id="SHActivityDetailStations"></td>
           </tr>
         </table>
 
@@ -3935,28 +4018,24 @@ require([
       <div data-dojo-type="dijit/form/Form" id="ShowHideCalendarForm" encType="multipart/form-data" action="" method="">
         <table class="dijitDialogPaneContentArea">
           <tr>
-            <td><label for="SHCoordinates">Show coordinates X and Y</label></td>
-            <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCoordinates" id="SHCoordinates" checked></td>
-          </tr>
-          <tr>
             <td><label for="SHCalendarHours">Show calendar hour label</label></td>
-            <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarHours" id="SHCalendarHours" checked></td>
+            <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarHours" id="SHCalendarHours" data-dojo-id="SHCalendarHours"></td>
           </tr>
           <tr>
             <td><label for="SHCalendarHourBars">Show calendar hour bars</label></td>
-            <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarHourBars" id="SHCalendarHourBars" checked></td>
+            <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarHourBars" id="SHCalendarHourBars" data-dojo-id="SHCalendarHourBars"></td>
           </tr>
           <tr>
             <td><label for="SHCalendarDayX">Show calendar Day X</label></td>
-            <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarDayX" id="SHCalendarDayX"></td>
+            <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarDayX" id="SHCalendarDayX" data-dojo-id="SHCalendarDayX"></td>
           </tr>
           <tr>
             <td><label for="SHCalendarDayYYYYMMDD">Show calendar day YYYY-MM-DD</label></td>
-            <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarDayYYYYMMDD" id="SHCalendarDayYYYYMMDD"></td>
+            <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarDayYYYYMMDD" id="SHCalendarDayYYYYMMDD" data-dojo-id="SHCalendarDayYYYYMMDD"></td>
           </tr>
           <tr>
             <td><label for="SHCalendarDayBars">Show calendar day bars</label></td>
-            <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarDayBars" id="SHCalendarDayBars"></td>
+            <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarDayBars" id="SHCalendarDayBars" data-dojo-id="SHCalendarDayBars"></td>
           </tr>
         </table>
 
@@ -4030,20 +4109,20 @@ require([
       <div data-dojo-type="dijit/form/Form" id="SetCalendarForm" data-dojo-id="SetCalendarForm" encType="multipart/form-data" action="" method="">
         <table class="dijitDialogPaneContentArea">
           <tr>
-            <td><label for="timezone">Timezone</label></td>
-            <td><input data-dojo-type="dijit/form/FilteringSelect" name="timezone" id="CalendarTimezone" required="true"></td>
+            <td><label for="CalendarTimezone">Timezone</label></td>
+            <td><input data-dojo-type="dijit/form/FilteringSelect" data-dojo-id="CalendarTimezone" name="CalendarTimezone" id="CalendarTimezone" required="true" data-dojo-props="labelAttr:'name', searchAttr:'name', identifier:'id'"></td>
           </tr>
           <tr>
-            <td><label for="station">Station</label></td>
-            <td><input data-dojo-type="dijit/form/FilteringSelect" name="station" id="CalendarStation" required="true" disabled="true"></td>
+            <td><label for="CalendarStation">Station</label></td>
+            <td><input data-dojo-type="dijit/form/FilteringSelect" data-dojo-id="CalendarStation" name="CalendarStation" id="CalendarStation" required="true" disabled="true"></td>
           </tr>
           <tr>
-            <td><label for="calendarStart">Start date</label></td>
-            <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="calendarStart" id="CalendarStart" required="true" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"></td>
+            <td><label for="CalendarStart">Start date</label></td>
+            <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="CalendarStart" id="CalendarStart" required="true" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"></td>
           </tr>
           <tr>
-            <td><label for="calendarEnd">End date (excluded)</label></td>
-            <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="calendarEnd" id="CalendarEnd" required="true" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"></td>
+            <td><label for="CalendarEnd">End date (excluded)</label></td>
+            <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="CalendarEnd" id="CalendarEnd" required="true" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"></td>
           </tr>
         </table>
 
