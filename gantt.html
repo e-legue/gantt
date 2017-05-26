@@ -1018,10 +1018,10 @@ require([
          midnightOffset                                : { type : "numeric", default : 0},
          reportTime                                    : { type : "numeric", default : 0},
          releaseTime                                   : { type : "numeric", default : 0},
-         CalendarTimezone                              : { type : "string",  default : "undefined"},
-         CalendarStation                               : { type : "string",  default : "undefined"},
-         CalendarStart                                 : { type : "string",  default : "undefined"},
-         CalendarEnd                                   : { type : "string",  default : "undefined"},
+         CalendarTimezone                              : { type : "string",  default : undefined},
+         CalendarStation                               : { type : "string",  default : undefined},
+         CalendarStart                                 : { type : "string",  default : undefined},
+         CalendarEnd                                   : { type : "string",  default : undefined},
          MenuFile                                      : { type : "boolean", default : false, },
          MenuFileLoadSVGFile                           : { type : "boolean", default : false, },
          MenuFileLoadXMLStationFile                    : { type : "boolean", default : false, },
@@ -1057,16 +1057,15 @@ require([
        },
        Apply         : function() {
                          var self = this;
-                           
-                         if( self.CalendarStart ) {
+
+                         if( typeof(self.CalendarStart) != "undefined" ) {
                            registry.byId("CalendarStart").set("value", self.CalendarStart);
                            var start = moment(self.CalendarStart);
                            Xorig = start.unix();
                          }
-                         if( self.CalendarEnd ) {
+                         if( typeof(self.CalendarEnd) != "undefined" ) {
                            registry.byId("CalendarEnd").set("value", self.CalendarEnd);
                          }
-console.log(config.CalendarStart);
                          if( self.CalendarTimezone ) {
                            timezoneStore.filter({name: self.CalendarTimezone}).fetchRange({start: 0, end: 1}).then(function(results) {
                              if( results.length > 0 ) {
@@ -1081,6 +1080,16 @@ console.log(config.CalendarStart);
 
                          registry.byId("XGraphCompression").set("value", self.XGraphCompression);
 
+                         registry.byId("SHCalendarHours").set("checked", self.SHCalendarHours);
+                         registry.byId("SHCalendarDayX").set("checked", self.SHCalendarDayX);
+                         registry.byId("SHCalendarDayYYYYMMDD").set("checked", self.SHCalendarDayYYYYMMDD);
+                         registry.byId("SHCalendarDayBars").set("checked", self.SHCalendarDayBars);
+                         registry.byId("SHCalendarHourBars").set("checked", self.SHCalendarHourBars);
+                         
+                         registry.byId("SHActivityHours").set("checked", self.SHActivityHours);
+                         registry.byId("SHActivityDetails").set("checked", self.SHActivityDetails);
+                         registry.byId("SHActivityDetailHours").set("checked", self.SHActivityDetailHours);
+                         registry.byId("SHActivityDetailStations").set("checked", self.SHActivityDetailStations);
                        },
      });
 
@@ -1094,9 +1103,7 @@ console.log(config.CalendarStart);
        var pattern = new RegExp("^Menu");
 
        for(var property in cfg) {
-         console.log(property);
          if( pattern.test(property) ) {
-           console.log(cfg.get(property));
            registry.byId(property).set("disabled", cfg.get(property));
          }
        }
@@ -1282,21 +1289,13 @@ console.log(config.CalendarStart);
 
      calendarStore.on("add", function(event) {
        calendarStore.nextPk += 1;
-//       event.target.DrawSVG();
      });
 
 
      calendarStore.on("update", function(event) {
        calendarStore.nextPk = Math.max(event.target.pk + 1, calendarStore.nextPk); 
-//       event.target.ClearSVG();
-//       event.target.DrawSVG();
      });
 
-/*
-     calendarStore.on("delete", function(event) {
-       event.target.ClearSVG();
-     });
-*/
 
      var calendarStoreAdapter = new DstoreAdapter(calendarStore);
      registry.byId("CalendarStartPeriods").set("labelAttr", "name");
@@ -1799,6 +1798,15 @@ console.log("remove ycoord...");
      });
 
 
+     var eventActivityStoreAdapter = new DstoreAdapter(eventActivityStore);
+
+
+     registry.byId("DistanceFromEventSelect").set("labelAttr", "name");
+     registry.byId("DistanceFromEventSelect").setStore(eventActivityStoreAdapter);
+     registry.byId("DistanceToEventSelect").set("labelAttr", "name");
+     registry.byId("DistanceToEventSelect").setStore(eventActivityStoreAdapter);
+
+
 
      // -----------------------------------------------
      // -----------------------------------------------
@@ -1817,38 +1825,41 @@ console.log("remove ycoord...");
       */
      function GetActivityLineNumber(crewMemberPk, x , width) {
        var lineNb = 1;
-       console.log("GetActivityLineNumber: crewMemberPk: ");
-       console.log(crewMemberPk);
+console.log("GetActivityLineNumber: crewMemberPk: ");
+console.log(crewMemberPk);
 
        activityStore.filter({fk_cm: crewMemberPk}).forEach(function(object) {
-         console.log("GetActivityLineNumber: loop into activities");
-         var A = x;
-         var B = x + width;
+console.log("GetActivityLineNumber: loop into activities");
+console.log(object);
+         if( typeof(object.fk_parent) == "undefined" ) {
+           var A = x;
+           var B = x + width;
 
-         var C = object.x;
-         var D = object.x + object.width;
+           var C = object.x;
+           var D = object.x + object.width;
 
-         if( !(( B <= C ) || ( A >= D ))) {    
-           lineNb = Math.max(lineNb, object.lineNb + 1);
+           if( !(( B <= C ) || ( A >= D ))) {    
+             lineNb = Math.max(lineNb, object.lineNb + 1);
+           }
          }
        });
 
        if ( crewMemberPk ) { // a true crewMember.
          var cm = crewMemberStore.getSync(crewMemberPk);
          if( cm.lineCount < lineNb ) {
-           console.log("GetActivityLineNumber: je passe la");
+console.log("GetActivityLineNumber: crewmember provided.");
            cm.lineCount = lineNb;
            crewMemberStore.putSync(cm);
-           topic.publish("refreshGraph");
          }
        }
        else { // opentime
+console.log("GetActivityLineNumber: crewmember NOT provided.");
          if( OpenTimeLineCount < lineNb ) {    
            OpenTimeLineCount = lineNb;          
-           topic.publish("refreshGraph");
          }  
        }
 
+console.log("GetActivityLineNumber: " + lineNb);
        return lineNb;
      }
 
@@ -2073,6 +2084,44 @@ console.log("remove ycoord...");
        activityStore.forEach(function(item) {
          item.DrawSVG(crewMemberStore.getSync(item.fk_cm));
        });
+
+       if( !config.SHCalendarHours ) {
+         registry.byId("SHCalendarHours").set("checked", !config.SHCalendarHours);
+         registry.byId("SHCalendarHours").set("checked", config.SHCalendarHours);
+       }
+       if( !config.SHCalendarDayX ) {
+         registry.byId("SHCalendarDayX").set("checked", !config.SHCalendarDayX);
+         registry.byId("SHCalendarDayX").set("checked", config.SHCalendarDayX);
+       }
+       if( !config.SHCalendarDayYYYYMMDD ) {
+         registry.byId("SHCalendarDayYYYYMMDD").set("checked", !config.SHCalendarDayYYYYMMDD);
+         registry.byId("SHCalendarDayYYYYMMDD").set("checked", config.SHCalendarDayYYYYMMDD);
+       }
+       if( !config.SHCalendarDayBars ) {
+         registry.byId("SHCalendarDayBars").set("checked", !config.SHCalendarDayBars);
+         registry.byId("SHCalendarDayBars").set("checked", config.SHCalendarDayBars);
+       }
+       if( !config.SHCalendarHourBars ) {
+         registry.byId("SHCalendarHourBars").set("checked", !config.SHCalendarHourBars);
+         registry.byId("SHCalendarHourBars").set("checked", config.SHCalendarHourBars);
+       }
+       
+       if( !config.SHActivityHours ) {
+         registry.byId("SHActivityHours").set("checked", !config.SHActivityHours);
+         registry.byId("SHActivityHours").set("checked", config.SHActivityHours);
+       }
+       if( !config.SHActivityDetails ) {
+         registry.byId("SHActivityDetails").set("checked", !config.SHActivityDetails);
+         registry.byId("SHActivityDetails").set("checked", config.SHActivityDetails);
+       }
+       if( !config.SHActivityDetailHours ) {
+         registry.byId("SHActivityDetailHours").set("checked", !config.SHActivityDetailHours);
+         registry.byId("SHActivityDetailHours").set("checked", config.SHActivityDetailHours);
+       }
+       if( !config.SHActivityDetailStations ) {
+         registry.byId("SHActivityDetailStations").set("checked", !config.SHActivityDetailStations);
+         registry.byId("SHActivityDetailStations").set("checked", config.SHActivityDetailStations);
+       }
      });
 
 
@@ -3043,16 +3092,9 @@ console.log("remove ycoord...");
      // Create Distance dialog
      // -----------------------------------------------
      function UpdateEvent(val, idEventSelect) {
-       var activity = activityStore.getSync(val);
-       if( activity ) {      
-         var when = registry.byId(idEventSelect);
-
-         when.set("disabled", false);
-         when.getOptions("1").disabled = activity.restb > 0 ? false : true;
-         when.getOptions("2").disabled = activity.tp > 0 ? false : true;
-         when.getOptions("5").disabled = activity.tp > 0 ? false : true;
-         when.getOptions("6").disabled = activity.resta > 0 ? false : true;
-       }
+       
+       registry.byId(idEventSelect).set("value", "");
+       registry.byId(idEventSelect).set("query", {fk_act: val});
      }
 
      registry.byId("DistanceFromSelect").on("change", function(val) {
@@ -3210,7 +3252,7 @@ console.log("remove ycoord...");
        mydate.minutes(mytime.minutes());
 
        var x       = getPositionX(mydate);
-       var endTrip = moment(registry.byId("TripEndDate").get("value")); //startTrip.clone().add(width, 'm');
+       var endTrip = moment(registry.byId("TripEndDate").get("value")); 
 
        mytime = moment(registry.byId("TripEndTime").get("value"));
 
@@ -3225,14 +3267,6 @@ console.log("remove ycoord...");
        if( lineNb > 1 ) {
          alert("The new trip is overlapping with another activity."); 
        }
-       // It is IMPORTANT to create detail items before the trip because to draw trip,
-       // we need the details. And because the drawing is linked with the add event, the 
-       // trip must be added after details.
-       // obtain uniq pk for the trip activity.
-       var fk_parent = activityStore.nextPk;
-
-       // to skip to the next uniq id, 
-       activityStore.nextPk +=1;
 
        var xDetail        = x;
        var credit         = 0;
@@ -3299,11 +3333,11 @@ console.log("remove ycoord...");
        tripDetailStore.sort('order').fetch().then(function(items) {
          var iLeg = 0;
          var iLay = 0;
-         var name;
+         var name, width, type;
 
          for (var i = 0; i < items.length ; i++) {
-           var width = Number(items[i].dhour * 60) + Number(items[i].dminute);
-           var type = items[i].type;
+           width = Number(items[i].dhour * 60) + Number(items[i].dminute);
+           type = items[i].type;
            if( type == "leg" ) {
              type += items[i].legType;
              iLeg += 1;
@@ -4255,6 +4289,8 @@ console.log("remove ycoord...");
             <td><select data-dojo-type="dijit/form/FilteringSelect" name="From" id="DistanceFromSelect" style="width: 30em;" required="true"></td>
             <td>
               <select data-dojo-type="dijit/form/Select" id="DistanceFromEventSelect" disabled="true" required="true">
+<!--              
+              <select data-dojo-type="dijit/form/Select" id="DistanceFromEventSelect" disabled="true" required="true">
                 <option value="1">rest before start</option>
                 <option value="2">transp. time before start</option>
                 <option value="3" selected="selected">activity start</option>
@@ -4262,12 +4298,15 @@ console.log("remove ycoord...");
                 <option value="5">transp. time after end</option>
                 <option value="6">rest after end</option>
               </select>
+-->              
             </td>
           </tr>
           <tr>
             <td><label for="To">To activity</label></td>
             <td><select data-dojo-type="dijit/form/FilteringSelect" name="To" id="DistanceToSelect" style="width: 30em;" required="true"></td>
             <td>
+              <select data-dojo-type="dijit/form/Select" id="DistanceToEventSelect" disabled="true" required="true">
+<!--              
               <select data-dojo-type="dijit/form/Select" id="DistanceToEventSelect" disabled="true" required="true">
                 <option value="1">rest before start</option>
                 <option value="2">transp. time before start</option>
@@ -4276,6 +4315,7 @@ console.log("remove ycoord...");
                 <option value="5">transp. time after end</option>
                 <option value="6">rest after end</option>
               </select>
+-->              
             </td>
           </tr>
         </table>
