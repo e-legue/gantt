@@ -595,6 +595,27 @@ require([
        myDialog.show();
      }
 
+     function PopupDistanceDetail(distancePk) {
+       var myDialog = new Dialog({
+         title: "Detail distance",
+         style: "width: 300px",
+         content: "Distance PK: " + distancePk + "<br/>",
+       });
+
+       var myButton = new Button({
+         label: "Delete this distance",
+         onClick: function() {
+           distanceStore.removeSync(distancePk);
+
+           myDialog.hide();
+
+           topic.publish("refreshGraph");
+         }
+       }).placeAt(myDialog);
+
+       myDialog.show();
+     }
+
 
 
      // ===============================================
@@ -728,20 +749,6 @@ require([
        groupBar.appendChild(SVG_drawRect("highlight", item.x, 0, 1, 1));
      }
 
-     function getActivityDistancePosition(event, activity) {
-       var x = activity.x;
-
-       switch( event ) {
-         case 1: x = x - activity.tp - activity.restb; break;
-         case 2: x = x - activity.tp; break;
-         case 4: x = x + activity.width; break;
-         case 5: x = x + activity.width + activity.tp; break;
-         case 6: x = x + activity.width + activity.tp + activity.resta; break;
-       }
-
-       return x;
-     }
-
 
      // Draw a distance in calendar.
      function SVG_drawDistance(item) {
@@ -751,32 +758,22 @@ require([
        G.setAttributeNS(null, "id", item.get("ident"));
        calendarId.appendChild(G);
 
-       var from = activityStore.getSync(item.fk_act1);
-       var to   = activityStore.getSync(item.fk_act2);
+       var activityFrom = item.GetActFrom();
+       var activityTo   = item.GetActTo();
 
-       var x1 = getActivityDistancePosition(item.act1_event, from);
-       var x2 = getActivityDistancePosition(item.act2_event, to);
+       var x1 = item.GetEventFrom().x;
+       var x2 = item.GetEventTo().x;
 
        var y = item.GetYCoord();
        var yy = y + HEIGHT_LINE_HL / 2;
 
-       var cm1 = crewMemberStore.getSync(from.fk_cm);
-       var cm2 = crewMemberStore.getSync(to.fk_cm);
+       var cmFrom = activityFrom.GetCrewMember();
+       var cmTo   = activityTo.GetCrewMember();
 
-       var y1 = cm1.GetYCoord();
-       var y2 = cm2.GetYCoord(); 
-
-       if( x2 < x1 ) {
-         var tmp = x1;
-         x1 = x2;
-         x2 = tmp;
-
-         tmp = y1;
-         y1 = y2;
-         y2 = tmp;
-       }
-
-       var dur = x2 - x1;
+       var y1 = cmFrom.GetYCoord();
+       var y2 = cmTo.GetYCoord(); 
+       
+       var dur = x2 < x1 ? x1 - x2 : x2 - x1;
        var min = dur % 60;
 
        var label = Math.floor(dur / 60) + "h";
@@ -785,7 +782,7 @@ require([
 
        var lblText = SVG_drawText("distance_label", (x1 + x2) / 2 , yy - 3, label);
        on(lblText, "dblclick", function(evt) {
-         PopupHighLightDetail(item.pk);
+         PopupDistanceDetail(item.pk);
        });
        G.appendChild(lblText);
        G.appendChild(SVG_drawLine("distance", x1, yy, x2, yy));
@@ -802,11 +799,11 @@ require([
        G.appendChild(SVG_drawLine("distance", x2, yy, x2 - xinc, yy - inc));
 
        // draw vertical lines.
-       var Y1 = MARGIN_TOP_CM + HEIGHT_LINE_CM * cm1.lineCount + MARGIN_BOTTOM_CM; 
-       var Y2 = MARGIN_TOP_CM + HEIGHT_LINE_CM * cm2.lineCount + MARGIN_BOTTOM_CM; 
+       var Y1 = MARGIN_TOP_CM + HEIGHT_LINE_CM * cmFrom.lineCount + MARGIN_BOTTOM_CM; 
+       var Y2 = MARGIN_TOP_CM + HEIGHT_LINE_CM * cmTo.lineCount + MARGIN_BOTTOM_CM; 
 
-       G.appendChild(SVG_drawLine("distance", x1, y1 < y ? y1 - Y1 : y1 + Y1, x1, y1 < y ? yy + 2 * inc : yy - 2 * inc));
-       G.appendChild(SVG_drawLine("distance", x2, y2 < y ? y2 - Y2 : y2 + Y2, x2, y2 < y ? yy + 2 * inc : yy - 2 * inc));
+       G.appendChild(SVG_drawLine("distance", x1, y1 < y ? y1 - Y1 : y1 + Y1, x1, y1 < y ? yy + inc : yy - inc));
+       G.appendChild(SVG_drawLine("distance", x2, y2 < y ? y2 - Y2 : y2 + Y2, x2, y2 < y ? yy + inc : yy - inc));
      }
 
 
@@ -1472,6 +1469,12 @@ require([
 
                               return crewMemberStore.getSync(self.fk_cm).GetYCoord();
                             },
+       GetCrewMember      : function() {
+                              var self = this;
+
+                              return self.fk_cm ? crewMemberStore.getSync(self.fk_cm) : undefined;
+                            },
+
        GetCrewMemberIdent : function() {
                               var self = this;
 
@@ -1486,6 +1489,7 @@ require([
                                   x  : self.x - self.restb - self.tp,
                                   label : "Start of rest before activity",
                                   fk_act : self.pk,
+                                  start : 0,
                                 });
                               }
                               if( self.tp > 0 ) {
@@ -1494,6 +1498,7 @@ require([
                                   x  : self.x - self.tp,
                                   label : "Start of transportation time before activity",
                                   fk_act : self.pk,
+                                  start : 0,
                                 });
                               }
                               eventActivityStore.addSync({
@@ -1501,6 +1506,7 @@ require([
                                 x  : self.x,
                                 label : "Start of activity",
                                 fk_act : self.pk,
+                                start : 1,
                               });
 
                               activityStore.filter({fk_parent: self.pk}).fetch().then(function(objects) {
@@ -1510,6 +1516,7 @@ require([
                                     x  : objects[i].x - self.x,
                                     label : "Start of " + objects[i].name,
                                     fk_act : self.pk,
+                                    start : 0,
                                   });
                                 }
                               });
@@ -1519,6 +1526,7 @@ require([
                                 x  : self.x + self.width,
                                 label : " End of activity",
                                 fk_act : self.pk,
+                                start : 0,
                               });
                               if( self.tp > 0 ) {
                                 eventActivityStore.addSync({
@@ -1526,6 +1534,7 @@ require([
                                   x  : self.x + self.width + self.tp,
                                   label : "End of transportation time after activity",
                                   fk_act : self.pk,
+                                  start : 0,
                                 });
                               }
                               if( self.resta > 0 ) {
@@ -1534,8 +1543,11 @@ require([
                                   x  : self.x + self.width + self.tp + self.resta,
                                   label : "End of rest after activity",
                                   fk_act : self.pk,
+                                  start : 0,
                                 });
                               }
+console.log("event activity");                              
+console.log(eventActivityStore);                              
                             },          
      });
 
@@ -1564,10 +1576,10 @@ require([
 
      activityStore.on("delete", function(event) {
        // Remove distance highlight that reference this activity.
-       distanceStore.filter({fk_act1: event.target.pk}).forEach(function(item) {
+       distanceStore.filter({fk_actFrom: event.target.pk}).forEach(function(item) {
          distanceStore.removeSync(item.pk);
        });
-       distanceStore.filter({fk_act2: event.target.pk}).forEach(function(item) {
+       distanceStore.filter({fk_actTo: event.target.pk}).forEach(function(item) {
          distanceStore.removeSync(item.pk);
        });
 
@@ -1697,10 +1709,10 @@ console.log("remove ycoord...");
        validateOnSet : false,
        schema        : {
          pk         : "numeric",
-         fk_act1    : "numeric",
-         act1_event : "numeric",
-         fk_act2    : "numeric",
-         act2_event : "numeric",
+         fk_actFrom    : "numeric",
+         fk_evtFrom : "numeric",
+         fk_actTo    : "numeric",
+         fk_evtTo   : "numeric",
          fk_yc      : "numeric",
          ident      : new ComputedProperty({
                         dependsOn : ["pk"],
@@ -1724,6 +1736,26 @@ console.log("remove ycoord...");
                          var self = this;
 
                          return yCoordStore.getSync(self.fk_yc).y;
+                       },
+       GetActFrom    : function() {
+                         var self = this;
+
+                         return activityStore.getSync(self.fk_actFrom);
+                       },
+       GetActTo      : function() {
+                         var self = this;
+
+                         return activityStore.getSync(self.fk_actTo);
+                       },
+       GetEventFrom  : function() {          
+                         var self = this;
+
+                         return eventActivityStore.getSync(self.fk_evtFrom);
+                       },
+       GetEventTo    : function() {          
+                         var self = this;
+
+                         return eventActivityStore.getSync(self.fk_evtTo);
                        },
      });
 
@@ -1752,9 +1784,7 @@ console.log("remove ycoord...");
 
      distanceStore.on("delete", function(event) {
        // Remove coords that reference this distance.
-       yCoordStore.filter({fk_dst: event.target.pk}).forEach(function(item) {
-         yCoordStore.removeSync(item.pk);
-       });
+       yCoordStore.removeSync(event.target.fk_yc);
      });
 
 
@@ -1768,6 +1798,7 @@ console.log("remove ycoord...");
          x      : "numeric",
          label  : "string",
          fk_act : "numeric",
+         start  : "numeric",
        },
      });
 
@@ -1800,11 +1831,10 @@ console.log("remove ycoord...");
 
      var eventActivityStoreAdapter = new DstoreAdapter(eventActivityStore);
 
-
-     registry.byId("DistanceFromEventSelect").set("labelAttr", "name");
-     registry.byId("DistanceFromEventSelect").setStore(eventActivityStoreAdapter);
-     registry.byId("DistanceToEventSelect").set("labelAttr", "name");
-     registry.byId("DistanceToEventSelect").setStore(eventActivityStoreAdapter);
+     registry.byId("DistanceFromEventSelect").set("labelAttr", "label");
+     registry.byId("DistanceFromEventSelect").set("store", eventActivityStoreAdapter);
+     registry.byId("DistanceToEventSelect").set("labelAttr", "label");
+     registry.byId("DistanceToEventSelect").set("store", eventActivityStoreAdapter);
 
 
 
@@ -2199,6 +2229,7 @@ console.log("GetActivityLineNumber: " + lineNb);
        SaveStore(crewMemberStore, "CrewMemberStore", "crew");
        SaveStore(activityStore, "ActivityStore", "activity");
        SaveStore(highLightStore, "HighLightStore", "highligth");
+       SaveStore(eventActivityStore, "EventActivityStore", "event");
        SaveStore(distanceStore, "DistanceStore", "distance");
        SaveStore(stationStore, "StationStore" , "station"); 
      }
@@ -2218,6 +2249,7 @@ console.log("GetActivityLineNumber: " + lineNb);
        LoadStore(crewMemberStore, svgNode.getElementById("CrewMemberStore"), "crew");
        LoadStore(activityStore, svgNode.getElementById("ActivityStore"), "activity");
        LoadStore(highLightStore, svgNode.getElementById("HighLightStore"), "highligth");
+       LoadStore(eventActivityStore, svgNode.getElementById("EventActivityStore"), "event");
        LoadStore(distanceStore, svgNode.getElementById("DistanceStore"), "distance");
        LoadStationStore(svgNode.getElementById("StationStore"), MODE_SVG);
 
@@ -3092,9 +3124,20 @@ console.log("GetActivityLineNumber: " + lineNb);
      // Create Distance dialog
      // -----------------------------------------------
      function UpdateEvent(val, idEventSelect) {
-       
-       registry.byId(idEventSelect).set("value", "");
-       registry.byId(idEventSelect).set("query", {fk_act: val});
+       var filter = new eventActivityStore.Filter();
+       var selectInput = registry.byId(idEventSelect);   
+
+       selectInput.set("sortByLabel", false);
+       selectInput.set("query", {fk_act: val}); 
+
+       var totoFilter = filter.eq('fk_act', val).eq('start', 1);
+       eventActivityStore.filter(totoFilter).fetch().then(function(items) {
+         if( items.length == 1 ) {
+           selectInput.set("displayedValue", items[0].label);
+          }
+       });
+
+       selectInput.set("disabled", false);
      }
 
      registry.byId("DistanceFromSelect").on("change", function(val) {
@@ -3111,32 +3154,29 @@ console.log("GetActivityLineNumber: " + lineNb);
 
        CreateDistanceDialog.hide();
 
-       var from      = registry.byId("DistanceFromSelect").value;
-       var to        = registry.byId("DistanceToSelect").value;
-       var fromEvent = registry.byId("DistanceFromEventSelect").value;
-       var toEvent   = registry.byId("DistanceToEventSelect").value;
-
-       var act1  = activityStore.getSync(from);
-       var act2  = activityStore.getSync(to);
-       var pkY   = yCoordStore.nextPk;
-       var pkDST = distanceStore.nextPk;
+       var actFrom  = activityStore.getSync(registry.byId("DistanceFromSelect").value);
+       var actTo    = activityStore.getSync(registry.byId("DistanceToSelect").value);
+       var evtFrom  = eventActivityStore.getSync(registry.byId("DistanceFromEventSelect").value);
+       var evtTo    = eventActivityStore.getSync(registry.byId("DistanceToEventSelect").value);
 
        // Add the new entry in the y coord store.
-       yCoordStore.addSync({
-         pk     : pkY,
-         fk_dst : pkDST,
-         y      : Math.min(act1.GetYCoord(), act2.GetYCoord()),
+       var yCoord = yCoordStore.addSync({
+         pk     : yCoordStore.GetNextPKSequence(),
+         y      : Math.min(actFrom.GetYCoord(), actTo.GetYCoord()) - 1,
          height : HEIGHT_LINE_HL,
        });
 
        distanceStore.addSync({
-         fk_act1    : from,
-         act1_event : Number(fromEvent),
-         fk_act2    : to,
-         act2_event : Number(toEvent),
-         pk         : pkDST,
-         fk_yc      : pkY,
+         pk         : distanceStore.GetNextPKSequence(),
+         fk_actFrom : actFrom.pk,
+         fk_evtFrom : evtFrom.pk,
+         fk_actTo   : actTo.pk,
+         fk_evtTo   : evtTo.pk,
+         fk_yc      : yCoord.pk,
        });
+
+       registry.byId("DistanceFromEventSelect").set("disabled", true);
+       registry.byId("DistanceToEventSelect").set("disabled", true);
 
        topic.publish("refreshGraph");
      });  
@@ -3811,6 +3851,10 @@ console.log("GetActivityLineNumber: " + lineNb);
   fill: gray;
 }
 
+.distance_label {
+  text-anchor: middle; 
+}
+
 .crewmember {
   text-anchor: end; 
   font-size: 40px;
@@ -3957,6 +4001,7 @@ console.log("GetActivityLineNumber: " + lineNb);
         <g id="CrewMemberStore"></g>
         <g id="ActivityStore"></g>
         <g id="StationStore"></g>
+        <g id="EventActivityStore"></g>
       </svg>
     </div>
 
