@@ -891,14 +891,15 @@ require([
      // Therefore no y translation is necessary, a x is used to draw the activity on
      // the rigth place in the calendar.
      function SVG_drawActivity(activity) { // , line) {
-
+console.log("draw activity");
+console.log(activity);
        var unitY = HEIGHT_LINE_CM / 14; 
 
        var parentId = svg.getElementById(activity.GetCrewMemberIdent()); // line ? svg.getElementById(line.get("ident")) : svg.getElementById("opentime");  
 
        var G = document.createElementNS(svgNS, "g");
        var yLine = MARGIN_TOP_CM + HEIGHT_LINE_CM * ( activity.lineNb - 1 );
-       G.setAttributeNS(null, "transform", "translate(" + CompressX(activity.x) + "," + yLine +")");
+       G.setAttributeNS(null, "transform", "translate(" + CompressX(activity.x + activity.midnightoffset) + "," + yLine +")");
        G.setAttributeNS(null, "id", activity.get("ident"));
 
        on(G, "dblclick", function(evt) {
@@ -920,6 +921,7 @@ require([
        G.appendChild(SVG_drawText("label", 10, 5 * unitY, activity.get("name")));
 
        var startActivity = moment(activity.get("lbtStart"));
+       startActivity.add(activity.midnightoffset, "m");
        var endActivity   = startActivity.clone();
        endActivity.add(activity.width, "m");
        var hourSize = 9;  // see font-size of class .hour_start.
@@ -1428,6 +1430,7 @@ require([
          name           : "string",
          fullname       : "string",
          x              : "numeric",
+         midnightoffset : "numeric",
          width          : "numeric",
          tp             : "numeric",
          resta          : "numeric",
@@ -1486,10 +1489,12 @@ require([
        CreateEvents       : function() {
                               var self = this;
 
+                              var x = self.x + self.midnightoffset;
+
                               if( self.restb > 0 ) {
                                 eventActivityStore.addSync({
                                   pk : eventActivityStore.GetNextPKSequence(),
-                                  x  : self.x - self.restb - self.tp,
+                                  x  : x - self.restb - self.tp,
                                   label : "Start of rest before activity",
                                   fk_act : self.pk,
                                   start : 0,
@@ -1498,7 +1503,7 @@ require([
                               if( self.tp > 0 ) {
                                 eventActivityStore.addSync({
                                   pk : eventActivityStore.GetNextPKSequence(),
-                                  x  : self.x - self.tp,
+                                  x  : x - self.tp,
                                   label : "Start of transportation time before activity",
                                   fk_act : self.pk,
                                   start : 0,
@@ -1506,7 +1511,7 @@ require([
                               }
                               eventActivityStore.addSync({
                                 pk : eventActivityStore.GetNextPKSequence(),
-                                x  : self.x,
+                                x  : x,
                                 label : "Start of activity",
                                 fk_act : self.pk,
                                 start : 1,
@@ -1516,7 +1521,7 @@ require([
                                 for(i = 1; i < objects.length; i++) {
                                   eventActivityStore.addSync({
                                     pk : eventActivityStore.GetNextPKSequence(),
-                                    x  : objects[i].x - self.x,
+                                    x  : objects[i].x - x,
                                     label : "Start of " + objects[i].name,
                                     fk_act : self.pk,
                                     start : 0,
@@ -1526,7 +1531,7 @@ require([
 
                               eventActivityStore.addSync({
                                 pk : eventActivityStore.GetNextPKSequence(),
-                                x  : self.x + self.width,
+                                x  : x + self.width,
                                 label : " End of activity",
                                 fk_act : self.pk,
                                 start : 0,
@@ -1534,7 +1539,7 @@ require([
                               if( self.tp > 0 ) {
                                 eventActivityStore.addSync({
                                   pk : eventActivityStore.GetNextPKSequence(),
-                                  x  : self.x + self.width + self.tp,
+                                  x  : x + self.width + self.tp,
                                   label : "End of transportation time after activity",
                                   fk_act : self.pk,
                                   start : 0,
@@ -1543,14 +1548,12 @@ require([
                               if( self.resta > 0 ) {
                                 eventActivityStore.addSync({
                                   pk : eventActivityStore.GetNextPKSequence(),
-                                  x  : self.x + self.width + self.tp + self.resta,
+                                  x  : x + self.width + self.tp + self.resta,
                                   label : "End of rest after activity",
                                   fk_act : self.pk,
                                   start : 0,
                                 });
                               }
-console.log("event activity");                              
-console.log(eventActivityStore);                              
                             },          
      });
 
@@ -1858,12 +1861,8 @@ console.log("remove ycoord...");
       */
      function GetActivityLineNumber(crewMemberPk, x , width) {
        var lineNb = 1;
-console.log("GetActivityLineNumber: crewMemberPk: ");
-console.log(crewMemberPk);
 
        activityStore.filter({fk_cm: crewMemberPk}).forEach(function(object) {
-console.log("GetActivityLineNumber: loop into activities");
-console.log(object);
          if( typeof(object.fk_parent) == "undefined" ) {
            var A = x;
            var B = x + width;
@@ -1880,19 +1879,16 @@ console.log(object);
        if ( crewMemberPk ) { // a true crewMember.
          var cm = crewMemberStore.getSync(crewMemberPk);
          if( cm.lineCount < lineNb ) {
-console.log("GetActivityLineNumber: crewmember provided.");
            cm.lineCount = lineNb;
            crewMemberStore.putSync(cm);
          }
        }
        else { // opentime
-console.log("GetActivityLineNumber: crewmember NOT provided.");
          if( OpenTimeLineCount < lineNb ) {    
            OpenTimeLineCount = lineNb;          
          }  
        }
 
-console.log("GetActivityLineNumber: " + lineNb);
        return lineNb;
      }
 
@@ -2945,27 +2941,30 @@ console.log("GetActivityLineNumber: " + lineNb);
          var x     = calendarDay.get("x");
          var width = calendarDay.get("width") + 1;
 
-         var lineNb = GetActivityLineNumber(crewMemberPk, x, width);
+         var lineNb = GetActivityLineNumber(crewMemberPk, x + Number(config.midnightOffset), width);
 
          if( lineNb > 1 ) {  
            alert("DO starting " + calendarDay.get("name") + " is overlapping with another activity."); 
          }
          var activity = activityStore.addSync({
-           name     : "DO",
-           fullname : crewMemberStore.getSync(crewMemberPk).name + " -- " + moment(calendarDay.get("name")).format("YYYY-MM-DD") + " -- DO",
-           type     : "DO",           
-           pk       : activityStore.GetNextPKSequence(),
-           fk_cm    : crewMemberPk,
-           x        : x,
-           lbtStart : moment(calendarDay.get("name")).format("YYYY-MM-DD HH:mm"),
-           utcStart : moment(calendarDay.get("name")).utc().format("YYYY-MM-DD HH:mm"),
-           utcEnd   : moment(calendarDay.get("name")).add(width, 'm').utc().format("YYYY-MM-DD HH:mm"),
-           width    : width,
-           tp       : 0,
-           resta    : 0,
-           restb    : 0,
-           lineNb   : lineNb,
+           name           : "DO",
+           fullname       : crewMemberStore.getSync(crewMemberPk).name + " -- " + moment(calendarDay.get("name")).format("YYYY-MM-DD") + " -- DO",
+           type           : "DO",           
+           pk             : activityStore.GetNextPKSequence(),
+           fk_cm          : crewMemberPk,
+           x              : x,
+           midnightoffset : Number(config.midnightOffset),
+           lbtStart       : moment(calendarDay.get("name")).format("YYYY-MM-DD HH:mm"),
+           utcStart       : moment(calendarDay.get("name")).utc().format("YYYY-MM-DD HH:mm"),
+           utcEnd         : moment(calendarDay.get("name")).add(width, 'm').utc().format("YYYY-MM-DD HH:mm"),
+           width          : width,
+           tp             : 0,
+           resta          : 0,
+           restb          : 0,
+           lineNb         : lineNb,
          });
+
+console.log(activityStore);         
 
          activity.CreateEvents();
        });
@@ -3050,20 +3049,21 @@ console.log("GetActivityLineNumber: " + lineNb);
          alert("The new traininig is overlapping with another activity."); 
        }
        var activity = activityStore.addSync({
-         name     : registry.byId("TrainingName").get("value"),
-         fullname : fullname,
-         type     : "TRN",
-         pk       : activityStore.GetNextPKSequence(),
-         fk_cm    : crewMemberPk,
-         x        : x,
-         lbtStart : mydate.format("YYYY-MM-DD HH:mm"),
-         utcStart : startTraining.utc().format("YYYY-MM-DD HH:mm"),
-         utcEnd   : endTraining.utc().format("YYYY-MM-DD HH:mm"),
-         width    : width,
-         tp       : registry.byId("TrainingTransportationTime").checked ? Number(config.transportationTime) : 0,
-         resta    : Number(registry.byId("TrainingRestAfterH").get("value")) * 60 + Number(registry.byId("TrainingRestAfterM").get("value")),
-         restb    : Number(registry.byId("TrainingRestBeforeH").get("value")) * 60 + Number(registry.byId("TrainingRestBeforeM").get("value")),
-         lineNb   : lineNb,
+         name           : registry.byId("TrainingName").get("value"),
+         fullname       : fullname,
+         type           : "TRN",
+         pk             : activityStore.GetNextPKSequence(),
+         fk_cm          : crewMemberPk,
+         x              : x,
+         midnightoffset : 0,
+         lbtStart       : mydate.format("YYYY-MM-DD HH:mm"),
+         utcStart       : startTraining.utc().format("YYYY-MM-DD HH:mm"),
+         utcEnd         : endTraining.utc().format("YYYY-MM-DD HH:mm"),
+         width          : width,
+         tp             : registry.byId("TrainingTransportationTime").checked ? Number(config.transportationTime) : 0,
+         resta          : Number(registry.byId("TrainingRestAfterH").get("value")) * 60 + Number(registry.byId("TrainingRestAfterM").get("value")),
+         restb          : Number(registry.byId("TrainingRestBeforeH").get("value")) * 60 + Number(registry.byId("TrainingRestBeforeM").get("value")),
+         lineNb         : lineNb,
        });
        
        activity.CreateEvents();
@@ -3354,6 +3354,7 @@ console.log("GetActivityLineNumber: " + lineNb);
          pk             : activityStore.GetNextPKSequence(),
          fk_cm          : crewMemberPk,
          x              : x,
+         midnightoffset : 0,
          lbtStart       : mydate.format("YYYY-MM-DD HH:mm"),
          utcStart       : startTrip.utc().format("YYYY-MM-DD HH:mm"),
          utcEnd         : endTrip.utc().format("YYYY-MM-DD HH:mm"),
