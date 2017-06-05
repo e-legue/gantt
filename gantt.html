@@ -174,6 +174,11 @@ var dojoConfig = {
 
   <script>
 require([
+  "dojo/text!./xml/Gantt2Acts.xsl",
+  "dojo/text!./xml/Gantt2Qual.xsl",
+  "dojo/text!./xml/Gantt2Station.xsl",
+  "dojo/text!./xml/Gantt2Trip_sup.xsl",
+  "dojo/text!./xml/Gantt2Trip.xsl",
   "dojo/_base/declare",
   "dojo/window",
   "dojo/sniff",
@@ -198,6 +203,9 @@ require([
   "dijit/form/Select",
   "dijit/form/FilteringSelect",
   "dijit/form/ComboBox",
+  "dijit/Editor", 
+  "dijit/InlineEditBox",
+  "dijit/_editor/plugins/AlwaysShowToolbar",
   "dojox/xml/parser", 
   "dojox/widget/Standby",
   "dojox/form/CheckedMultiSelect",
@@ -235,6 +243,11 @@ require([
   "dojox/form/Uploader",
   "dojox/form/uploader/FileList",
 ], function(
+  Gantt2ActsXsl,
+  Gantt2QualXsl,
+  Gantt2StationXsl,
+  Gantt2TripSupXsl,
+  Gantt2TripXsl,
   // dojo section    
   declare,
   win,
@@ -261,6 +274,9 @@ require([
   Select,
   FilteringSelect,
   ComboBox,
+  DijitEditor,
+  InlineEditBox,
+  AlwaysShowToolbar,
   // dojox section
   xmlparser,
   Standby,
@@ -1013,19 +1029,20 @@ console.log(yCoordStore);
      var configurationModel = declare(Model, {
        validateOnSet : false,
        schema        : {
-         id                                            : { type : "numeric", default : 0 },
-         transportationTime                            : { type : "numeric", default : 0},
-         midnightOffset                                : { type : "numeric", default : 0},
-         reportTime                                    : { type : "numeric", default : 0},
-         releaseTime                                   : { type : "numeric", default : 0},
-         CalendarTimezone                              : { type : "string",  default : undefined},
-         CalendarStation                               : { type : "string",  default : undefined},
-         CalendarStart                                 : { type : "string",  default : undefined},
-         CalendarEnd                                   : { type : "string",  default : undefined},
+         id                                            : { type : "numeric", default : 0, },
+         transportationTime                            : { type : "numeric", default : 0, },
+         midnightOffset                                : { type : "numeric", default : 0, },
+         reportTime                                    : { type : "numeric", default : 0, },
+         releaseTime                                   : { type : "numeric", default : 0, },
+         CalendarTimezone                              : { type : "string",  default : undefined, },
+         CalendarStation                               : { type : "string",  default : undefined, },
+         CalendarStart                                 : { type : "string",  default : undefined, },
+         CalendarEnd                                   : { type : "string",  default : undefined, },
          MenuFile                                      : { type : "boolean", default : false, },
          MenuFileLoadSVGFile                           : { type : "boolean", default : false, },
          MenuFileLoadXMLStationFile                    : { type : "boolean", default : false, },
          MenuFileSaveSVGFile                           : { type : "boolean", default : true, },
+         MenuFileExportToPI                            : { type : "boolean", default : true, },
          MenuCalendar                                  : { type : "boolean", default : true, },
          MenuCalendarSetStartEnd                       : { type : "boolean", default : true, },
          MenuCalendarSetStartPeriods                   : { type : "boolean", default : true, },
@@ -2853,6 +2870,7 @@ console.log("remove ycoord...");
        config.MenuGraphOption             = false;
        config.MenuHighLights              = false;
        config.MenuFileSaveSVGFile         = false;
+       config.MenuFileExportToPI          = false;
 
        configurationStore.putSync(config);
 
@@ -3422,6 +3440,60 @@ console.log("remove ycoord...");
      });
 
 
+     SaveFileToPIDialog.on("show", function() {
+
+       SaveStores();
+       
+       //get svg source.
+       var serializer = new XMLSerializer();
+       var source = serializer.serializeToString(svg);
+
+       if (document.implementation && document.implementation.createDocument) {
+         var domParser = new DOMParser();
+
+console.log("=========================================================");          
+console.log(Gantt2StationXsl);          
+console.log("=========================================================");          
+         var xsltDoc = domParser.parseFromString(Gantt2StationXsl, "text/xml");
+        var xml = domParser.parseFromString(source, "text/xml");
+         
+         var xsltProcessor = new XSLTProcessor();
+         xsltProcessor.importStylesheet(xsltDoc);
+
+console.log("=========================================================");          
+console.log(svg);          
+console.log("=========================================================");          
+         var ownerDocument = document.implementation.createDocument("", "test", null);
+         var fragment = xsltProcessor.transformToFragment(xml, ownerDocument);
+console.log("=========================================================");          
+console.log(fragment);          
+          var fragmentSource = serializer.serializeToString(fragment);
+console.log(fragmentSource);
+console.log("=========================================================");          
+         dom.byId('XMLstation').textContent = fragmentSource;
+
+         var myEditor = new DijitEditor({
+            height: '',
+            renderAsHtml:true, 
+            autoSave:true,
+            plugins:['undo','redo'],
+            extraPlugins: [AlwaysShowToolbar],
+          }, dom.byId('XMLstation'));
+
+          myEditor.startup();
+/*
+          var myEditor = new InlineEditBox({
+            editor:'dijit/Editor', 
+            renderAsHtml:true, 
+            autoSave:false,
+            editorParams:{height: '', plugins: ['undo','redo'], extraPlugins: [AlwaysShowToolbar]}
+          }, dom.byId('XMLstation')); 
+
+          myEditor.startup();
+*/          
+        }   
+     });
+
 
      // ==============================================
      // FORM
@@ -3764,7 +3836,10 @@ console.log("remove ycoord...");
         <div data-dojo-type="dijit/DropDownMenu">
           <div id="MenuFileLoadSVGFile"        data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {LoadSvgDialog.show();}">Load SVG file</div>
           <div id="MenuFileLoadXMLStationFile" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {LoadStationDialog.show();}">Load XML station file</div>
+          <div data-dojo-type="dijit/MenuSeparator"></div>
           <div id="MenuFileSaveSVGFile"        data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {SaveFileDialog.show();}">Save SVG file</div>
+          <div data-dojo-type="dijit/MenuSeparator"></div>
+          <div id="MenuFileExportToPI"         data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {SaveFileToPIDialog.show();}">Export to Planner Interface</div>
         </div>
       </div>
       <div id="MenuCalendar" data-dojo-type="dijit/PopupMenuBarItem">
@@ -4194,6 +4269,44 @@ console.log("remove ycoord...");
         <button data-dojo-type="dijit/form/Button" type="button" id="SaveFile">Save file</button>
       </div>
     </div>
+
+
+    <div data-dojo-type="dijit/Dialog" data-dojo-id="SaveFileToPIDialog" title="Save XML files compatible with PI" style="display: none;width: 90%; height: 90%">
+      <table class="dijitDialogPaneContentArea">
+        <tr>
+          <td><label for="filename">Zip filename:</label></td>
+          <td><input data-dojo-type="dijit/form/TextBox" name="filename" id="zipFilename" value=".zip" required="true"></td>
+        </tr>
+      </table>
+
+
+      <div style="width: 1350px; height: 600px">
+        <div data-dojo-type="dijit/layout/TabContainer" style="width: 100%; height: 90%;">
+          <div data-dojo-type="dijit/layout/ContentPane" title="station.xml" data-dojo-props="selected:true">
+            <!-- <div id="XMLstation" data-dojo-type="dijit/InlineEditBox" data-dojo-props="editor:'dijit/Editor', renderAsHtml:true, autoSave:false, editorParams:{height: '', extraPlugins: ['dijit._editor.plugins.AlwaysShowToolbar'], plugins:['undo','redo']}"></div> -->
+            <div id="XMLstation"></div>
+          </div>
+          <div data-dojo-type="dijit/layout/ContentPane" title="qual.xml">
+            Lorem ipsum and all around - second...
+          </div>
+          <div data-dojo-type="dijit/layout/ContentPane" title="acts.xml">
+            Lorem ipsum and all around - last...
+          </div>
+          <div data-dojo-type="dijit/layout/ContentPane" title="trip.xml">
+            Lorem ipsum and all around - last...
+          </div>
+          <div data-dojo-type="dijit/layout/ContentPane" title="trip_sup.xml">
+            Lorem ipsum and all around - last...
+          </div>
+        </div>
+      </div>
+
+
+      <div class="dijitDialogPaneActionBar">
+        <button data-dojo-type="dijit/form/Button" type="button" id="SaveZipFile">Save zip file</button>
+      </div>
+    </div>
+
 
 
     <div data-dojo-type="dijit/Dialog" id="SetCalendarDialog" data-dojo-id="SetCalendarDialog" title="Set calendar" style="display: none;">
