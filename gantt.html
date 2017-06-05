@@ -477,10 +477,6 @@ require([
     registry.byId("TrainingRestAfterM").set("store", zeroTo59Store);
     registry.byId("TrainingDurationMinute").set("store", zeroTo59Store);
 
-    registry.byId("TrainingRestBeforeM").set("value", 0);
-    registry.byId("TrainingRestAfterM").set("value", 0);
-
-
     registry.byId("TripRestBeforeH").set("store", zeroTo99Store);
     registry.byId("TripRestAfterH").set("store", zeroTo99Store);
 
@@ -489,8 +485,6 @@ require([
 
     registry.byId("TripRestBeforeM").set("store", zeroTo59Store);
     registry.byId("TripRestAfterM").set("store", zeroTo59Store);
-
-
 
     registry.byId("transportationTime").set("store", zeroTo99Store);
     registry.byId("reportTime").set("store", zeroTo99Store);
@@ -1580,11 +1574,7 @@ console.log(yCoordStore);
      activityStore.on("add", function(event) {
        activityStore.nextPk += 1;
 
-       console.log("event.target.fk_cm"); 
-       console.log(event.target.fk_cm); 
-       if( event.target.fk_cm == 0 ) {
-       console.log(event.target); 
-         
+       if( event.target.fk_cm == 0 && typeof(event.target.fk_parent) == 'undefined') {
          OpenTimeLineCount = Math.max(event.target.lineNb, OpenTimeLineCount);
        }
      });
@@ -3027,6 +3017,12 @@ console.log("remove ycoord...");
      });
      registry.byId("TrainingDurationMinute").on("change", function(val) {
        UpdateEndDateTime("Training");
+     });
+
+     CreateTrainingDialog.on("show", function() {
+       // reset filteringselect Minute of rest before and after. Those two are not set to zero.
+       registry.byId("TrainingRestBeforeM").set("value", 0);
+       registry.byId("TrainingRestAfterM").set("value", 0);
      });
 
      registry.byId("CreateTraining").on("click", function() {
