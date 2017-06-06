@@ -12,40 +12,43 @@
           <xsl:element name="birth-date-lbt"><xsl:value-of select="birthdate"/></xsl:element>
           <xsl:element name="seniority"><xsl:value-of select="pk"/></xsl:element>
           <xsl:element name="base">
-            <xsl:attribute name="ref"><xsl:value-of select="//configuration/station"/></xsl:attribute>
+            <xsl:attribute name="ref"><xsl:value-of select="//configuration/CalendarStation"/></xsl:attribute>
           </xsl:element>
 
           <!-- ================== -->
           <!-- hard coded section -->
           <!-- ================== -->
-          <primary-seat-qual ref="CP"/>
-          <crew-status>A</crew-status>              <!-- A Active, D Terminated or I Inactive -->
-          <employment-status>FT</employment-status> <!-- FT fulltime, PT parttime -->
-          <gender>M</gender>                        <!-- M male, F female -->
-          <nationality>CAN</nationality>      
-          <inexperienced>false</inexperienced>
-          <min-block-time>3000</min-block-time>
-          <max-block-time>4000</max-block-time>
-          <hire-date-lbt>2000-01-01</hire-date-lbt>
+          <xsl:comment>Hard coded section</xsl:comment>
+          <xsl:element name="primary-seat-qual">
+            <xsl:attribute name="ref">CP</xsl:attribute>
+          </xsl:element>
+          <xsl:element name="crew-status">A</xsl:element>
+          <xsl:element name="employment-status">FT</xsl:element>
+          <xsl:element name="gender">M</xsl:element>
+          <xsl:element name="nationality">CAN</xsl:element>
+          <xsl:element name="inexperienced">false</xsl:element>
+          <xsl:element name="min-block-time">3000</xsl:element>
+          <xsl:element name="max-block-time">4000</xsl:element>
+          <xsl:element name="hire-date-lbt">2000-01-01</xsl:element>
 
           <aircraft-qual-list>
             <aircraft-qual>
-              <aircraft ref="330" />
-              <seat-qual ref="CP" />
+              <aircraft ref="330"></aircraft>
+              <seat-qual ref="CP"></seat-qual>
               <start-date-lbt>2009-12-01</start-date-lbt>
               <end-date-lbt>2069-09-17</end-date-lbt>
               <inexperienced>false</inexperienced>
             </aircraft-qual>
             <aircraft-qual>
-              <aircraft ref="33X" />
-              <seat-qual ref="CP" />
+              <aircraft ref="33X"></aircraft>
+              <seat-qual ref="CP"></seat-qual>
               <start-date-lbt>2011-01-06</start-date-lbt>
               <end-date-lbt>2069-09-17</end-date-lbt>
               <inexperienced>false</inexperienced>
             </aircraft-qual>
             <aircraft-qual>
-              <aircraft ref="340" />
-              <seat-qual ref="CP" />
+              <aircraft ref="340"></aircraft>
+              <seat-qual ref="CP"></seat-qual>
               <start-date-lbt>2009-12-01</start-date-lbt>
               <end-date-lbt>2069-09-17</end-date-lbt>
               <inexperienced>false</inexperienced>
@@ -53,8 +56,8 @@
           </aircraft-qual-list>
 
           <language-list>
-            <language ref="EN" />
-            <language ref="FR" />
+            <language ref="EN"></language>
+            <language ref="FR"></language>
           </language-list>      
 
 
@@ -63,19 +66,19 @@
 
           <region-recency-list>
             <region-recency>
-              <region ref="AFR" />
+              <region ref="AFR"></region>
               <last-flown-date-lbt>2014-01-10</last-flown-date-lbt>
             </region-recency>
             <region-recency>
-              <region ref="EUR" />
+              <region ref="EUR"></region>
               <last-flown-date-lbt>2014-05-08</last-flown-date-lbt>
             </region-recency>
             <region-recency>
-              <region ref="JAK" />
+              <region ref="JAK"></region>
               <last-flown-date-lbt>2014-06-01</last-flown-date-lbt>
             </region-recency>
             <region-recency>
-              <region ref="MDE" />
+              <region ref="MDE"></region>
               <last-flown-date-lbt>2014-06-01</last-flown-date-lbt>
             </region-recency>
           </region-recency-list>
@@ -104,19 +107,19 @@
 
           <take-off-landing-last-flown-list>
             <take-off-landing-last-flown>
-              <aircraft ref="330" />
+              <aircraft ref="330"></aircraft>
               <take-off-date-lbt>2014-05-07</take-off-date-lbt>
             </take-off-landing-last-flown>
             <take-off-landing-last-flown>
-              <aircraft ref="330" />
+              <aircraft ref="330"></aircraft>
               <take-off-date-lbt>2014-04-19</take-off-date-lbt>
             </take-off-landing-last-flown>
             <take-off-landing-last-flown>
-              <aircraft ref="330" />
+              <aircraft ref="330"></aircraft>
               <take-off-date-lbt>2014-04-14</take-off-date-lbt>
             </take-off-landing-last-flown>
           </take-off-landing-last-flown-list>
-
+          <xsl:comment>End of hard coded section</xsl:comment>
            
           <!-- ========================= -->
           <!-- End of hard coded section -->

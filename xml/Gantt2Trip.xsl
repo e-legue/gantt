@@ -74,8 +74,10 @@ extension-element-prefixes="date xs fn">
     <!-- ================== -->
     <!-- hard coded section -->
     <!-- ================== -->
+    <xsl:comment>Hard coded section</xsl:comment>
     <aircraft-variant>330</aircraft-variant>
     <flight-carrier>EY</flight-carrier>
+    <xsl:comment>End of hard coded section</xsl:comment>
     <!-- ========================= -->
     <!-- End of hard coded section -->
     <!-- ========================= -->
@@ -93,7 +95,7 @@ extension-element-prefixes="date xs fn">
           <xsl:value-of select="name"/>
         </xsl:element>
         <xsl:element name="base">
-          <xsl:attribute name="ref"><xsl:value-of select="//configuration/station"/></xsl:attribute>
+          <xsl:attribute name="ref"><xsl:value-of select="//configuration/CalendarStation"/></xsl:attribute>
         </xsl:element>
         <xsl:element name="effective-report-time-utc">
           <xsl:value-of select="substring(utcStart,12)"/>
@@ -200,6 +202,7 @@ extension-element-prefixes="date xs fn">
         <!-- ================== -->
         <!-- hard coded section -->
         <!-- ================== -->
+        <xsl:comment>Hard coded section</xsl:comment>
         <crew-composition>
           <seat-role-requirement>
             <seat-role ref="CM" />
@@ -250,6 +253,7 @@ extension-element-prefixes="date xs fn">
             <count>0</count>
           </seat-role-requirement>
         </crew-composition>
+        <xsl:comment>End of hard coded section</xsl:comment>
         <!-- ========================= -->
         <!-- End of hard coded section -->
         <!-- ========================= -->

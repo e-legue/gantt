@@ -5,8 +5,7 @@
   <xsl:template match="/">
     <data xmlns="http://www.ad-opt.com/2009/Altitude/data">
       <xsl:for-each select="//station">
-        <!-- test to exclude station node in node configuration of ConfigurationStore -->
-        <xsl:if test="not(parent::configuration)">
+        <xsl:if test="name(parent::node()) = 'g'">
           <xsl:element name="station">
             <xsl:attribute name="id"><xsl:value-of select="id"/></xsl:attribute>
             <xsl:element name="code"><xsl:value-of select="code"/></xsl:element>

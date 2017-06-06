@@ -8,6 +8,8 @@
   <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.12.2/dojox/form/resources/UploaderFileList.css" />
   <link rel="stylesheet" href="http://cdn.rawgit.com/SitePen/dgrid/v1.1.0/css/dgrid.css" />
   <link rel="stylesheet" href="http://cdn.rawgit.com/SitePen/dgrid/v1.1.0/css/skins/claro.css" />
+  <link rel="stylesheet" href="http://codemirror.net/lib/codemirror.css"/>
+  <link rel="stylesheet" href="http://codemirror.net/addon/fold/foldgutter.css" />
 
   <style type="text/css">
 
@@ -142,6 +144,11 @@
   background-color: ivory !important;
 }
 
+.CodeMirror {
+  border: 1px solid gray;
+  height: 100%;
+}
+
   </style>
 
   <script>
@@ -165,7 +172,20 @@ var dojoConfig = {
     name: "moment-timezone",
     location: "http://cdn.rawgit.com/moment/moment-timezone/0.5.10",
     main: "timezone"
-  }]
+  }, {
+    name: "codemirror",
+    location: "http://codemirror.net/",
+    main: "codemirror"
+  }, {
+    name: "prettydata",
+    location: "http://www.eslinstructor.net/pretty-data/",
+    main: "prettydata"
+  }, {
+    name: "jszip",
+    location: "https://stuk.github.io/",
+    main: "jszip"
+  }
+  ]
 };
   </script>
 
@@ -174,11 +194,11 @@ var dojoConfig = {
 
   <script>
 require([
-  "dojo/text!./xml/Gantt2Acts.xsl",
   "dojo/text!./xml/Gantt2Qual.xsl",
   "dojo/text!./xml/Gantt2Station.xsl",
   "dojo/text!./xml/Gantt2Trip_sup.xsl",
   "dojo/text!./xml/Gantt2Trip.xsl",
+  "dojo/text!./xml/Gantt2Acts.xsl",
   "dojo/_base/declare",
   "dojo/window",
   "dojo/sniff",
@@ -203,9 +223,6 @@ require([
   "dijit/form/Select",
   "dijit/form/FilteringSelect",
   "dijit/form/ComboBox",
-  "dijit/Editor", 
-  "dijit/InlineEditBox",
-  "dijit/_editor/plugins/AlwaysShowToolbar",
   "dojox/xml/parser", 
   "dojox/widget/Standby",
   "dojox/form/CheckedMultiSelect",
@@ -221,6 +238,8 @@ require([
   "dgrid/extensions/CompoundColumns",
   "moment/moment",
   "moment-timezone/builds/moment-timezone-with-data",
+  "codemirror/lib/codemirror",
+  "jszip/jszip/dist/jszip",
   
   "dojo/domReady!",
 
@@ -242,12 +261,18 @@ require([
   "dojox/layout/TableContainer",
   "dojox/form/Uploader",
   "dojox/form/uploader/FileList",
+  "codemirror/mode/xml/xml",
+  "codemirror/addon/fold/xml-fold",
+  "codemirror/addon/edit/matchtags",
+  "codemirror/addon/fold/foldgutter",
+  "codemirror/addon/fold/brace-fold",
+  "prettydata/vkbeautify",
 ], function(
-  Gantt2ActsXsl,
   Gantt2QualXsl,
   Gantt2StationXsl,
   Gantt2TripSupXsl,
   Gantt2TripXsl,
+  Gantt2ActsXsl,
   // dojo section    
   declare,
   win,
@@ -274,9 +299,6 @@ require([
   Select,
   FilteringSelect,
   ComboBox,
-  DijitEditor,
-  InlineEditBox,
-  AlwaysShowToolbar,
   // dojox section
   xmlparser,
   Standby,
@@ -296,7 +318,10 @@ require([
   CompoundColumns,
   // moment section
   moment,
-  timezone
+  timezone,
+  // codemirror section 
+  CodeMirror,
+  JSZip
 //  ganttSVG
   ) {
 
@@ -736,9 +761,6 @@ require([
 
      // Draw a highlight in calendar.
      function SVG_drawHighlight(item) {
-console.log("drawHighlight");
-console.log(item);
-console.log(yCoordStore);
        var calendarId    = svg.getElementById("calendar");
        var calendarBarId = svg.getElementById("calendar_bar");
        var group         = document.createElementNS(svgNS, "g");
@@ -765,9 +787,6 @@ console.log(yCoordStore);
 
      // Draw a distance in calendar.
      function SVG_drawDistance(item) {
-console.log("drawDistance");       
-console.log(item);       
-console.log(yCoordStore);
        var calendarId    = svg.getElementById("calendar");
 
        var G       = document.createElementNS(svgNS, "g");
@@ -2340,7 +2359,7 @@ console.log("remove ycoord...");
 //console.log("station name:   " + obj.getElementsByTagName(convertionSvgXml("name", mode))[0].textContent );          
 //console.log("station offset: " + offset );          
 
-         stationStore.addSync({
+         stationStore.putSync({
            id: id,
            code: obj.getElementsByTagName(convertionSvgXml("code", mode))[0].textContent,
            name: obj.getElementsByTagName(convertionSvgXml("name", mode))[0].textContent,
@@ -3439,59 +3458,61 @@ console.log("remove ycoord...");
 
      });
 
+    
+
+     function ProcessXslt(id, strXml, strXslt) {
+       var domParser = new DOMParser();
+
+       var xslt = domParser.parseFromString(strXslt, "text/xml");
+       var xml  = domParser.parseFromString(strXml,  "text/xml");
+         
+       var xsltProcessor = new XSLTProcessor();
+       xsltProcessor.importStylesheet(xslt);
+
+       var fragment = xsltProcessor.transformToDocument(xml);
+       var serializer = new XMLSerializer();
+
+       var cmdoc = CodeMirror.Doc(vkbeautify.xml(serializer.serializeToString(fragment)), "xml");  
+
+       var editor = CodeMirror(dom.byId(id), {
+          lineNumbers: true,
+          value: cmdoc,
+          smartIndent: true,
+          indentUnit: 2,
+          matchTags: {bothTags: true},
+          extraKeys: {"Ctrl-J": "toMatchingTag", 
+                      "Ctrl-Q": function(cm){ cm.foldCode(cm.getCursor()); }},
+          foldGutter: true,
+          gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+       });
+
+     }
+
+
+
+
 
      SaveFileToPIDialog.on("show", function() {
+       var windowSize = win.getBox();
+       var w = Math.floor(windowSize.w * 0.9);
+       var h = Math.floor(windowSize.h * 0.9);
+
+       domStyle.set("SaveFileToPIDialogContent", {
+         width: w + "px", 
+         height: h + "px",
+       });
 
        SaveStores();
        
        //get svg source.
        var serializer = new XMLSerializer();
-       var source = serializer.serializeToString(svg);
+       var strXml = serializer.serializeToString(svg);
 
-       if (document.implementation && document.implementation.createDocument) {
-         var domParser = new DOMParser();
-
-console.log("=========================================================");          
-console.log(Gantt2StationXsl);          
-console.log("=========================================================");          
-         var xsltDoc = domParser.parseFromString(Gantt2StationXsl, "text/xml");
-        var xml = domParser.parseFromString(source, "text/xml");
-         
-         var xsltProcessor = new XSLTProcessor();
-         xsltProcessor.importStylesheet(xsltDoc);
-
-console.log("=========================================================");          
-console.log(svg);          
-console.log("=========================================================");          
-         var ownerDocument = document.implementation.createDocument("", "test", null);
-         var fragment = xsltProcessor.transformToFragment(xml, ownerDocument);
-console.log("=========================================================");          
-console.log(fragment);          
-          var fragmentSource = serializer.serializeToString(fragment);
-console.log(fragmentSource);
-console.log("=========================================================");          
-         dom.byId('XMLstation').textContent = fragmentSource;
-
-         var myEditor = new DijitEditor({
-            height: '',
-            renderAsHtml:true, 
-            autoSave:true,
-            plugins:['undo','redo'],
-            extraPlugins: [AlwaysShowToolbar],
-          }, dom.byId('XMLstation'));
-
-          myEditor.startup();
-/*
-          var myEditor = new InlineEditBox({
-            editor:'dijit/Editor', 
-            renderAsHtml:true, 
-            autoSave:false,
-            editorParams:{height: '', plugins: ['undo','redo'], extraPlugins: [AlwaysShowToolbar]}
-          }, dom.byId('XMLstation')); 
-
-          myEditor.startup();
-*/          
-        }   
+       ProcessXslt('XMLqual',     strXml, Gantt2QualXsl);
+       ProcessXslt('XMLacts',     strXml, Gantt2ActsXsl); 
+       ProcessXslt('XMLtrip',     strXml, Gantt2TripXsl); 
+       ProcessXslt('XMLtrip_sup', strXml, Gantt2TripSupXsl); 
+       ProcessXslt('XMLstation',  strXml, Gantt2StationXsl); 
      });
 
 
@@ -4261,7 +4282,7 @@ console.log("=========================================================");
       <table class="dijitDialogPaneContentArea">
         <tr>
           <td><label for="filename">Filename:</label></td>
-          <td><input data-dojo-type="dijit/form/TextBox" name="filename" id="filename" value=".svg" required="true"></td>
+          <td><input data-dojo-type="dijit/form/TextBox" name="filename" id="filename" data-dojo-props="placeHolder: '.svg'" required="true"></td>
         </tr>
       </table>
 
@@ -4271,39 +4292,40 @@ console.log("=========================================================");
     </div>
 
 
-    <div data-dojo-type="dijit/Dialog" data-dojo-id="SaveFileToPIDialog" title="Save XML files compatible with PI" style="display: none;width: 90%; height: 90%">
-      <table class="dijitDialogPaneContentArea">
-        <tr>
-          <td><label for="filename">Zip filename:</label></td>
-          <td><input data-dojo-type="dijit/form/TextBox" name="filename" id="zipFilename" value=".zip" required="true"></td>
-        </tr>
-      </table>
+    <div data-dojo-type="dijit/Dialog" data-dojo-id="SaveFileToPIDialog" title="Save XML files compatible with PI" style="display: none;">
+      <div id="SaveFileToPIDialogContent">
+        <div style="width: 100%; height: 100%">
+          <table class="dijitDialogPaneContentArea">
+            <tr>
+              <td><label for="filename">Zip filename:</label></td>
+              <td><input data-dojo-type="dijit/form/TextBox" name="filename" id="zipFilename" data-dojo-props="placeHolder: '.zip'" required="true"></td>
+            </tr>
+          </table>
 
 
-      <div style="width: 1350px; height: 600px">
-        <div data-dojo-type="dijit/layout/TabContainer" style="width: 100%; height: 90%;">
-          <div data-dojo-type="dijit/layout/ContentPane" title="station.xml" data-dojo-props="selected:true">
-            <!-- <div id="XMLstation" data-dojo-type="dijit/InlineEditBox" data-dojo-props="editor:'dijit/Editor', renderAsHtml:true, autoSave:false, editorParams:{height: '', extraPlugins: ['dijit._editor.plugins.AlwaysShowToolbar'], plugins:['undo','redo']}"></div> -->
-            <div id="XMLstation"></div>
+          <div data-dojo-type="dijit/layout/TabContainer" style="width: 90%; height: 80%;">
+            <div data-dojo-type="dijit/layout/ContentPane" title="qual.xml" data-dojo-props="selected:true">
+              <div id="XMLqual"></div>
+            </div>
+            <div data-dojo-type="dijit/layout/ContentPane" title="acts.xml">
+              <div id="XMLacts"></div>
+            </div>
+            <div data-dojo-type="dijit/layout/ContentPane" title="trip.xml">
+              <div id="XMLtrip"></div>
+            </div>
+            <div data-dojo-type="dijit/layout/ContentPane" title="trip_sup.xml">
+              <div id="XMLtrip_sup"></div>
+            </div>
+            <div data-dojo-type="dijit/layout/ContentPane" title="station.xml">
+              <div id="XMLstation"></div>
+            </div>
           </div>
-          <div data-dojo-type="dijit/layout/ContentPane" title="qual.xml">
-            Lorem ipsum and all around - second...
-          </div>
-          <div data-dojo-type="dijit/layout/ContentPane" title="acts.xml">
-            Lorem ipsum and all around - last...
-          </div>
-          <div data-dojo-type="dijit/layout/ContentPane" title="trip.xml">
-            Lorem ipsum and all around - last...
-          </div>
-          <div data-dojo-type="dijit/layout/ContentPane" title="trip_sup.xml">
-            Lorem ipsum and all around - last...
+
+
+          <div class="dijitDialogPaneActionBar">
+            <button data-dojo-type="dijit/form/Button" type="button" id="SaveZipFile">Save zip file</button>
           </div>
         </div>
-      </div>
-
-
-      <div class="dijitDialogPaneActionBar">
-        <button data-dojo-type="dijit/form/Button" type="button" id="SaveZipFile">Save zip file</button>
       </div>
     </div>
 

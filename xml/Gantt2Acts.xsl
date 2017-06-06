@@ -36,7 +36,7 @@ extension-element-prefixes="date">
             <xsl:attribute name="ref">off</xsl:attribute>
           </xsl:element> 
           <xsl:element name="start-date-lbt"><xsl:value-of select="//calendar[x=current()/x]/name"/></xsl:element>
-          <xsl:element name="end-date-lbt"><xsl:value-of select="date:add(//calendar[x=current()/x]/name, 'P1D')"/></xsl:element>
+          <!-- <xsl:element name="end-date-lbt"><xsl:value-of select="date:add(//calendar[x=current()/x]/name, 'P1D')"/></xsl:element> --> 
         </xsl:element>
       </xsl:when>
       <xsl:when test="type='TRN' or type='TRP'">
