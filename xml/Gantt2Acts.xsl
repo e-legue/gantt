@@ -35,20 +35,27 @@ extension-element-prefixes="date">
           <xsl:element name="activity-type">
             <xsl:attribute name="ref">off</xsl:attribute>
           </xsl:element> 
-          <xsl:element name="start-date-lbt"><xsl:value-of select="//calendar[x=current()/x]/name"/></xsl:element>
-          <!-- <xsl:element name="end-date-lbt"><xsl:value-of select="date:add(//calendar[x=current()/x]/name, 'P1D')"/></xsl:element> --> 
+          <xsl:element name="start-date-lbt"><xsl:value-of select="substring(lbtStart,1,10)"/></xsl:element>
+          <xsl:element name="end-date-lbt"><xsl:value-of select="substring(lbtEnd,1,10)"/></xsl:element>
         </xsl:element>
       </xsl:when>
-      <xsl:when test="type='TRN' or type='TRP'">
+      <xsl:when test="type='TRN'">
         <xsl:element name="task">
-          <xsl:element name="seat-role">
-            <xsl:attribute name="ref">CP</xsl:attribute>
-          </xsl:element> 
           <xsl:element name="activity-type">
             <xsl:attribute name="ref"><xsl:value-of select="type"/></xsl:attribute>
           </xsl:element> 
           <xsl:element name="start-utc"><xsl:value-of select="utcStart"/></xsl:element>
           <xsl:element name="end-utc"><xsl:value-of select="utcEnd"/></xsl:element>
+        </xsl:element>
+      </xsl:when>
+      <xsl:when test="type='TRP'">
+        <xsl:element name="task">
+          <xsl:element name="seat-role">
+            <xsl:attribute name="ref">CP</xsl:attribute>
+          </xsl:element> 
+          <xsl:element name="trip">
+            <xsl:attribute name="ref">trp_<xsl:value-of select="pk"/></xsl:attribute>
+          </xsl:element> 
         </xsl:element>
       </xsl:when>
       <xsl:otherwise>

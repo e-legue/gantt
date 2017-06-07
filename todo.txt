@@ -1,3 +1,10 @@
+Rawgit:
+https://rawgit.com/ 
+just fill in a path to a github file and it will generate the link on rawgit.
+
+
+
+
 TODO:
 
 https://dojotoolkit.org/reference-guide/1.10/dojox/data/XmlStore-examples.html#dojox-data-xmlstore-examples
