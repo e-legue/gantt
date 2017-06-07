@@ -157,36 +157,37 @@ var dojoConfig = {
   debug: true,
   packages: [{
     name: "dstore",
-    location: "http://cdn.rawgit.com/SitePen/dstore/v1.1.1"
+    location: "https://cdn.rawgit.com/SitePen/dstore/v1.1.1"
   }, {
     name: "dmodel",
-    location: "http://cdn.rawgit.com/SitePen/dmodel/master"
+    location: "https://cdn.rawgit.com/SitePen/dmodel/master"
   }, {
     name: "dgrid",
-    location: "http://cdn.rawgit.com/SitePen/dgrid/v1.1.0"
+    location: "https://cdn.rawgit.com/SitePen/dgrid/v1.1.0"
   }, {
     name: "moment",
-    location: "http://cdn.rawgit.com/moment/moment/2.17.1",
+    location: "https://cdn.rawgit.com/moment/moment/2.17.1",
     main: "moment"
   }, {
     name: "moment-timezone",
-    location: "http://cdn.rawgit.com/moment/moment-timezone/0.5.10",
+    location: "https://cdn.rawgit.com/moment/moment-timezone/0.5.10",
     main: "timezone"
   }, {
     name: "codemirror",
     location: "http://codemirror.net/",
+//    location: "https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.25.0",
     main: "codemirror"
   }, {
-    name: "prettydata",
-    location: "http://www.eslinstructor.net/pretty-data/",
-    main: "prettydata"
+    name: "vkbeautify",
+    location: "https://cdn.rawgit.com/vkiryukhin/vkBeautify/0a238953",
+    main: "vkbeautify"
   }, {
     name: "jszip",
-    location: "https://stuk.github.io/",
+    location: "https://cdn.rawgit.com/Stuk/jszip/v3.1.3/dist/",
     main: "jszip"
   }, {
     name: "filesaver",
-    location: "https://rawgit.com/eligrey/FileSaver.js/master/",
+    location: "https://cdn.rawgit.com/eligrey/FileSaver.js/1.3.3",
     main: "filesaver"
   }
   ]
@@ -243,7 +244,7 @@ require([
   "moment/moment",
   "moment-timezone/builds/moment-timezone-with-data",
   "codemirror/lib/codemirror",
-  "jszip/jszip/dist/jszip",
+  "jszip/jszip",
   "filesaver/FileSaver",
   
   "dojo/domReady!",
@@ -271,7 +272,7 @@ require([
   "codemirror/addon/edit/matchtags",
   "codemirror/addon/fold/foldgutter",
   "codemirror/addon/fold/brace-fold",
-  "prettydata/vkbeautify",
+  "vkbeautify/vkbeautify",
 ], function(
   Gantt2QualXsl,
   Gantt2StationXsl,
@@ -933,9 +934,10 @@ require([
      // the rigth place in the calendar.
      function SVG_drawActivity(activity) { // , line) {
        var unitY = HEIGHT_LINE_CM / 14; 
-
+console.log(activity);
        var parentId = svg.getElementById(activity.GetCrewMemberIdent()); // line ? svg.getElementById(line.get("ident")) : svg.getElementById("opentime");  
 
+console.log(parentId);
        var G = document.createElementNS(svgNS, "g");
        var yLine = MARGIN_TOP_CM + HEIGHT_LINE_CM * ( activity.lineNb - 1 );
        G.setAttributeNS(null, "transform", "translate(" + CompressX(activity.x + activity.midnightoffset) + "," + yLine +")");
@@ -1222,7 +1224,8 @@ require([
                              if( OpenTimeLineCount > 0 ) {
                                height += MARGIN_TOP_CM + HEIGHT_LINE_CM * OpenTimeLineCount + MARGIN_BOTTOM_CM;
                              }
-
+console.log("strech");
+console.log(self.nextY);
                              svg.getElementById("calendar_bar").setAttribute("transform", "scale(1," + height + ")");
                              svg.getElementById("opentime").setAttribute("transform","translate(0, " + self.nextY + ")");
                            },
@@ -1237,7 +1240,6 @@ require([
                              return self.nextY;
                            },  
        ComputeYAndHeigth : function() {
-//                             yCoordStore.sort({property: 'y'}, {property: 'fk_cm', descending: true }).fetch().then(function(items) {
                              yCoordStore.sort('y').fetch().then(function(items) {
                                var nextY = 0;
                                for (var i = 0 ; i < items.length ; i++) {
@@ -1480,6 +1482,7 @@ require([
          restb          : "numeric",
          type           : "string",
          lbtStart       : "string",
+         lbtEnd         : "string",
          utcStart       : "string",
          utcEnd         : "string",
          block          : "numeric",
@@ -1615,9 +1618,10 @@ require([
 
      activityStore.on("add", function(event) {
        activityStore.nextPk += 1;
-
-       if( event.target.fk_cm == 0 && typeof(event.target.fk_parent) == 'undefined') {
-         OpenTimeLineCount = Math.max(event.target.lineNb, OpenTimeLineCount);
+       if( event.target.fk_cm == 0 ) {
+         if( typeof(event.target.lineNb) != 'undefined') {
+           OpenTimeLineCount = Math.max(event.target.lineNb, OpenTimeLineCount);
+         }
        }
      });
 
@@ -2298,6 +2302,7 @@ console.log("remove ycoord...");
 
        LoadStore(calendarStore, svgNode.getElementById("CalendarStore"),"calendar");
        LoadStore(yCoordStore, svgNode.getElementById("YCoordStore"),"ycoord");
+       yCoordStore.ComputeYAndHeigth();
        LoadStore(crewMemberStore, svgNode.getElementById("CrewMemberStore"), "crew");
        LoadStore(activityStore, svgNode.getElementById("ActivityStore"), "activity");
        LoadStore(highLightStore, svgNode.getElementById("HighLightStore"), "highligth");
@@ -2744,22 +2749,14 @@ console.log("remove ycoord...");
 
        SaveStores();
 
-
-       var a           = document.createElement("a");
-       var contentType = "data:application/octet-stream,";
-
        //get svg source.
        var serializer = new XMLSerializer();
-       var source = serializer.serializeToString(svg);
+       var source = vkbeautify.xml(serializer.serializeToString(svg));
+       var blob = new Blob([source], {type: "text/plain;charset=utf-8"});
 
-       var uriContent  = contentType + encodeURIComponent(source);
+       var filename = registry.byId("filename").value;
 
-       a.setAttribute("href", uriContent);
-       a.setAttribute("download", registry.byId("filename").value);
-
-       document.body.appendChild(a);
-       a.click();
-       document.body.removeChild(a);
+       saveAs(blob, filename);   
 
        SaveFileDialog.hide();
      }, true);
@@ -3002,6 +2999,7 @@ console.log("remove ycoord...");
            x              : x,
            midnightoffset : Number(config.midnightOffset),
            lbtStart       : moment(calendarDay.get("name")).format("YYYY-MM-DD HH:mm"),
+           lbtEnd         : moment(calendarDay.get("name")).add(width, 'm').format("YYYY-MM-DD HH:mm"),
            utcStart       : moment(calendarDay.get("name")).utc().format("YYYY-MM-DD HH:mm"),
            utcEnd         : moment(calendarDay.get("name")).add(width, 'm').utc().format("YYYY-MM-DD HH:mm"),
            width          : width,
@@ -3108,6 +3106,7 @@ console.log("remove ycoord...");
          x              : x,
          midnightoffset : 0,
          lbtStart       : mydate.format("YYYY-MM-DD HH:mm"),
+         lbtEnd         : mydate.add(width, 'm').format("YYYY-MM-DD HH:mm"),
          utcStart       : startTraining.utc().format("YYYY-MM-DD HH:mm"),
          utcEnd         : endTraining.utc().format("YYYY-MM-DD HH:mm"),
          width          : width,
@@ -3407,6 +3406,7 @@ console.log("remove ycoord...");
          x              : x,
          midnightoffset : 0,
          lbtStart       : mydate.format("YYYY-MM-DD HH:mm"),
+         lbtEnd         : mydate.add(width, 'm').format("YYYY-MM-DD HH:mm"),
          utcStart       : startTrip.utc().format("YYYY-MM-DD HH:mm"),
          utcEnd         : endTrip.utc().format("YYYY-MM-DD HH:mm"),
          width          : width,
@@ -3478,7 +3478,9 @@ console.log("remove ycoord...");
        var fragment = xsltProcessor.transformToDocument(xml);
        var serializer = new XMLSerializer();
 
-       dom.byId(id).value = vkbeautify.xml(serializer.serializeToString(fragment));  
+       dom.byId(id).value = vkbeautify.xml(serializer.serializeToString(fragment)); 
+
+       var toto = dom.byId(id);   
 
        var editor = CodeMirror.fromTextArea(dom.byId(id), {
           lineNumbers: true,
@@ -3490,7 +3492,16 @@ console.log("remove ycoord...");
                       "Ctrl-F": function(cm){ cm.foldCode(cm.getCursor()); }},
           foldGutter: true,
           gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+          onCursorActivity: function () {
+            editor.setLineClass(hlLine, null);
+            hlLine = editor.setLineClass(editor.getCursor().line, "activeline");
+          },
        });
+
+       editor.on('change', function (cm) {
+         toto.value = cm.getValue();
+       });
+          
      }
 
 
@@ -3499,10 +3510,10 @@ console.log("remove ycoord...");
 
      SaveFileToPIDialog.on("show", function() {
        var windowSize = win.getBox();
-       var w = Math.floor(windowSize.w * 0.9);
-       var h = Math.floor(windowSize.h * 0.9);
+       var w = Math.floor(windowSize.w * 0.8);
+       var h = Math.floor(windowSize.h * 0.6);
 
-       domStyle.set("SaveFileToPIDialogContent", {
+       domStyle.set("ici", {
          width: w + "px", 
          height: h + "px",
        });
@@ -3538,8 +3549,10 @@ console.log("remove ycoord...");
        var serializer = new XMLSerializer();
        zip.file("data.svg", serializer.serializeToString(svg));
 
+       var zipFilename = registry.byId("zipFilename").value;
+
        zip.generateAsync({type:"blob"}).then(function(content) {
-         saveAs(content, dom.byId("zipFilename").value);
+         saveAs(content, zipFilename);
        });
 
        registry.byId("SaveFileToPIForm").reset();
@@ -3884,10 +3897,10 @@ console.log("remove ycoord...");
       <div id="MenuFile" data-dojo-type="dijit/PopupMenuBarItem">
         <span>File</span>
         <div data-dojo-type="dijit/DropDownMenu">
-          <div id="MenuFileLoadSVGFile"        data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {LoadSvgDialog.show();}">Load SVG file</div>
-          <div id="MenuFileLoadXMLStationFile" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {LoadStationDialog.show();}">Load XML station file</div>
+          <div id="MenuFileLoadSVGFile"        data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {LoadSvgDialog.show();}">Load a SVG file</div>
+          <div id="MenuFileLoadXMLStationFile" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {LoadStationDialog.show();}">Load a XML station file</div>
           <div data-dojo-type="dijit/MenuSeparator"></div>
-          <div id="MenuFileSaveSVGFile"        data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {SaveFileDialog.show();}">Save SVG file</div>
+          <div id="MenuFileSaveSVGFile"        data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {SaveFileDialog.show();}">Save as SVG file</div>
           <div data-dojo-type="dijit/MenuSeparator"></div>
           <div id="MenuFileExportToPI"         data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {SaveFileToPIDialog.show();}">Export to Planner Interface</div>
         </div>
@@ -4102,7 +4115,7 @@ console.log("remove ycoord...");
 
         <text x="400" y="50"  style="fill:black;font-size:40px;">Bob, the "problem" builder v0.1</text>
         <text x="400" y="90"  style="fill:black;font-size:20px;">To start, please do one of: </text>
-        <text x="420" y="120" style="fill:black;font-size:20px;">- Use File menu to load an XML station file and then Calendar menu to set a period or</text>
+        <text x="420" y="120" style="fill:black;font-size:20px;">- Use File menu to load a XML station file and then Calendar menu to set a period or</text>
         <text x="420" y="150" style="fill:black;font-size:20px;">- Use File menu to load a SVG file.</text>
         </g>
         </g>
@@ -4322,39 +4335,43 @@ console.log("remove ycoord...");
 
 
     <div data-dojo-type="dijit/Dialog" data-dojo-id="SaveFileToPIDialog" title="Save XML files compatible with PI" style="display: none;">
-      <div id="SaveFileToPIDialogContent">
-        <div data-dojo-type="dijit/form/Form" id="SaveFileToPIForm" data-dojo-id="SaveFileToPIForm" encType="multipart/form-data" action="" method="" style="width: 100%; height: 100%">
-          <table class="dijitDialogPaneContentArea">
+      <div id="SaveFileToPIDialogContent" class ="dijitDialogPaneContentArea">
+
+        <div data-dojo-type="dijit/form/Form" id="SaveFileToPIForm" data-dojo-id="SaveFileToPIForm" encType="multipart/form-data" action="" method="">
+          <table >
             <tr>
               <td><label for="filename">Zip filename:</label></td>
-              <td><input data-dojo-type="dijit/form/TextBox" name="filename" id="zipFilename" data-dojo-props="placeHolder: '.zip'" required="true"></td>
+              <td><input data-dojo-type="dijit/form/TextBox" name="filename" id="zipFilename" data-dojo-props="placeHolder: '.zip'" required="true" /></td>
+            </tr>
+            <tr>
+              <td><label for="data">Xml data:</label></td>
+              <td>
+                <div data-dojo-type="dijit/layout/TabContainer" id="ici" style="width: 100%; height: 100%;">
+                  <div data-dojo-type="dijit/layout/ContentPane" title="qual.xml" data-dojo-props="selected:true">
+                    <textarea id="XMLqual"></textarea>
+                  </div>
+                  <div data-dojo-type="dijit/layout/ContentPane" title="acts.xml">
+                    <textarea id="XMLacts"></textarea>
+                  </div>
+                  <div data-dojo-type="dijit/layout/ContentPane" title="trip.xml">
+                    <textarea id="XMLtrip"></textarea>
+                  </div>
+                  <div data-dojo-type="dijit/layout/ContentPane" title="trip_sup.xml">
+                    <textarea id="XMLtrip_sup"></textarea>
+                  </div>
+                  <div data-dojo-type="dijit/layout/ContentPane" title="station.xml">
+                    <textarea id="XMLstation"></textarea>
+                  </div>
+                </div>
+              </td>
             </tr>
           </table>
-
-
-          <div data-dojo-type="dijit/layout/TabContainer" style="width: 90%; height: 80%;">
-            <div data-dojo-type="dijit/layout/ContentPane" title="qual.xml" data-dojo-props="selected:true">
-              <textarea id="XMLqual"></textarea>
-            </div>
-            <div data-dojo-type="dijit/layout/ContentPane" title="acts.xml">
-              <textarea id="XMLacts"></textarea>
-            </div>
-            <div data-dojo-type="dijit/layout/ContentPane" title="trip.xml">
-              <textarea id="XMLtrip"></textarea>
-            </div>
-            <div data-dojo-type="dijit/layout/ContentPane" title="trip_sup.xml">
-              <textarea id="XMLtrip_sup"></textarea>
-            </div>
-            <div data-dojo-type="dijit/layout/ContentPane" title="station.xml">
-              <textarea id="XMLstation"></textarea>
-            </div>
-          </div>
-
-
-          <div class="dijitDialogPaneActionBar">
-            <button data-dojo-type="dijit/form/Button" type="button" id="SaveZipFile">Save zip file</button>
-          </div>
+          <p style="margin-top: 0; margin-bottom: 0; font-size: small;">You can use <b>Ctrl+J</b> to go to matching tag, and <b>Ctrl+F</b> to fold/unfold the current line.</p>
         </div>
+      </div>
+
+      <div class="dijitDialogPaneActionBar">
+        <button data-dojo-type="dijit/form/Button" type="button" id="SaveZipFile">Save zip file</button>
       </div>
     </div>
 
