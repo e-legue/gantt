@@ -184,6 +184,10 @@ var dojoConfig = {
     name: "jszip",
     location: "https://stuk.github.io/",
     main: "jszip"
+  }, {
+    name: "filesaver",
+    location: "https://rawgit.com/eligrey/FileSaver.js/master/",
+    main: "filesaver"
   }
   ]
 };
@@ -240,6 +244,7 @@ require([
   "moment-timezone/builds/moment-timezone-with-data",
   "codemirror/lib/codemirror",
   "jszip/jszip/dist/jszip",
+  "filesaver/FileSaver",
   
   "dojo/domReady!",
 
@@ -321,7 +326,8 @@ require([
   timezone,
   // codemirror section 
   CodeMirror,
-  JSZip
+  JSZip,
+  FileSaver
 //  ganttSVG
   ) {
 
@@ -3472,20 +3478,19 @@ console.log("remove ycoord...");
        var fragment = xsltProcessor.transformToDocument(xml);
        var serializer = new XMLSerializer();
 
-       var cmdoc = CodeMirror.Doc(vkbeautify.xml(serializer.serializeToString(fragment)), "xml");  
+       dom.byId(id).value = vkbeautify.xml(serializer.serializeToString(fragment));  
 
-       var editor = CodeMirror(dom.byId(id), {
+       var editor = CodeMirror.fromTextArea(dom.byId(id), {
           lineNumbers: true,
-          value: cmdoc,
           smartIndent: true,
+          mode: "xml",
           indentUnit: 2,
           matchTags: {bothTags: true},
           extraKeys: {"Ctrl-J": "toMatchingTag", 
-                      "Ctrl-Q": function(cm){ cm.foldCode(cm.getCursor()); }},
+                      "Ctrl-F": function(cm){ cm.foldCode(cm.getCursor()); }},
           foldGutter: true,
           gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
        });
-
      }
 
 
@@ -3515,6 +3520,30 @@ console.log("remove ycoord...");
        ProcessXslt('XMLstation',  strXml, Gantt2StationXsl); 
      });
 
+     registry.byId("SaveZipFile").on("click", function() {
+       if( !registry.byId("SaveFileToPIForm").validate() ) {
+         return;
+       }
+
+       SaveFileToPIDialog.hide();   
+
+       var zip = new JSZip();
+       zip.file("qual.xml",     dom.byId("XMLqual").value);
+       zip.file("acts.xml",     dom.byId("XMLacts").value);
+       zip.file("trip.xml",     dom.byId("XMLtrip").value);
+       zip.file("trip_sup.xml", dom.byId("XMLtrip_sup").value);
+       zip.file("station.xml",  dom.byId("XMLstation").value);
+
+       //get svg source.
+       var serializer = new XMLSerializer();
+       zip.file("data.svg", serializer.serializeToString(svg));
+
+       zip.generateAsync({type:"blob"}).then(function(content) {
+         saveAs(content, dom.byId("zipFilename").value);
+       });
+
+       registry.byId("SaveFileToPIForm").reset();
+     });
 
      // ==============================================
      // FORM
@@ -4294,7 +4323,7 @@ console.log("remove ycoord...");
 
     <div data-dojo-type="dijit/Dialog" data-dojo-id="SaveFileToPIDialog" title="Save XML files compatible with PI" style="display: none;">
       <div id="SaveFileToPIDialogContent">
-        <div style="width: 100%; height: 100%">
+        <div data-dojo-type="dijit/form/Form" id="SaveFileToPIForm" data-dojo-id="SaveFileToPIForm" encType="multipart/form-data" action="" method="" style="width: 100%; height: 100%">
           <table class="dijitDialogPaneContentArea">
             <tr>
               <td><label for="filename">Zip filename:</label></td>
@@ -4305,19 +4334,19 @@ console.log("remove ycoord...");
 
           <div data-dojo-type="dijit/layout/TabContainer" style="width: 90%; height: 80%;">
             <div data-dojo-type="dijit/layout/ContentPane" title="qual.xml" data-dojo-props="selected:true">
-              <div id="XMLqual"></div>
+              <textarea id="XMLqual"></textarea>
             </div>
             <div data-dojo-type="dijit/layout/ContentPane" title="acts.xml">
-              <div id="XMLacts"></div>
+              <textarea id="XMLacts"></textarea>
             </div>
             <div data-dojo-type="dijit/layout/ContentPane" title="trip.xml">
-              <div id="XMLtrip"></div>
+              <textarea id="XMLtrip"></textarea>
             </div>
             <div data-dojo-type="dijit/layout/ContentPane" title="trip_sup.xml">
-              <div id="XMLtrip_sup"></div>
+              <textarea id="XMLtrip_sup"></textarea>
             </div>
             <div data-dojo-type="dijit/layout/ContentPane" title="station.xml">
-              <div id="XMLstation"></div>
+              <textarea id="XMLstation"></textarea>
             </div>
           </div>
 
@@ -4328,6 +4357,7 @@ console.log("remove ycoord...");
         </div>
       </div>
     </div>
+
 
 
 
@@ -4481,16 +4511,6 @@ console.log("remove ycoord...");
             <td><select data-dojo-type="dijit/form/FilteringSelect" name="From" id="DistanceFromSelect" style="width: 30em;" required="true"></td>
             <td>
               <select data-dojo-type="dijit/form/Select" id="DistanceFromEventSelect" disabled="true" required="true">
-<!--              
-              <select data-dojo-type="dijit/form/Select" id="DistanceFromEventSelect" disabled="true" required="true">
-                <option value="1">rest before start</option>
-                <option value="2">transp. time before start</option>
-                <option value="3" selected="selected">activity start</option>
-                <option value="4">activity end</option>
-                <option value="5">transp. time after end</option>
-                <option value="6">rest after end</option>
-              </select>
--->              
             </td>
           </tr>
           <tr>
@@ -4498,16 +4518,6 @@ console.log("remove ycoord...");
             <td><select data-dojo-type="dijit/form/FilteringSelect" name="To" id="DistanceToSelect" style="width: 30em;" required="true"></td>
             <td>
               <select data-dojo-type="dijit/form/Select" id="DistanceToEventSelect" disabled="true" required="true">
-<!--              
-              <select data-dojo-type="dijit/form/Select" id="DistanceToEventSelect" disabled="true" required="true">
-                <option value="1">rest before start</option>
-                <option value="2">transp. time before start</option>
-                <option value="3" selected="selected">activity start</option>
-                <option value="4">activity end</option>
-                <option value="5">transp. time after end</option>
-                <option value="6">rest after end</option>
-              </select>
--->              
             </td>
           </tr>
         </table>
