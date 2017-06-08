@@ -1,16 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xsl:stylesheet version="1.0" 
 xmlns:xsl="http://www.w3.org/1999/XSL/Transform" 
-xmlns:date="http://exslt.org/dates-and-times" 
 xmlns:xs="http://www.w3.org/2001/XMLSchema" 
 xmlns:fn="http://www.w3.org/2005/xpath-functions" 
-extension-element-prefixes="date xs fn">
+extension-element-prefixes="xs fn">
 
   <xsl:output method="xml" doctype-system="http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd" doctype-public="-//W3C//DTD XHTML 1.0 Transitional//EN" indent="yes"/>
 
   <xsl:template match="/">
     <data xmlns="http://www.ad-opt.com/2009/Altitude/data">
-      <xsl:apply-templates select="//activity[type='TRP']"/>
+      <xsl:apply-templates select="//activity[type='TRP' and fk_cm=0]"/>
     </data>
   </xsl:template>
 
