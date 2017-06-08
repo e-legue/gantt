@@ -175,20 +175,15 @@ var dojoConfig = {
   }, {
     name: "codemirror",
     location: "http://codemirror.net/",
-//    location: "https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.25.0",
-    main: "codemirror"
   }, {
     name: "vkbeautify",
     location: "https://cdn.rawgit.com/vkiryukhin/vkBeautify/0a238953",
-    main: "vkbeautify"
   }, {
     name: "jszip",
     location: "https://cdn.rawgit.com/Stuk/jszip/v3.1.3/dist/",
-    main: "jszip"
   }, {
     name: "filesaver",
     location: "https://cdn.rawgit.com/eligrey/FileSaver.js/1.3.3",
-    main: "filesaver"
   }
   ]
 };
@@ -2209,9 +2204,12 @@ console.log("remove ycoord...");
      // SAVING STORES TO SVG
      // ===============================================
      function SaveStore(store, id, obj_name) {
+       // clean/empty the children.
+       dojo.query("#" + id).forEach(dojo.empty);
+
        var InsertionPointId = svg.getElementById(id);
        var schema           = store.Model().schema;
-
+       
        store.forEach(function(item) {
          var objNode = document.createElementNS("", obj_name);
 
@@ -3478,11 +3476,14 @@ console.log("remove ycoord...");
        var fragment = xsltProcessor.transformToDocument(xml);
        var serializer = new XMLSerializer();
 
-       dom.byId(id).value = vkbeautify.xml(serializer.serializeToString(fragment)); 
+       dom.byId(id).nextSibling.CodeMirror.getDoc().setValue(vkbeautify.xml(serializer.serializeToString(fragment))); 
+     }
 
-       var toto = dom.byId(id);   
 
-       var editor = CodeMirror.fromTextArea(dom.byId(id), {
+     function SetXslEditor(id) {
+       var textarea = dom.byId(id);   
+
+       var editor = CodeMirror.fromTextArea(textarea, {
           lineNumbers: true,
           smartIndent: true,
           mode: "xml",
@@ -3499,11 +3500,17 @@ console.log("remove ycoord...");
        });
 
        editor.on('change', function (cm) {
-         toto.value = cm.getValue();
+         textarea.value = cm.getValue();
        });
-          
      }
 
+ 
+
+     SetXslEditor('XMLqual');
+     SetXslEditor('XMLacts'); 
+     SetXslEditor('XMLtrip'); 
+     SetXslEditor('XMLtrip_sup'); 
+     SetXslEditor('XMLstation'); 
 
 
 
