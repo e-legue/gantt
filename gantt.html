@@ -258,6 +258,7 @@ require([
   "dijit/form/DateTextBox",
   "dijit/form/TimeTextBox",
   "dijit/form/DropDownButton",
+  "dijit/form/RadioButton",
   "dijit/layout/TabContainer", 
   "dijit/layout/ContentPane", 
   "dijit/Editor",
@@ -571,13 +572,13 @@ require([
 
 
      // ===============================================
-     // Display "detail" of activity, or highlight.
+     // Display "detail" of activity, or event.
      // ===============================================
      function PopupActivityDetail(activityId) {
        var myDialog = new Dialog({
          title: "Detail activity",
          style: "width: 300px",
-         content: "Activitiy id: " + activityId + "<br/>name: " + activityStore.getSync(activityId).name + "<br/>",
+         content: "Activitiy pk : " + activityId + "<br/>name: " + activityStore.getSync(activityId).name + "<br/>",
        });
 
        var myButton = new Button({
@@ -594,17 +595,17 @@ require([
        myDialog.show();
      }
 
-     function PopupHighLightDetail(highLightId) {
+     function PopupEventDetail(eventId) {
        var myDialog = new Dialog({
-         title: "Detail highlight",
+         title: "Detail event",
          style: "width: 300px",
-         content: "Highlight id: " + highLightId + "<br/>",
+         content: "Event pk : " + eventId + "<br/>",
        });
 
        var myButton = new Button({
-         label: "Delete this highlight",
+         label: "Delete this event",
          onClick: function() {
-           highLightStore.removeSync(highLightId);
+           eventStore.removeSync(eventId);
 
            myDialog.hide();
 
@@ -619,7 +620,7 @@ require([
        var myDialog = new Dialog({
          title: "Detail crew member",
          style: "width: 300px",
-         content: "Crewmember id: " + crewMemberPk + "<br/>name: " + crewMemberStore.getSync(crewMemberPk).name + "<br/>",
+         content: "Crewmember pk : " + crewMemberPk + "<br/>name: " + crewMemberStore.getSync(crewMemberPk).name + "<br/>",
        });
 
        var myButton = new Button({
@@ -765,8 +766,8 @@ require([
      }
 
 
-     // Draw a highlight in calendar.
-     function SVG_drawHighlight(item) {
+     // Draw a event in calendar.
+     function SVG_drawEvent(item) {
        var calendarId    = svg.getElementById("calendar");
        var calendarBarId = svg.getElementById("calendar_bar");
        var group         = document.createElementNS(svgNS, "g");
@@ -775,9 +776,9 @@ require([
        group.setAttributeNS(null, "id", item.get("ident"));
        calendarId.appendChild(group);
 
-       var lblText = SVG_drawText("highlight_label", item.x + 10, HEIGHT_LINE_HL / 2, item.get("message"));
+       var lblText = SVG_drawText("event_label", item.x + 10, HEIGHT_LINE_HL / 2, item.get("label"));
        on(lblText, "dblclick", function(evt) {
-         PopupHighLightDetail(item.pk);
+         PopupEventDetail(item.pk);
        });
        group.appendChild(lblText);
 
@@ -787,7 +788,7 @@ require([
        groupBar.setAttributeNS(null, "id", item.get("barident"));
        calendarBarId.appendChild(groupBar);
 
-       groupBar.appendChild(SVG_drawRect("highlight", item.x, 0, 1, 1));
+       groupBar.appendChild(SVG_drawRect("event", item.x, 0, 1, 1));
      }
 
 
@@ -799,55 +800,57 @@ require([
        G.setAttributeNS(null, "id", item.get("ident"));
        calendarId.appendChild(G);
 
-       var activityFrom = item.GetActFrom();
-       var activityTo   = item.GetActTo();
-
-       var x1 = item.GetEventFrom().x;
-       var x2 = item.GetEventTo().x;
+       var xFrom = item.GetEventFrom().x;
+       var xTo = item.GetEventTo().x;
 
        var y = item.GetYCoord();
-       var yy = y + HEIGHT_LINE_HL / 2;
+       var yHorizontalLine = y + HEIGHT_LINE_HL / 2;
 
-       var cmFrom = activityFrom.GetCrewMember();
-       var cmTo   = activityTo.GetCrewMember();
-
-       var y1 = cmFrom ? cmFrom.GetYCoord() : yCoordStore.nextY;
-       var y2 = cmTo ? cmTo.GetYCoord() : yCoordStore.nextY; 
-
-       var fromLineCount = cmFrom ? cmFrom.lineCount : OpenTimeLineCount;
-       var toLineCount = cmTo ? cmTo.lineCount : OpenTimeLineCount;
-       
-       var dur = x2 < x1 ? x1 - x2 : x2 - x1;
+       var dur = xTo < xFrom ? xFrom - xTo : xTo - xFrom;
        var min = dur % 60;
 
        var label = Math.floor(dur / 60) + "h";
        label += min > 9 ? min : "0" + min;
 
-
-       var lblText = SVG_drawText("distance_label", (x1 + x2) / 2 , yy - 3, label);
+       // draw measure  <-------  dst -------->
+       var lblText = SVG_drawText("distance_label", (xFrom + xTo) / 2 , yHorizontalLine - 3, label);
        on(lblText, "dblclick", function(evt) {
          PopupDistanceDetail(item.pk);
        });
        G.appendChild(lblText);
-       G.appendChild(SVG_drawLine("distance", x1, yy, x2, yy));
+       G.appendChild(SVG_drawLine("distance", xFrom, yHorizontalLine, xTo, yHorizontalLine));
 
        var inc = HEIGHT_LINE_CM / 10;
        var xinc = inc * config.XGraphCompression; 
 
        // draw arrow.
-       G.appendChild(SVG_drawLine("distance", x1, yy, x1 + xinc, yy + inc));
-       G.appendChild(SVG_drawLine("distance", x1, yy, x1 + xinc, yy - inc ));
+       G.appendChild(SVG_drawLine("distance", xFrom, yHorizontalLine, xFrom + xinc, yHorizontalLine + inc));
+       G.appendChild(SVG_drawLine("distance", xFrom, yHorizontalLine, xFrom + xinc, yHorizontalLine - inc ));
 
        // draw second arrow.
-       G.appendChild(SVG_drawLine("distance", x2, yy, x2 - xinc, yy + inc));
-       G.appendChild(SVG_drawLine("distance", x2, yy, x2 - xinc, yy - inc));
+       G.appendChild(SVG_drawLine("distance", xTo, yHorizontalLine, xTo - xinc, yHorizontalLine + inc));
+       G.appendChild(SVG_drawLine("distance", xTo, yHorizontalLine, xTo - xinc, yHorizontalLine - inc));
 
-       // draw vertical lines.
-       var Y1 = MARGIN_TOP_CM + HEIGHT_LINE_CM * fromLineCount + MARGIN_BOTTOM_CM; 
-       var Y2 = MARGIN_TOP_CM + HEIGHT_LINE_CM * toLineCount + MARGIN_BOTTOM_CM; 
+        
 
-       G.appendChild(SVG_drawLine("distance", x1, y1 < y ? y1 - Y1 : y1 + Y1, x1, y1 < y ? yy + inc : yy - inc));
-       G.appendChild(SVG_drawLine("distance", x2, y2 < y ? y2 - Y2 : y2 + Y2, x2, y2 < y ? yy + inc : yy - inc));
+       var activityFrom = item.GetActFrom();
+       if( typeof(activityFrom) != 'undefined' ){
+         var cmFrom = activityFrom.GetCrewMember();
+         var y1 = cmFrom ? cmFrom.GetYCoord() : yCoordStore.nextY;
+         var fromLineCount = cmFrom ? cmFrom.lineCount : OpenTimeLineCount;
+         var Y1 = MARGIN_TOP_CM + HEIGHT_LINE_CM * fromLineCount + MARGIN_BOTTOM_CM; 
+         G.appendChild(SVG_drawLine("distance", xFrom, y1 < y ? y1 - Y1 : y1 + Y1, xFrom, y1 < y ? yHorizontalLine + inc : yHorizontalLine - inc));
+       }
+
+
+       var activityTo   = item.GetActTo();
+       if( typeof(activityTo) != 'undefined' ){
+         var cmTo   = activityTo.GetCrewMember();
+         var y2 = cmTo ? cmTo.GetYCoord() : yCoordStore.nextY; 
+         var toLineCount = cmTo ? cmTo.lineCount : OpenTimeLineCount;
+         var Y2 = MARGIN_TOP_CM + HEIGHT_LINE_CM * toLineCount + MARGIN_BOTTOM_CM; 
+         G.appendChild(SVG_drawLine("distance", xTo, y2 < y ? y2 - Y2 : y2 + Y2, xTo, y2 < y ? yHorizontalLine + inc : yHorizontalLine - inc));
+       }
      }
 
 
@@ -1083,7 +1086,7 @@ require([
          MenuGraphOptionCalendar                       : { type : "boolean", default : false, },
          MenuGraphOptionActivity                       : { type : "boolean", default : false, },
          MenuHighLights                                : { type : "boolean", default : true, },
-         MenuHighLightsSpecificDateTime                : { type : "boolean", default : false, },
+         MenuHighLightsEvent                : { type : "boolean", default : false, },
          MenuHighLightsDistance                        : { type : "boolean", default : false, },
          MenuHighLightsWindow                          : { type : "boolean", default : true, },
          MenuHighLightsNote                            : { type : "boolean", default : false, },
@@ -1319,14 +1322,6 @@ console.log(self.nextY);
                          
                          SVG_drawCalendarDate(self); 
                        },
-       ClearSVG      : function() {
-                         var self = this;
-                         var item_lbl = svg.getElementById(self.get("ident"));
-                         var item_bar = svg.getElementById(self.get("barident"));
-
-                         if( item_lbl) item_lbl.parentNode.removeChild(item_lbl);
-                         if( item_bar) item_bar.parentNode.removeChild(item_bar);
-                       },
      });
 
 
@@ -1354,8 +1349,8 @@ console.log(self.nextY);
 
      registry.byId("DayOffDatesSelect").set("labelAttr", "name");
      registry.byId("DayOffDatesSelect").setStore(calendarStoreAdapter);
-     registry.byId("HighlightDatesSelect").set("labelAttr", "name");
-     registry.byId("HighlightDatesSelect").setStore(calendarStoreAdapter);
+     registry.byId("EventDatesSelect").set("labelAttr", "name");
+     registry.byId("EventDatesSelect").setStore(calendarStoreAdapter);
 
 
      // -----------------------------------------------
@@ -1386,15 +1381,6 @@ console.log(self.nextY);
                          var self = this;
 
                          SVG_drawCrewMember(self); 
-                       },
-       ClearSVG      : function() {
-                         var self = this;
-
-                         var item_lbl = svg.getElementById(self.get("ident"));
-                         var item_bar = svg.getElementById(self.get("barident"));
-
-                         if( item_lbl) item_lbl.parentNode.removeChild(item_lbl);
-                         if( item_bar) item_bar.parentNode.removeChild(item_bar);
                        },
        GetYCoord     : function() {
                          var self = this;
@@ -1517,14 +1503,6 @@ console.log(self.nextY);
                                 SVG_drawActivity(self);
                               }
                             },
-       ClearSVG           : function() {
-                              var self = this;
-                              var item = svg.getElementById(self.get("ident"));
-
-                              // an activity belongs to a crewmember. If the crewmember was cleared,
-                              // then the activity is also cleared !  
-                              if( item ) item.parentNode.removeChild(item);
-                            },
        GetYCoord          : function() {
                               var self = this;
 
@@ -1547,8 +1525,8 @@ console.log(self.nextY);
                               var x = self.x + self.midnightoffset;
 
                               if( self.restb > 0 ) {
-                                eventActivityStore.addSync({
-                                  pk : eventActivityStore.GetNextPKSequence(),
+                                eventStore.addSync({
+                                  pk : eventStore.GetNextPKSequence(),
                                   x  : x - self.restb - self.tp,
                                   label : "Start of rest before activity",
                                   fk_act : self.pk,
@@ -1556,16 +1534,16 @@ console.log(self.nextY);
                                 });
                               }
                               if( self.tp > 0 ) {
-                                eventActivityStore.addSync({
-                                  pk : eventActivityStore.GetNextPKSequence(),
+                                eventStore.addSync({
+                                  pk : eventStore.GetNextPKSequence(),
                                   x  : x - self.tp,
                                   label : "Start of transportation time before activity",
                                   fk_act : self.pk,
                                   start : 0,
                                 });
                               }
-                              eventActivityStore.addSync({
-                                pk : eventActivityStore.GetNextPKSequence(),
+                              eventStore.addSync({
+                                pk : eventStore.GetNextPKSequence(),
                                 x  : x,
                                 label : "Start of activity",
                                 fk_act : self.pk,
@@ -1574,8 +1552,8 @@ console.log(self.nextY);
 
                               activityStore.filter({fk_parent: self.pk}).fetch().then(function(objects) {
                                 for(i = 1; i < objects.length; i++) {
-                                  eventActivityStore.addSync({
-                                    pk : eventActivityStore.GetNextPKSequence(),
+                                  eventStore.addSync({
+                                    pk : eventStore.GetNextPKSequence(),
                                     x  : objects[i].x - x,
                                     label : "Start of " + objects[i].name,
                                     fk_act : self.pk,
@@ -1584,16 +1562,16 @@ console.log(self.nextY);
                                 }
                               });
 
-                              eventActivityStore.addSync({
-                                pk : eventActivityStore.GetNextPKSequence(),
+                              eventStore.addSync({
+                                pk : eventStore.GetNextPKSequence(),
                                 x  : x + self.width,
                                 label : " End of activity",
                                 fk_act : self.pk,
                                 start : 0,
                               });
                               if( self.tp > 0 ) {
-                                eventActivityStore.addSync({
-                                  pk : eventActivityStore.GetNextPKSequence(),
+                                eventStore.addSync({
+                                  pk : eventStore.GetNextPKSequence(),
                                   x  : x + self.width + self.tp,
                                   label : "End of transportation time after activity",
                                   fk_act : self.pk,
@@ -1601,8 +1579,8 @@ console.log(self.nextY);
                                 });
                               }
                               if( self.resta > 0 ) {
-                                eventActivityStore.addSync({
-                                  pk : eventActivityStore.GetNextPKSequence(),
+                                eventStore.addSync({
+                                  pk : eventStore.GetNextPKSequence(),
                                   x  : x + self.width + self.tp + self.resta,
                                   label : "End of rest after activity",
                                   fk_act : self.pk,
@@ -1643,7 +1621,7 @@ console.log(self.nextY);
 
 
      activityStore.on("delete", function(event) {
-       // Remove distance highlight that reference this activity.
+       // Remove distance that reference this activity.
        distanceStore.filter({fk_actFrom: event.target.pk}).forEach(function(item) {
          distanceStore.removeSync(item.pk);
        });
@@ -1660,117 +1638,12 @@ console.log(self.nextY);
 
      var activityStoreAdapter = new DstoreAdapter(activityStore.filter({fk_parent: undefined}));
 
-     registry.byId("DistanceFromSelect").set("labelAttr", "fullname");
-     registry.byId("DistanceFromSelect").set("searchAttr", "fullname");
-     registry.byId("DistanceFromSelect").set("store", activityStoreAdapter);
-     registry.byId("DistanceToSelect").set("labelAttr", "fullname");
-     registry.byId("DistanceToSelect").set("searchAttr", "fullname");
-     registry.byId("DistanceToSelect").set("store", activityStoreAdapter);
-
-
-     // -----------------------------------------------
-     // hightLight Model and Store
-     // -----------------------------------------------
-     var highLightModel = declare(Model, {
-       validateOnSet : false,
-       schema        : {
-         message  : "string",
-         pk       : "numeric",
-         x        : "numeric",
-         fk_yc    : "numeric",
-         ident    : new ComputedProperty({
-                      dependsOn : ["pk"],
-                      getValue  : function(pk) {
-                        return "hl" + pk;  // hl stands for HighLight
-                      }
-                    }),
-         barident : new ComputedProperty({ 
-                      dependsOn : ["pk"],
-                      getValue  : function(pk) {
-                        return "bhl" + pk;  // bhl stands for Bar HighLight
-                      }
-                    }),
-       },
-       DrawSVG       : function() { 
-                         var self = this;
-
-                         SVG_drawHighlight(self); 
-                       },
-       ClearSVG      : function() {
-                         var self = this;
-
-                         var item_lbl = svg.getElementById(self.get("ident"));
-                         var item_bar = svg.getElementById(self.get("barident"));
-
-                         // a hightligh  belongs to a calendar day. If a day was cleared,
-                         // then the hightlight is also cleared !  
-                         if( item_lbl ) item_lbl.parentNode.removeChild(item_lbl);
-                         if( item_bar ) item_bar.parentNode.removeChild(item_bar);
-                       },
-       GetYCoord     : function() {
-                         var self = this;
-
-                         return yCoordStore.getSync(self.fk_yc).y;
-                       },
-     });
-
-
-     var highLightStore = new Memory({
-       Model             : highLightModel,
-       idProperty        : "pk",
-       nextPk            : 1,
-       svgId             : "HighLightStore",
-       svgItemNodeName   : "highligth",
-       GetNextPKSequence : function() {
-                             var self = this;
-
-                             return self.nextPk;
-                           },
-     });
-
-
-     highLightStore.on("add", function(event) {
-       // 1 - increment primary key sequence.
-       highLightStore.nextPk += 1;
-
-       // for recurent hl, there is only one yCoord object, created before the creation
-       // of each recurent hl. So there is no need for the following.
-       if( typeof(event.target.fk_yc) == 'undefined' ){
-         // 2 - create y coord object.
-         var yCoordinate = yCoordStore.addSync({
-           pk     : yCoordStore.GetNextPKSequence(),
-           fk_hl  : event.target.pk,
-           y      : 0,
-           height : HEIGHT_LINE_HL,
-         });
-
-         // 3 - save coordinate primary key into highlight object.
-         event.target.fk_yc = yCoordinate.pk;
-       }
-     });
-
-
-     highLightStore.on("update", function(event) {
-       highLightStore.nextPk = Math.max(event.target.pk + 1, highLightStore.nextPk);
-     });
-
-
-     highLightStore.on("delete", function(event) {
-console.log("delete hl");
-console.log(event.target);
-
-        highLightStore.filter({fk_yc: event.target.fk_yc}).fetch().then( function(items) {
-          for (var i = 0 ; i < items.length ; i++) {
-console.log(items[i]);            
-          }
-          if( items.length == 0 ) {
-console.log("remove ycoord...");            
-            yCoordStore.removeSync(event.target.fk_yc);
-          }
-          
-        });
-     });
-
+     registry.byId("DistanceFromActSelect").set("labelAttr", "fullname");
+     registry.byId("DistanceFromActSelect").set("searchAttr", "fullname");
+     registry.byId("DistanceFromActSelect").set("store", activityStoreAdapter);
+     registry.byId("DistanceToActSelect").set("labelAttr", "fullname");
+     registry.byId("DistanceToActSelect").set("searchAttr", "fullname");
+     registry.byId("DistanceToActSelect").set("store", activityStoreAdapter);
 
      // -----------------------------------------------
      // distance Model and Store
@@ -1779,15 +1652,15 @@ console.log("remove ycoord...");
        validateOnSet : false,
        schema        : {
          pk         : "numeric",
-         fk_actFrom    : "numeric",
+         fk_actFrom : "numeric",
          fk_evtFrom : "numeric",
-         fk_actTo    : "numeric",
+         fk_actTo   : "numeric",
          fk_evtTo   : "numeric",
          fk_yc      : "numeric",
          ident      : new ComputedProperty({
                         dependsOn : ["pk"],
                         getValue: function(pk) {
-                          return "dst" + pk;  // hl stands for HighLight
+                          return "dst" + pk;  // dst stands for distance
                         }
                       }),
        },
@@ -1795,12 +1668,6 @@ console.log("remove ycoord...");
                          var self = this;
 
                          SVG_drawDistance(self); 
-                       },
-       ClearSVG      : function() {
-                         var self     = this;
-                         var item_lbl = svg.getElementById(self.get("ident"));
-
-                         if( item_lbl ) item_lbl.parentNode.removeChild(item_lbl);
                        },
        GetYCoord     : function() {
                          var self = this;
@@ -1820,12 +1687,12 @@ console.log("remove ycoord...");
        GetEventFrom  : function() {          
                          var self = this;
 
-                         return eventActivityStore.getSync(self.fk_evtFrom);
+                         return eventStore.getSync(self.fk_evtFrom);
                        },
        GetEventTo    : function() {          
                          var self = this;
 
-                         return eventActivityStore.getSync(self.fk_evtTo);
+                         return eventStore.getSync(self.fk_evtTo);
                        },
      });
 
@@ -1859,27 +1726,50 @@ console.log("remove ycoord...");
        yCoordStore.removeSync(event.target.fk_yc);
      });
 
-
      // -----------------------------------------------
-     // eventActivity Model and Store
+     // event Model and Store
      // -----------------------------------------------
-     var eventActivityModel = declare(Model, {
+     var eventModel = declare(Model, {
        validateOnSet : false,
        schema        : {
-         pk     : "numeric",
-         x      : "numeric",
-         label  : "string",
-         fk_act : "numeric",
-         start  : "numeric",
+         pk       : "numeric",
+         x        : "numeric",
+         label    : "string",
+         fk_act   : "numeric", // 0 means no activity
+         start    : "numeric",
+         fk_yc    : "numeric",
+         ident    : new ComputedProperty({
+                      dependsOn : ["pk"],
+                      getValue  : function(pk) {
+                        return "evt" + pk;  // evt stands for Event
+                      }
+                    }),
+         barident : new ComputedProperty({ 
+                      dependsOn : ["pk"],
+                      getValue  : function(pk) {
+                        return "bevt" + pk;  // bevt stands for Bar Event
+                      }
+                    }),
        },
+       DrawSVG       : function() { 
+                         var self = this;
+                         
+                         if( typeof(self.fk_act) == 'undefined' ){
+                           SVG_drawEvent(self); 
+                         }
+                       },
+       GetYCoord     : function() {
+                         var self = this;
+
+                         return yCoordStore.getSync(self.fk_yc).y;
+                       },
      });
 
-
-     var eventActivityStore = new TrackableMemory({
-       Model             : eventActivityModel,
+     var eventStore = new TrackableMemory({
+       Model             : eventModel,
        idProperty        : "pk",
        nextPk            : 1,
-       svgId             : "EventActivityStore",
+       svgId             : "EventStore",
        svgItemNodeName   : "event",
        GetNextPKSequence : function() {
                              var self = this;
@@ -1888,28 +1778,60 @@ console.log("remove ycoord...");
                            },
      });
 
+     eventStore.on("add", function(event) {
+       // 1 - increment primary key sequence.
+       eventStore.nextPk += 1;
 
-     eventActivityStore.on("add", function(event) {
-       eventActivityStore.nextPk += 1;
+       // for recurent hl, there is only one yCoord object, created before the creation
+       // of each recurent hl. So there is no need for the following.
+       if( typeof(event.target.fk_yc) == 'undefined' && typeof(event.target.fk_act) == 'undefined'){
+         // 2 - create y coord object.
+         var yCoordinate = yCoordStore.addSync({
+           pk     : yCoordStore.GetNextPKSequence(),
+           fk_hl  : event.target.pk,
+           y      : 0,
+           height : HEIGHT_LINE_HL,
+         });
+
+         // 3 - save coordinate primary key into event object.
+         event.target.fk_yc = yCoordinate.pk;
+       }
+
+
      });
 
 
-     eventActivityStore.on("update", function(event) {
-       eventActivityStore.nextPk = Math.max(event.target.pk + 1, eventActivityStore.nextPk); 
+     eventStore.on("update", function(event) {
+       eventStore.nextPk = Math.max(event.target.pk + 1, eventStore.nextPk); 
      });
 
 
-     eventActivityStore.on("delete", function(event) {
+     eventStore.on("delete", function(event) {
+       eventStore.filter({fk_yc: event.target.fk_yc}).fetch().then( function(items) {
+         for (var i = 0 ; i < items.length ; i++) {
+console.log(items[i]);            
+         }
+         if( items.length == 0 ) {
+console.log("remove ycoord...");            
+           yCoordStore.removeSync(event.target.fk_yc);
+         }
+          
+       });
      });
 
 
-     var eventActivityStoreAdapter = new DstoreAdapter(eventActivityStore);
+     var eventStoreAdapter = new DstoreAdapter(eventStore.filter({fk_act: undefined}));
+     var eventActivityStoreAdapter = new DstoreAdapter(eventStore.filter({fk_yc: undefined}));
+
+     registry.byId("DistanceFromActEventSelect").set("labelAttr", "label");
+     registry.byId("DistanceFromActEventSelect").set("store", eventActivityStoreAdapter);
+     registry.byId("DistanceToActEventSelect").set("labelAttr", "label");
+     registry.byId("DistanceToActEventSelect").set("store", eventActivityStoreAdapter);
 
      registry.byId("DistanceFromEventSelect").set("labelAttr", "label");
-     registry.byId("DistanceFromEventSelect").set("store", eventActivityStoreAdapter);
+     registry.byId("DistanceFromEventSelect").set("store", eventStoreAdapter);
      registry.byId("DistanceToEventSelect").set("labelAttr", "label");
-     registry.byId("DistanceToEventSelect").set("store", eventActivityStoreAdapter);
-
+     registry.byId("DistanceToEventSelect").set("store", eventStoreAdapter);
      // -----------------------------------------------
      // note Model and Store
      // -----------------------------------------------
@@ -2181,11 +2103,6 @@ console.log("remove ycoord...");
      // ===============================================
      function RemoveIntroMessage() {
        dojo.query("#calendar").forEach(dojo.empty);
-       /*
-       var intro = svg.getElementById("intro");
-       if(intro) {
-         intro.parentNode.removeChild(intro);
-       } */
      }
 
 
@@ -2212,7 +2129,7 @@ console.log("remove ycoord...");
        });
        AdjustCrewmemberBarScaleX(x);
 
-       highLightStore.forEach(function(item) {
+       eventStore.forEach(function(item) {
          item.DrawSVG();
        });
        distanceStore.forEach(function(item) {
@@ -2352,8 +2269,7 @@ console.log("remove ycoord...");
        SaveStore(yCoordStore);
        SaveStore(crewMemberStore);
        SaveStore(activityStore);
-       SaveStore(highLightStore);
-       SaveStore(eventActivityStore);
+       SaveStore(eventStore);
        SaveStore(distanceStore);
        SaveStore(stationStore); 
        SaveStore(noteStore); 
@@ -2375,8 +2291,7 @@ console.log("remove ycoord...");
        yCoordStore.ComputeYAndHeigth();
        LoadStore(svgNode, crewMemberStore);
        LoadStore(svgNode, activityStore);
-       LoadStore(svgNode, highLightStore);
-       LoadStore(svgNode, eventActivityStore);
+       LoadStore(svgNode, eventStore);
        LoadStore(svgNode, distanceStore);
        LoadStationStore(svgNode.getElementById("StationStore"), MODE_SVG);
        LoadStore(svgNode, noteStore);
@@ -2942,10 +2857,10 @@ console.log("remove ycoord...");
            while( start.isDST() == InitialState ) {
              start.add(1, "minutes");
            }
-
-           highLightStore.addSync({
-             pk      : highLightStore.GetNextPKSequence(),
-             message : InitialState ? "End DST" : "Start DST",
+ 
+           eventStore.addSync({
+             pk      : eventStore.GetNextPKSequence(),
+             label   : InitialState ? "End DST" : "Start DST",
              x       : getPositionX(start),
            });
          }
@@ -3013,6 +2928,8 @@ console.log("remove ycoord...");
        });
 
        SetStartPeriodsDialog.hide();
+
+       topic.publish("refreshGraph");
      });
 
      // -----------------------------------------------
@@ -3194,22 +3111,22 @@ console.log("remove ycoord...");
 
 
      // -----------------------------------------------
-     // Create Highlight dialog
+     // Create Event dialog
      // -----------------------------------------------
 
-     registry.byId("CreateHighlight").on("click", function() {
-       if( !registry.byId("CreateHighlightForm").validate() ) {
+     registry.byId("CreateEvent").on("click", function() {
+       if( !registry.byId("CreateEventForm").validate() ) {
          return;
        }
 
-       CreateHighlightDialog.hide();
-       var label   = registry.byId("HighlightLabel").get("value");
-       var days    = registry.byId("HighlightDatesSelect").value; 
-       var time    = registry.byId("HighlightTime").value; 
+       CreateEventDialog.hide();
+       var label   = registry.byId("EventLabel").get("value");
+       var days    = registry.byId("EventDatesSelect").value; 
+       var time    = registry.byId("EventTime").value; 
 
        // to avoid the "at least one item must be selected" message, form data are save in 
        // local variables before reseting the form.
-       registry.byId("CreateHighlightForm").reset();
+       registry.byId("CreateEventForm").reset();
 
        if( days.length == 0 ) {
          calendarStore.forEach(function(item) {
@@ -3231,11 +3148,11 @@ console.log("remove ycoord...");
          when.minute(time.getMinutes());
 
          if( when.isValid() ) {   
-           highLightStore.addSync({
-             pk      : highLightStore.GetNextPKSequence(),
-             message : label,
-             x       : getPositionX(when),
-             fk_yc   : yCoordinate.pk,
+           eventStore.addSync({
+             pk    : eventStore.GetNextPKSequence(),
+             label : label,
+             x     : getPositionX(when),
+             fk_yc : yCoordinate.pk,
            });
          }
        }
@@ -3248,14 +3165,14 @@ console.log("remove ycoord...");
      // Create Distance dialog
      // -----------------------------------------------
      function UpdateEvent(val, idEventSelect) {
-       var filter = new eventActivityStore.Filter();
+       var filter = new eventStore.Filter();
        var selectInput = registry.byId(idEventSelect);   
 
        selectInput.set("sortByLabel", false);
        selectInput.set("query", {fk_act: val}); 
 
        var totoFilter = filter.eq('fk_act', val).eq('start', 1);
-       eventActivityStore.filter(totoFilter).fetch().then(function(items) {
+       eventStore.filter(totoFilter).fetch().then(function(items) {
          if( items.length == 1 ) {
            selectInput.set("displayedValue", items[0].label);
           }
@@ -3264,43 +3181,69 @@ console.log("remove ycoord...");
        selectInput.set("disabled", false);
      }
 
-     registry.byId("DistanceFromSelect").on("change", function(val) {
-       UpdateEvent(val, "DistanceFromEventSelect");
+     registry.byId("DistanceFromActSelect").on("change", function(val) {
+       UpdateEvent(val, "DistanceFromActEventSelect");
      });
-     registry.byId("DistanceToSelect").on("change", function(val) {
-       UpdateEvent(val, "DistanceToEventSelect");
+     registry.byId("DistanceToActSelect").on("change", function(val) {
+       UpdateEvent(val, "DistanceToActEventSelect");
      });
+
+     registry.byId("DistanceFromActivity").on("click", function() {
+       dojo.query(".dstFromAct").style("display", "inherit");
+       dojo.query(".dstFromEvt").style("display", "none");
+     });
+     registry.byId("DistanceFromEvent").on("click", function() {
+       dojo.query(".dstFromAct").style("display", "none");
+       dojo.query(".dstFromEvt").style("display", "inherit");
+     });
+     registry.byId("DistanceToActivity").on("click", function() {
+       dojo.query(".dstToAct").style("display", "inherit");
+       dojo.query(".dstToEvt").style("display", "none");
+     });
+     registry.byId("DistanceToEvent").on("click", function() {
+       dojo.query(".dstToAct").style("display", "none");
+       dojo.query(".dstToEvt").style("display", "inherit");
+     });
+
 
      registry.byId("CreateDistance").on("click", function() {
-       if( !registry.byId("CreateDistanceForm").validate() ) {
+/*       if( !registry.byId("CreateDistanceForm").validate() ) {
          return;
+       }*/
+       var distance = new distanceModel();
+       var yFrom = 0;
+       var yTo   = 0;
+
+       if( registry.byId("DistanceFromActivity").checked ) {
+         distance.fk_actFrom = registry.byId("DistanceFromActSelect").value;
+         distance.fk_evtFrom = registry.byId("DistanceFromActEventSelect").value;
+         yFrom = activityStore.getSync(registry.byId("DistanceFromActSelect").value).GetYCoord();
        }
-
-       CreateDistanceDialog.hide();
-
-       var actFrom  = activityStore.getSync(registry.byId("DistanceFromSelect").value);
-       var actTo    = activityStore.getSync(registry.byId("DistanceToSelect").value);
-       var evtFrom  = eventActivityStore.getSync(registry.byId("DistanceFromEventSelect").value);
-       var evtTo    = eventActivityStore.getSync(registry.byId("DistanceToEventSelect").value);
+       else {
+         distance.fk_evtFrom = registry.byId("DistanceFromEventSelect").value;
+       }
+       if( registry.byId("DistanceToActivity").checked ) {
+         distance.fk_actTo = registry.byId("DistanceToActSelect").value;
+         distance.fk_evtTo = registry.byId("DistanceToActEventSelect").value;
+         yTo = activityStore.getSync(registry.byId("DistanceToActSelect").value).GetYCoord();
+       }
+       else {
+         distance.fk_evtTo = registry.byId("DistanceToEventSelect").value;
+       }
 
        // Add the new entry in the y coord store.
        var yCoord = yCoordStore.addSync({
          pk     : yCoordStore.GetNextPKSequence(),
-         y      : Math.min(actFrom.GetYCoord(), actTo.GetYCoord()) - 1,
+         y      : Math.max(yFrom, yTo) - 1,
          height : HEIGHT_LINE_HL,
        });
 
-       distanceStore.addSync({
-         pk         : distanceStore.GetNextPKSequence(),
-         fk_actFrom : actFrom.pk,
-         fk_evtFrom : evtFrom.pk,
-         fk_actTo   : actTo.pk,
-         fk_evtTo   : evtTo.pk,
-         fk_yc      : yCoord.pk,
-       });
 
-       registry.byId("DistanceFromEventSelect").set("disabled", true);
-       registry.byId("DistanceToEventSelect").set("disabled", true);
+       distance.pk    = distanceStore.GetNextPKSequence();
+       distance.fk_yc = yCoord.pk;
+
+       CreateDistanceDialog.hide();
+       distanceStore.addSync(distance);
 
        topic.publish("refreshGraph");
      });  
@@ -4069,10 +4012,10 @@ console.log(noteStore);
       <div id="MenuHighLights" data-dojo-type="dijit/PopupMenuBarItem">
         <span>Highlights</span>
         <div data-dojo-type="dijit/DropDownMenu">
-          <div id="MenuHighLightsSpecificDateTime" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateHighlightDialog.show();}">Specific datetime(s)</div>
-          <div id="MenuHighLightsDistance"         data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateDistanceDialog.show();}">Distance</div>
-          <div id="MenuHighLightsWindow"           data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {alert('not yet available');}">Window</div>
-          <div id="MenuHighLightsNote"             data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateNoteDialog.show();}">Note</div>
+          <div id="MenuHighLightsEvent"    data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateEventDialog.show();}">Event(s)</div>
+          <div id="MenuHighLightsDistance" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateDistanceDialog.show();}">Distance</div>
+          <div id="MenuHighLightsWindow"   data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {alert('not yet available');}">Window</div>
+          <div id="MenuHighLightsNote"     data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateNoteDialog.show();}">Note</div>
         </div>
       </div>
 
@@ -4129,11 +4072,11 @@ console.log(noteStore);
   fill: black;
 }
 
-.highlight {
+.event {
   fill: red;
 }
 
-.highlight_label {
+.event_label {
   fill: red;
   font-weight: bold;
 }
@@ -4264,12 +4207,11 @@ console.log(noteStore);
         <g id="ConfigurationStore"></g>
         <g id="CalendarStore"></g>
         <g id="YCoordStore"></g>
-        <g id="HighLightStore"></g>
         <g id="DistanceStore"></g>
         <g id="CrewMemberStore"></g>
         <g id="ActivityStore"></g>
         <g id="StationStore"></g>
-        <g id="EventActivityStore"></g>
+        <g id="EventStore"></g>
         <g id="NoteStore"></g>
       </svg>
     </div>
@@ -4613,27 +4555,27 @@ console.log(noteStore);
     </div>
 
 
-    <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateHighlightDialog" title="Create highlight" style="display: none;" data-dojo-props="onHide: function() {CreateHighlightForm.reset();}" >
-      <div data-dojo-type="dijit/form/Form" id="CreateHighlightForm" data-dojo-id="CreateHighlightForm" encType="multipart/form-data" action="" method="">
+    <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateEventDialog" title="Create an event" style="display: none;" data-dojo-props="onHide: function() {CreateEventForm.reset();}" >
+      <div data-dojo-type="dijit/form/Form" id="CreateEventForm" data-dojo-id="CreateEventForm" encType="multipart/form-data" action="" method="">
         <table class="dijitDialogPaneContentArea">
           <tr>
             <td><label for="lbl">Label</label></td>
-            <td><input data-dojo-type="dijit/form/TextBox" name="lbl" id="HighlightLabel"></td>
+            <td><input data-dojo-type="dijit/form/TextBox" name="lbl" id="EventLabel"></td>
           </tr>
           <tr>
             <td><label for="days">Date(s)</label></td>
-            <td><select multiple="true" data-dojo-type="dojox/form/FixedCheckedMultiSelect" name="days" id="HighlightDatesSelect"></td>
+            <td><select multiple="true" data-dojo-type="dojox/form/FixedCheckedMultiSelect" name="days" id="EventDatesSelect"></td>
           </tr>
           <tr>
             <td><label for="time">Time</label></td>
             <td class="datetime">
-              <input id="HighlightTime" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'"/>
+              <input id="EventTime" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'"/>
             </td>
           </tr>
         </table>
 
         <div class="dijitDialogPaneActionBar">
-          <button data-dojo-type="dijit/form/Button" type="button" id="CreateHighlight">Create</button>
+          <button data-dojo-type="dijit/form/Button" type="button" id="CreateEvent">Create</button>
         </div>
       </div>
     </div>
@@ -4643,17 +4585,60 @@ console.log(noteStore);
       <div data-dojo-type="dijit/form/Form" id="CreateDistanceForm" data-dojo-id="CreateDistanceForm" encType="multipart/form-data" action="" method="">
         <table class="dijitDialogPaneContentArea">
           <tr>
-            <td><label for="From">From activity</label></td>
-            <td><select data-dojo-type="dijit/form/FilteringSelect" name="From" id="DistanceFromSelect" style="width: 30em;" required="true"></td>
+            <td><label for="DistanceFromType">From</label></td>
             <td>
-              <select data-dojo-type="dijit/form/Select" id="DistanceFromEventSelect" disabled="true" required="true">
+               <input type="radio" name="DistanceFromType" id="DistanceFromActivity" checked value="activity" data-dojo-type="dijit/form/RadioButton" /><label for="DistanceFromActivity">Activity</label><br />
+               <input type="radio" name="DistanceFromType" id="DistanceFromEvent"            value="event"    data-dojo-type="dijit/form/RadioButton" /><label for="DistanceFromEvent">Event</label><br />
             </td>
           </tr>
           <tr>
-            <td><label for="To">To activity</label></td>
-            <td><select data-dojo-type="dijit/form/FilteringSelect" name="To" id="DistanceToSelect" style="width: 30em;" required="true"></td>
+            <td></td>
             <td>
-              <select data-dojo-type="dijit/form/Select" id="DistanceToEventSelect" disabled="true" required="true">
+              <table class="dstFromAct">
+                <tr>
+                  <td><label for="From">activity name</label></td>
+                  <td><select data-dojo-type="dijit/form/FilteringSelect" name="From" id="DistanceFromActSelect" style="width: 30em;"></td>
+                </tr>
+                <tr>
+                  <td><label for="From">activity event</label></td>
+                  <td><select data-dojo-type="dijit/form/Select" id="DistanceFromActEventSelect" disabled="true"></td>
+                </tr>
+              </table>
+              <table class="dstFromEvt" style="display: none;">
+                <tr>
+                  <td><label for="From">event</label></td>
+                  <td><select data-dojo-type="dijit/form/Select" id="DistanceFromEventSelect"></td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td><label for="DistanceToType">To</label></td>
+            <td>
+               <input type="radio" name="DistanceToType" id="DistanceToActivity" checked value="activity" data-dojo-type="dijit/form/RadioButton" /><label for="DistanceToActivity">Activity</label><br />
+               <input type="radio" name="DistanceToType" id="DistanceToEvent"            value="event"    data-dojo-type="dijit/form/RadioButton" /><label for="DistanceToEvent">Event</label><br />
+            </td>
+          </tr>
+          <tr>
+            <td></td>
+            <td>
+              <table class="dstToAct">
+                <tr>
+                  <td><label for="To">activity name</label></td>
+                  <td><select data-dojo-type="dijit/form/FilteringSelect" name="To" id="DistanceToActSelect" style="width: 30em;"></td>
+                </tr>
+                <tr>
+                  <td><label for="To">activity event</label></td>
+                  <td><select data-dojo-type="dijit/form/Select" id="DistanceToActEventSelect" disabled="true"></td>
+                </tr>
+              </table>
+              <table class="dstToEvt" style="display: none;">
+                <tr>
+                  <td><label for="To">event</label></td>
+                  <td><select data-dojo-type="dijit/form/Select" id="DistanceToEventSelect"></td>
+                </tr>
+              </table>
             </td>
           </tr>
         </table>
