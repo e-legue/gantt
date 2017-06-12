@@ -1554,7 +1554,7 @@ console.log(self.nextY);
                                 for(i = 1; i < objects.length; i++) {
                                   eventStore.addSync({
                                     pk : eventStore.GetNextPKSequence(),
-                                    x  : objects[i].x - x,
+                                    x  : objects[i].x,
                                     label : "Start of " + objects[i].name,
                                     fk_act : self.pk,
                                     start : 0,
@@ -2758,18 +2758,19 @@ console.log("remove ycoord...");
 
      registry.byId("CalendarTimezone").on("change", function() {
        var item = timezoneStore.getSync(this.get("value"));
+console.log("timezone :" + item); 
 
-       console.log("timezone :" + item); 
+       // Set default time zone, based on user input.
+       moment.tz.setDefault(item.name);
 
        if( item ) {          
          registry.byId("CalendarStation").set("disabled", false);
 
          if( !registry.byId("CalendarStation").get("value") ) {
+           
            var zone = moment.tz.zone(item.name);
-
-           console.log("zone: ");  
-           console.log(zone);  
-
+console.log("zone: ");  
+console.log(zone);  
 
            var dateOutsideDST = moment();
 
@@ -2778,7 +2779,7 @@ console.log("remove ycoord...");
            }
 
            var offsetZone = zone.offset(dateOutsideDST.valueOf());         
-           console.log("offsetZone: " + offsetZone);
+console.log("offsetZone: " + offsetZone);
 
            registry.byId("CalendarStation").set("value", "");
            registry.byId("CalendarStation").set("query", {offset: offsetZone});
@@ -2820,6 +2821,7 @@ console.log("remove ycoord...");
        setFromForm(config, dom.byId("SetCalendarForm"));
 
        var start = moment(config.CalendarStart);
+
        Xorig = start.unix();
        var end   = moment(config.CalendarEnd); 
        var range = end.diff(start, "days");
@@ -2829,6 +2831,8 @@ console.log("remove ycoord...");
            calendarStore.remove(days[i].pk);
          }
        });        
+
+       moment.tz.setDefault();
 
        var dstStatus = start.isDST();
 
@@ -3061,16 +3065,10 @@ console.log("remove ycoord...");
 
        CreateTrainingDialog.hide();
 
-       var lbtStartTraining = registry.byId("TrainingStartDate").get("value");
-
-       var mydate = moment(registry.byId("TrainingStartDate").get("value"));
-       var mytime = moment(registry.byId("TrainingStartTime").get("value"));
-
-       // rebuild the start date from StartDate and StartTime field values, 
-       mydate.hours(mytime.hours());
-       mydate.minutes(mytime.minutes());
-       var x                = getPositionX(mydate);
-       var startTraining    = moment.tz(mydate, timezoneStore.get(config.CalendarTimezone).name);
+       var lbtTrainingStartDate = registry.byId("TrainingStartDate").get("value");
+       var lbtTrainingStartTime = registry.byId("TrainingStartTime").get("value");
+       var startTraining    = moment.tz([lbtTrainingStartDate.getYear() + 1900, lbtTrainingStartDate.getMonth(), lbtTrainingStartDate.getDate(), lbtTrainingStartTime.getHours(), lbtTrainingStartTime.getMinutes()], timezoneStore.getSync(config.CalendarTimezone).name);
+       var x                = getPositionX(startTraining);
 
        var width = Number(registry.byId("TrainingDurationHour").get("value")) * 60 + Number(registry.byId("TrainingDurationMinute").get("value"));
 
@@ -3080,7 +3078,7 @@ console.log("remove ycoord...");
        var lineNb = GetActivityLineNumber(crewMemberPk, x, width);
 
        var fullname = crewMemberPk ? crewMemberStore.getSync(crewMemberPk).name : "Open time";
-       fullname += " -- " + mydate.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TrainingName").get("value");
+       fullname += " -- " + startTraining.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TrainingName").get("value");
 
        if( lineNb > 1 ) {
          alert("The new traininig is overlapping with another activity."); 
@@ -3093,8 +3091,8 @@ console.log("remove ycoord...");
          fk_cm          : crewMemberPk,
          x              : x,
          midnightoffset : 0,
-         lbtStart       : mydate.format("YYYY-MM-DD HH:mm"),
-         lbtEnd         : mydate.add(width, 'm').format("YYYY-MM-DD HH:mm"),
+         lbtStart       : startTraining.format("YYYY-MM-DD HH:mm"),
+         lbtEnd         : endTraining.format("YYYY-MM-DD HH:mm"),
          utcStart       : startTraining.utc().format("YYYY-MM-DD HH:mm"),
          utcEnd         : endTraining.utc().format("YYYY-MM-DD HH:mm"),
          width          : width,
@@ -3143,7 +3141,7 @@ console.log("remove ycoord...");
        for(i = 0; i < days.length; i++) {
          var calDay = calendarStore.getSync(days[i]);
 
-         var when = moment(calDay.get("name"));
+         var when = moment.tz(calDay.get("name"), timezoneStore.getSync(config.CalendarTimezone).name);
          when.hour(time.getHours());
          when.minute(time.getMinutes());
 
@@ -3351,23 +3349,17 @@ console.log("remove ycoord...");
 
        CreateTripDialog.hide();
 
-       var mydate = moment(registry.byId("TripStartDate").get("value"));
-       var mytime = moment(registry.byId("TripStartTime").get("value"));
+       var lbtTripStartDate   = registry.byId("TripStartDate").get("value");
+       var lbtTripStartTime   = registry.byId("TripStartTime").get("value");
+       var lbtTripEndDate     = registry.byId("TripEndDate").get("value");
+       var lbtTripEndTime     = registry.byId("TripEndTime").get("value");
 
-       // rebuild the start date from StartDate and StartTime field values, 
-       mydate.hours(mytime.hours());
-       mydate.minutes(mytime.minutes());
+       var startTrip = moment.tz([lbtTripStartDate.getYear() + 1900, lbtTripStartDate.getMonth(), lbtTripStartDate.getDate(), lbtTripStartTime.getHours(), lbtTripStartTime.getMinutes()], timezoneStore.getSync(config.CalendarTimezone).name);
+       var endTrip   = moment.tz([lbtTripEndDate.getYear() + 1900, lbtTripEndDate.getMonth(), lbtTripEndDate.getDate(), lbtTripEndTime.getHours(), lbtTripEndTime.getMinutes()], timezoneStore.getSync(config.CalendarTimezone).name);
 
-       var x       = getPositionX(mydate);
-       var endTrip = moment(registry.byId("TripEndDate").get("value")); 
+       var x     = getPositionX(startTrip);
+       var width = getPositionX(endTrip) - x;
 
-       mytime = moment(registry.byId("TripEndTime").get("value"));
-
-       endTrip.hours(mytime.hours());
-       endTrip.minutes(mytime.minutes());
-
-       var width        = getPositionX(endTrip) - x;
-       var startTrip    = moment.tz(mydate, timezoneStore.get(config.CalendarTimezone).name);
        var crewMemberPk = Number(registry.byId("TripCrewMemberSelect").get("value"));
        var lineNb       = GetActivityLineNumber(crewMemberPk, x, width);
 
@@ -3409,7 +3401,7 @@ console.log("remove ycoord...");
 
        var fullname = crewMemberPk ? crewMemberStore.getSync(crewMemberPk).name : "Open time";
 
-       fullname += " -- " + mydate.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TripName").get("value");  
+       fullname += " -- " + startTrip.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TripName").get("value");  
 
        var trip = activityStore.addSync({
          name           : registry.byId("TripName").get("value"),
@@ -3419,8 +3411,8 @@ console.log("remove ycoord...");
          fk_cm          : crewMemberPk,
          x              : x,
          midnightoffset : 0,
-         lbtStart       : mydate.format("YYYY-MM-DD HH:mm"),
-         lbtEnd         : mydate.add(width, 'm').format("YYYY-MM-DD HH:mm"),
+         lbtStart       : startTrip.format("YYYY-MM-DD HH:mm"),
+         lbtEnd         : endTrip.format("YYYY-MM-DD HH:mm"),
          utcStart       : startTrip.utc().format("YYYY-MM-DD HH:mm"),
          utcEnd         : endTrip.utc().format("YYYY-MM-DD HH:mm"),
          width          : width,
@@ -3459,7 +3451,7 @@ console.log("remove ycoord...");
 
            activityStore.addSync({
              name      : name,
-             fullname  : name + " -- " + mydate.format("YYYY-MM-DD HH:mm"),
+             fullname  : name + " -- " + startTrip.format("YYYY-MM-DD HH:mm"),
              type      : type.toUpperCase(),
              pk        : activityStore.GetNextPKSequence(),
              fk_parent : trip.pk,
