@@ -776,7 +776,7 @@ require([
        group.setAttributeNS(null, "id", item.get("ident"));
        calendarId.appendChild(group);
 
-       var lblText = SVG_drawText("event_label", item.x + 10, HEIGHT_LINE_HL / 2, item.get("label"));
+       var lblText = SVG_drawText("event_label", item.x + 10, HEIGHT_LINE_HL / 2, item.get("short_label"));
        on(lblText, "dblclick", function(evt) {
          PopupEventDetail(item.pk);
        });
@@ -1528,6 +1528,7 @@ console.log(self.nextY);
                                 eventStore.addSync({
                                   pk : eventStore.GetNextPKSequence(),
                                   x  : x - self.restb - self.tp,
+                                  short_label : "Start of rest before activity",
                                   label : "Start of rest before activity",
                                   fk_act : self.pk,
                                   start : 0,
@@ -1537,6 +1538,7 @@ console.log(self.nextY);
                                 eventStore.addSync({
                                   pk : eventStore.GetNextPKSequence(),
                                   x  : x - self.tp,
+                                  short_label : "Start of transportation time before activity",
                                   label : "Start of transportation time before activity",
                                   fk_act : self.pk,
                                   start : 0,
@@ -1545,6 +1547,7 @@ console.log(self.nextY);
                               eventStore.addSync({
                                 pk : eventStore.GetNextPKSequence(),
                                 x  : x,
+                                short_label : "Start of activity",
                                 label : "Start of activity",
                                 fk_act : self.pk,
                                 start : 1,
@@ -1555,6 +1558,7 @@ console.log(self.nextY);
                                   eventStore.addSync({
                                     pk : eventStore.GetNextPKSequence(),
                                     x  : objects[i].x,
+                                    short_label : "Start of " + objects[i].name,
                                     label : "Start of " + objects[i].name,
                                     fk_act : self.pk,
                                     start : 0,
@@ -1565,6 +1569,7 @@ console.log(self.nextY);
                               eventStore.addSync({
                                 pk : eventStore.GetNextPKSequence(),
                                 x  : x + self.width,
+                                short_label : " End of activity",
                                 label : " End of activity",
                                 fk_act : self.pk,
                                 start : 0,
@@ -1573,6 +1578,7 @@ console.log(self.nextY);
                                 eventStore.addSync({
                                   pk : eventStore.GetNextPKSequence(),
                                   x  : x + self.width + self.tp,
+                                  short_label : "End of transportation time after activity",
                                   label : "End of transportation time after activity",
                                   fk_act : self.pk,
                                   start : 0,
@@ -1582,6 +1588,7 @@ console.log(self.nextY);
                                 eventStore.addSync({
                                   pk : eventStore.GetNextPKSequence(),
                                   x  : x + self.width + self.tp + self.resta,
+                                  short_label : "End of rest after activity",
                                   label : "End of rest after activity",
                                   fk_act : self.pk,
                                   start : 0,
@@ -1732,24 +1739,25 @@ console.log(self.nextY);
      var eventModel = declare(Model, {
        validateOnSet : false,
        schema        : {
-         pk       : "numeric",
-         x        : "numeric",
-         label    : "string",
-         fk_act   : "numeric", // 0 means no activity
-         start    : "numeric",
-         fk_yc    : "numeric",
-         ident    : new ComputedProperty({
-                      dependsOn : ["pk"],
-                      getValue  : function(pk) {
-                        return "evt" + pk;  // evt stands for Event
-                      }
-                    }),
-         barident : new ComputedProperty({ 
-                      dependsOn : ["pk"],
-                      getValue  : function(pk) {
-                        return "bevt" + pk;  // bevt stands for Bar Event
-                      }
-                    }),
+         pk            :  "numeric",
+         x             : "numeric",
+         short_label   : "string",
+         label         : "string",
+         fk_act        : "numeric", // 0 means no activity
+         start         : "numeric",
+         fk_yc         : "numeric",
+         ident         : new ComputedProperty({
+                           dependsOn : ["pk"],
+                           getValue  : function(pk) {
+                             return "evt" + pk;  // evt stands for Event
+                           }
+                         }),
+         barident      : new ComputedProperty({ 
+                           dependsOn : ["pk"],
+                           getValue  : function(pk) {
+                             return "bevt" + pk;  // bevt stands for Bar Event
+                           }
+                         }),
        },
        DrawSVG       : function() { 
                          var self = this;
@@ -2863,9 +2871,10 @@ console.log("offsetZone: " + offsetZone);
            }
  
            eventStore.addSync({
-             pk      : eventStore.GetNextPKSequence(),
-             label   : InitialState ? "End DST" : "Start DST",
-             x       : getPositionX(start),
+             pk          : eventStore.GetNextPKSequence(),
+             label       : InitialState ? "End DST" : "Start DST",
+             short_label : InitialState ? "End DST" : "Start DST",
+             x           : getPositionX(start),
            });
          }
 
@@ -3147,10 +3156,11 @@ console.log("offsetZone: " + offsetZone);
 
          if( when.isValid() ) {   
            eventStore.addSync({
-             pk    : eventStore.GetNextPKSequence(),
-             label : label,
-             x     : getPositionX(when),
-             fk_yc : yCoordinate.pk,
+             pk          : eventStore.GetNextPKSequence(),
+             short_label : label,
+             label       : when.format("YYYY-MM-DD HH:mm") + " -- " + label, 
+             x           : getPositionX(when),
+             fk_yc       : yCoordinate.pk,
            });
          }
        }
@@ -3172,7 +3182,7 @@ console.log("offsetZone: " + offsetZone);
        var totoFilter = filter.eq('fk_act', val).eq('start', 1);
        eventStore.filter(totoFilter).fetch().then(function(items) {
          if( items.length == 1 ) {
-           selectInput.set("displayedValue", items[0].label);
+           selectInput.set("displayedValue", items[0].long_lbl);
           }
        });
 
