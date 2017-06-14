@@ -671,7 +671,7 @@ require([
        var mytime = moment(registry.byId(prefixId + "StartTime").get("value"));
 
        // rebuild the start date from StartDate and StartTime field values, 
-       mydate.minutes(mytime.minutes());
+       
        mydate.hours(mytime.hours());
 
        // add duration to determine end datetime of the activity..
@@ -803,10 +803,15 @@ require([
        var xFrom = item.GetEventFrom().x;
        var xTo = item.GetEventTo().x;
 
+       if( xTo < xFrom ) {
+         xFrom = xTo;
+         xTo   = item.GetEventFrom().x;
+       }
+
        var y = item.GetYCoord();
        var yHorizontalLine = y + HEIGHT_LINE_HL / 2;
 
-       var dur = xTo < xFrom ? xFrom - xTo : xTo - xFrom;
+       var dur = xTo - xFrom;
        var min = dur % 60;
 
        var label = Math.floor(dur / 60) + "h";
@@ -814,15 +819,34 @@ require([
 
        // draw measure  <-------  dst -------->
        var lblText = SVG_drawText("distance_label", (xFrom + xTo) / 2 , yHorizontalLine - 3, label);
+
        on(lblText, "dblclick", function(evt) {
          PopupDistanceDetail(item.pk);
        });
        G.appendChild(lblText);
-       G.appendChild(SVG_drawLine("distance", xFrom, yHorizontalLine, xTo, yHorizontalLine));
 
-       var inc = HEIGHT_LINE_CM / 10;
+console.log("lblText length");
+console.log(lblText.getComputedTextLength());
+console.log(dur);
+console.log(CompressX(dur));
+    
+       var lblTextLength = lblText.getComputedTextLength();
+       var extra = 0;
+       var inc = HEIGHT_LINE_CM / 20;
        var xinc = inc * config.XGraphCompression; 
 
+       if( lblTextLength + 2 * inc > CompressX(dur) ){
+         extra = (lblTextLength + 2 * inc)  * config.XGraphCompression;
+       }
+
+       G.appendChild(SVG_drawLine("distance", xFrom, yHorizontalLine, xTo + extra, yHorizontalLine));
+
+       if( extra ) {
+          xinc = xinc * -1;
+          lblText.setAttributeNS(null,"x", CompressX(xTo - 2 * xinc));
+          lblText.setAttributeNS(null,"style", "text-anchor: start");
+        }
+       
        // draw arrow.
        G.appendChild(SVG_drawLine("distance", xFrom, yHorizontalLine, xFrom + xinc, yHorizontalLine + inc));
        G.appendChild(SVG_drawLine("distance", xFrom, yHorizontalLine, xFrom + xinc, yHorizontalLine - inc ));
@@ -854,6 +878,14 @@ require([
      }
 
 
+     function GetIncHour() {
+       if( config.XGraphCompression < 1 ) return 60;
+       if( config.XGraphCompression <= 2 ) return 120;
+       if( config.XGraphCompression <= 4 ) return 240;
+       if( config.XGraphCompression <= 8 ) return 360;
+       return 720;
+     }
+
      // Draw a calendar date. The drawing belongs to id calendar in the SVG.
      // Each "date" is embedded in a g node, with a translation on X, according
      // to the position. This way, each drawing into the g node is strictly the 
@@ -871,7 +903,7 @@ require([
 
        G.appendChild(SVG_drawText("day_label yyyymmdd", 720, -20, item.get("name")));
 
-       var minutes = 120;
+       var minutes = GetIncHour();
        var time = moment(item.get("name"));
        var duration = moment.duration(minutes, "minutes");
 
@@ -892,7 +924,8 @@ require([
        Gbar.appendChild(SVG_drawRect("line", 0, 0, 1, 1));
        Gbar.appendChild(SVG_drawRect("line", item.width, 0, 1, 1));
 
-       for(var i = 60; i < item.width; i += minutes) { 
+
+       for(var i = 60; i < item.width; i += 120) { 
          Gbar.appendChild(SVG_drawRect("hour_bar", i, 0, 60, 1));
        }
      }
@@ -1086,7 +1119,7 @@ require([
          MenuGraphOptionCalendar                       : { type : "boolean", default : false, },
          MenuGraphOptionActivity                       : { type : "boolean", default : false, },
          MenuHighLights                                : { type : "boolean", default : true, },
-         MenuHighLightsEvent                : { type : "boolean", default : false, },
+         MenuHighLightsEvent                           : { type : "boolean", default : false, },
          MenuHighLightsDistance                        : { type : "boolean", default : false, },
          MenuHighLightsWindow                          : { type : "boolean", default : true, },
          MenuHighLightsNote                            : { type : "boolean", default : false, },
@@ -1116,8 +1149,8 @@ require([
                            timezoneStore.filter({name: self.CalendarTimezone}).fetchRange({start: 0, end: 1}).then(function(results) {
                              if( results.length > 0 ) {
                                registry.byId("CalendarTimezone").set("value", "" + results[0].id);
-                               console.log("**************************************************");
-                               console.log(reusults[0]);
+console.log("**************************************************");
+console.log(reusults[0]);
                                registry.byId("CalendarTimezone").set("value", timezoneStoreAdapter.getIdentity(results[0].id));
 
                              }
