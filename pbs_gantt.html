@@ -886,6 +886,12 @@ console.log(CompressX(dur));
        return 720;
      }
 
+     function GetFontSize() {
+       if( config.XGraphCompression <  5 ) return "40px";
+       if( config.XGraphCompression < 10 ) return "30px";
+       return "20px";
+     }     
+
      // Draw a calendar date. The drawing belongs to id calendar in the SVG.
      // Each "date" is embedded in a g node, with a translation on X, according
      // to the position. This way, each drawing into the g node is strictly the 
@@ -901,7 +907,9 @@ console.log(CompressX(dur));
 
        G.appendChild(SVG_drawText("day_label relative", 720, -70, "Day " + item.get("relative")));
 
-       G.appendChild(SVG_drawText("day_label yyyymmdd", 720, -20, item.get("name")));
+       var day_label = SVG_drawText("day_label yyyymmdd", 720, -20, item.get("name"));
+       day_label.setAttributeNS(null, "style", "font-size: " + GetFontSize());
+       G.appendChild(day_label);
 
        var minutes = GetIncHour();
        var time = moment(item.get("name"));
@@ -940,7 +948,7 @@ console.log(CompressX(dur));
 
        on(crewText, "dblclick", function(evt) {
          PopupCrewMemberDetail(item.pk);
-      });
+       });
 
        var group = document.createElementNS(svgNS, "g");
        var y     = item.GetYCoord();
@@ -1074,6 +1082,68 @@ console.log(CompressX(dur));
          }
        });
      }
+
+     function SVG_drawNote(item) {
+
+       var parentId = svg.getElementById("notes"); // line ? svg.getElementById(line.get("ident")) : svg.getElementById("opentime");  
+//       var group = document.createElementNS(svgNS, "g");
+//       group.setAttributeNS(null,"id", item.get("ident"));
+//       parentId.appendChild(group);
+console.log("drawNode");
+console.log(item.note);
+       var x = 0;
+       var y = 0;
+
+       var foreignObject = document.createElementNS(svgNS, "foreignObject");
+       foreignObject.setAttributeNS(null,"id", item.get("ident"));
+       foreignObject.setAttributeNS(null,"x", -100);
+       foreignObject.setAttributeNS(null,"y", -100);
+       foreignObject.setAttributeNS(null,"width", 300);
+       foreignObject.setAttributeNS(null,"height", 300);
+       parentId.appendChild(foreignObject);
+
+       var body = document.createElement("body");
+       body.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+
+       var div = document.createElement("div");
+       div.textContent = item.note;
+
+       foreignObject.appendChild(body);
+       body.appendChild(div);
+
+// console.log(noteText.getComputedTextLength());
+       
+
+
+
+/*     
+       var crewText = SVG_drawText("crewmember", -50, MARGIN_TOP_CM + HEIGHT_LINE_CM / 2, item.name);
+
+       on(crewText, "dblclick", function(evt) {
+         PopupCrewMemberDetail(item.pk);
+       });
+
+       var group = document.createElementNS(svgNS, "g");
+       var y     = item.GetYCoord();
+
+       group.appendChild(crewText);
+
+       group.setAttributeNS(null,"transform","translate(0, " + y + ")");
+       group.setAttributeNS(null,"id", item.get("ident"));
+       
+       svg.getElementById("crewmembers").appendChild(group);
+
+       var groupBar = document.createElementNS(svgNS, "g");
+
+       groupBar.setAttributeNS(null,"transform","translate(0, " + y + ")");
+       groupBar.setAttributeNS(null,"id", item.get("barident"));
+       groupBar.appendChild(SVG_drawRect("line", 0, 0               , 1, 1));
+       groupBar.appendChild(SVG_drawRect("line", 0, item.GetHeight(), 1, 1));
+
+       svg.getElementById("crewmember_bar").appendChild(groupBar);
+*/
+     }
+
 
 
 
@@ -1368,7 +1438,7 @@ console.log(self.nextY);
 
 
      calendarStore.on("add", function(event) {
-       calendarStore.nextPk += 1;
+       calendarStore.nextPk = Math.max(event.target.pk + 1, calendarStore.nextPk); 
      });
 
 
@@ -1443,7 +1513,7 @@ console.log(self.nextY);
 
      crewMemberStore.on("add", function(event) {
        // 1 - inc pk sequence.
-       crewMemberStore.nextPk += 1;
+       crewMemberStore.nextPk = Math.max(event.target.pk + 1, crewMemberStore.nextPk);
 
        if( typeof(event.target.fk_yc) == 'undefined' ) {
          // 2 - create y coord object.
@@ -1646,7 +1716,7 @@ console.log(self.nextY);
 
 
      activityStore.on("add", function(event) {
-       activityStore.nextPk += 1;
+       activityStore.nextPk = Math.max(event.target.pk + 1, activityStore.nextPk); 
        if( event.target.fk_cm == 0 ) {
          if( typeof(event.target.lineNb) != 'undefined') {
            OpenTimeLineCount = Math.max(event.target.lineNb, OpenTimeLineCount);
@@ -1821,7 +1891,7 @@ console.log(self.nextY);
 
      eventStore.on("add", function(event) {
        // 1 - increment primary key sequence.
-       eventStore.nextPk += 1;
+       eventStore.nextPk = Math.max(event.target.pk + 1, eventStore.nextPk); 
 
        // for recurent hl, there is only one yCoord object, created before the creation
        // of each recurent hl. So there is no need for the following.
@@ -1884,7 +1954,19 @@ console.log("remove ycoord...");
          y      : "numeric",
          note   : "string",
          color  : "string",
+         ident  : new ComputedProperty({
+                    dependsOn : ["pk"],
+                    getValue  : function(pk) {
+                      return "note" + pk;  // evt stands for Event
+                    }
+                  }),
+
        },
+       DrawSVG       : function() { 
+                         var self = this;
+
+                         SVG_drawNote(self); 
+                       },
      });
 
 
@@ -1903,7 +1985,7 @@ console.log("remove ycoord...");
 
 
      noteStore.on("add", function(event) {
-       noteStore.nextPk += 1;
+       noteStore.nextPk = Math.max(event.target.pk + 1, noteStore.nextPk); 
      });
 
 
@@ -2161,6 +2243,7 @@ console.log("remove ycoord...");
        dojo.query("#crewmembers").forEach(dojo.empty);
        dojo.query("#crewmember_bar").forEach(dojo.empty);
        dojo.query("#opentime").forEach(dojo.empty);
+       dojo.query("#notes").forEach(dojo.empty);
 
        var x = 0;
        calendarStore.forEach(function(item) {
@@ -2220,6 +2303,10 @@ console.log("remove ycoord...");
          registry.byId("SHActivityDetailStations").set("checked", !config.SHActivityDetailStations);
          registry.byId("SHActivityDetailStations").set("checked", config.SHActivityDetailStations);
        }
+
+       noteStore.forEach(function(item) {
+         item.DrawSVG();
+       });
      });
 
 
@@ -2648,12 +2735,19 @@ console.log("remove ycoord...");
      registry.byId("LoadStation").on("click", function() {
        var upload = registry.byId("uploader");
 
-       var f = upload._files[0];
+       if( typeof(upload) == 'undefined' || typeof(upload._files) == 'undefined' ) {
+         alert("Please select an XML file");
+         return;
+       }
 
+       var f = upload._files[0];
        if( f.type != "text/xml" ) {
-         alert("Please provide an xml file");
+         alert("Please select an XML file");
          return;
        }          
+
+       var s = registry.byId("basicStandby");
+       s.show();
 
        var reader = new FileReader();
 
@@ -2669,13 +2763,14 @@ console.log("remove ycoord...");
        // Read in the file as a text.
        reader.readAsText(f);
 
-       LoadStationDialog.hide();
 
        config.MenuCalendar = false;
        config.MenuCalendarSetStartEnd = false;
 
        configurationStore.putSync(config);
 
+       s.hide();
+       LoadStationDialog.hide();
      });
 
      // -----------------------------------------------
@@ -2683,13 +2778,20 @@ console.log("remove ycoord...");
      // -----------------------------------------------
      registry.byId("LoadSvg").on("click", function() {
        var upload = registry.byId("uploader2");
+       
+       if( typeof(upload) == 'undefined' || typeof(upload._files) == 'undefined' ) {
+         alert("Please select an SVG file");
+         return;
+       }
 
        var f = upload._files[0];
-
        if( f.type != "image/svg+xml" ) {
-         alert("Please provide an svg file");
+         alert("Please select an SVG file");
          return;
        }          
+
+       var s = registry.byId("basicStandby");
+       s.show();
 
        var reader = new FileReader();
 
@@ -2705,7 +2807,9 @@ console.log("remove ycoord...");
        // Read in the file as a text.
        reader.readAsText(f);
 
+       s.hide();
        LoadSvgDialog.hide();
+
      });
 
 
@@ -3024,6 +3128,10 @@ console.log("offsetZone: " + offsetZone);
          if( lineNb > 1 ) {  
            alert("DO starting " + calendarDay.get("name") + " is overlapping with another activity."); 
          }
+
+console.log(activityStore);         
+console.log(activityStore.GetNextPKSequence());
+
          var activity = activityStore.addSync({
            name           : "DO",
            fullname       : crewMemberStore.getSync(crewMemberPk).name + " -- " + moment(calendarDay.get("name")).format("YYYY-MM-DD") + " -- DO",
@@ -3567,6 +3675,9 @@ console.log("offsetZone: " + offsetZone);
 
 
      SaveFileToPIDialog.on("show", function() {
+       var s = registry.byId("basicStandby");
+       s.show();
+
        var windowSize = win.getBox();
        var w = Math.floor(windowSize.w * 0.8);
        var h = Math.floor(windowSize.h * 0.6);
@@ -3587,6 +3698,8 @@ console.log("offsetZone: " + offsetZone);
        ProcessXslt('XMLtrip',     strXml, Gantt2TripXsl); 
        ProcessXslt('XMLtrip_sup', strXml, Gantt2TripSupXsl); 
        ProcessXslt('XMLstation',  strXml, Gantt2StationXsl); 
+
+       s.hide();
      });
 
      registry.byId("SaveZipFile").on("click", function() {
@@ -3987,13 +4100,14 @@ console.log(noteStore);
   <div id="loader">
     <div id="loaderInner" style="direction:ltr;">Loading libraries ...</div> 
   </div> 
+  <div id="basicStandby" data-dojo-type="dojox/widget/Standby" data-dojo-props="target:'content', zIndex:1000"></div>
   <div id="content" style="display:none;">
     <div data-dojo-type="dijit/MenuBar" id="navMenu" style="margin-bottom: 8px;">
       <div id="MenuFile" data-dojo-type="dijit/PopupMenuBarItem">
         <span>File</span>
         <div data-dojo-type="dijit/DropDownMenu">
-          <div id="MenuFileLoadSVGFile"        data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {LoadSvgDialog.show();}">Load a SVG file</div>
-          <div id="MenuFileLoadXMLStationFile" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {LoadStationDialog.show();}">Load a XML station file</div>
+          <div id="MenuFileLoadSVGFile"        data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {LoadSvgDialog.show();}">Load an SVG file</div>
+          <div id="MenuFileLoadXMLStationFile" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {LoadStationDialog.show();}">Load an XML station file</div>
           <div data-dojo-type="dijit/MenuSeparator"></div>
           <div id="MenuFileSaveSVGFile"        data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {SaveFileDialog.show();}">Save as SVG file</div>
           <div data-dojo-type="dijit/MenuSeparator"></div>
@@ -4211,8 +4325,8 @@ console.log(noteStore);
 
         <text x="400" y="50"  style="fill:black;font-size:40px;">Bob, the "problem" builder v0.1</text>
         <text x="400" y="90"  style="fill:black;font-size:20px;">To start, please do one of: </text>
-        <text x="420" y="120" style="fill:black;font-size:20px;">- Use File menu to load a XML station file and then Calendar menu to set a period or</text>
-        <text x="420" y="150" style="fill:black;font-size:20px;">- Use File menu to load a SVG file.</text>
+        <text x="420" y="120" style="fill:black;font-size:20px;">- Use File menu to load an XML station file and then Calendar menu to set a period or</text>
+        <text x="420" y="150" style="fill:black;font-size:20px;">- Use File menu to load an SVG file.</text>
         </g>
         </g>
 
@@ -4231,8 +4345,15 @@ console.log(noteStore);
           ====================================================================================
         -->
         <g id="opentime"></g>
-        </g>
 
+        <!--
+          ====================================================================================
+          NOTES
+          ====================================================================================
+        -->
+        <g id="notes"></g>
+
+        </g>
         <!--
           ====================================================================================
           DSTORE
@@ -4369,11 +4490,11 @@ console.log(noteStore);
         </div>
       </div>
     </div>
-
-
+    
     <!-- TODO: create a tpl, since LoadSvgDialog and LoadStationDialog look the same -->
-    <div data-dojo-type="dijit/Dialog" data-dojo-id="LoadSvgDialog" title="Load SVG file" style="display: none; width: 300px;">
+    <div data-dojo-type="dijit/Dialog" data-dojo-id="LoadSvgDialog" title="Load an SVG file" style="display: none;">
       <div data-dojo-type="dijit/form/Form" id="LoadSvgForm" data-dojo-id="LoadSvgForm" encType="multipart/form-data" action="" method="">
+        <p><b>Warning</b>, this operation will delete the current graph.</p>
         <table class="dijitDialogPaneContentArea">
           <tr>
             <td>
@@ -4388,14 +4509,16 @@ console.log(noteStore);
         </table>
 
         <div class="dijitDialogPaneActionBar">
+          <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){LoadSvgDialog.hide();}">Cancel</button>
           <button data-dojo-type="dijit/form/Button" type="button" id="LoadSvg">Load file</button>
         </div>
       </div>
     </div>
 
 
-    <div data-dojo-type="dijit/Dialog" data-dojo-id="LoadStationDialog" title="Load XML station file" style="display: none; width: 300px;">
+    <div data-dojo-type="dijit/Dialog" id="LoadStationDialog" data-dojo-id="LoadStationDialog" title="Load an XML station file" style="display: none;">
       <div data-dojo-type="dijit/form/Form" id="LoadStationForm" data-dojo-id="LoadStationForm" encType="multipart/form-data" action="" method="">
+        <p><b>Warning</b>, this operation will delete the current graph.</p>
         <table class="dijitDialogPaneContentArea">
           <tr>
             <td>
@@ -4410,6 +4533,7 @@ console.log(noteStore);
         </table>
 
         <div class="dijitDialogPaneActionBar">
+          <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){LoadStationDialog.hide();}">Cancel</button>
           <button data-dojo-type="dijit/form/Button" type="button" id="LoadStation">Load file</button>
         </div>
       </div>
