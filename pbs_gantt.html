@@ -149,6 +149,15 @@
   height: 100%;
 }
 
+.draggable {
+  cursor: move;
+}
+
+#gantt {  
+  border:1px solid lightgray;
+  overflow: scroll;
+}
+
   </style>
 
   <script>
@@ -208,6 +217,7 @@ require([
   "dojo/dom",
   "dojo/dom-style",
   "dojo/dom-construct",
+  "dojo/dom-geometry",
   "dojo/parser",
   "dojo/request/script",
   "dojo/date",
@@ -288,7 +298,8 @@ require([
   touch,
   dom, 
   domStyle,
-  domConstruct, 
+  domConstruct,
+  domGeom,
   parser, 
   script,
   date,
@@ -349,7 +360,7 @@ require([
     on(window, "resize", function() {
       var windowSize = win.getBox();
 
-      domStyle.set("graph", { height: windowSize.h - 3 * 8 - dom.byId("navMenu").offsetHeight + "px" });
+      domStyle.set("gantt", { height: windowSize.h - 6 - 3 * 8 - dom.byId("navMenu").offsetHeight + "px" });
     });
 
 
@@ -777,7 +788,7 @@ require([
        calendarId.appendChild(group);
 
        var lblText = SVG_drawText("event_label", item.x + 10, HEIGHT_LINE_HL / 2, item.get("short_label"));
-       on(lblText, "dblclick", function(evt) {
+       on(lblText, "click", function(evt) {
          PopupEventDetail(item.pk);
        });
        group.appendChild(lblText);
@@ -820,7 +831,7 @@ require([
        // draw measure  <-------  dst -------->
        var lblText = SVG_drawText("distance_label", (xFrom + xTo) / 2 , yHorizontalLine - 3, label);
 
-       on(lblText, "dblclick", function(evt) {
+       on(lblText, "click", function(evt) {
          PopupDistanceDetail(item.pk);
        });
        G.appendChild(lblText);
@@ -946,7 +957,7 @@ console.log(CompressX(dur));
      function SVG_drawCrewMember(item) {
        var crewText = SVG_drawText("crewmember", -50, MARGIN_TOP_CM + HEIGHT_LINE_CM / 2, item.name);
 
-       on(crewText, "dblclick", function(evt) {
+       on(crewText, "click", function(evt) {
          PopupCrewMemberDetail(item.pk);
        });
 
@@ -984,7 +995,7 @@ console.log(CompressX(dur));
        G.setAttributeNS(null, "transform", "translate(" + CompressX(activity.x + activity.midnightoffset) + "," + yLine +")");
        G.setAttributeNS(null, "id", activity.get("ident"));
 
-       on(G, "dblclick", function(evt) {
+       on(G, "click", function(evt) {
          PopupActivityDetail(activity.pk);
        });
 
@@ -1083,67 +1094,97 @@ console.log(CompressX(dur));
        });
      }
 
-     function SVG_drawNote(item) {
+    var selectedElement = 0;
+    var currentX = 0;
+    var currentY = 0;
+    var currentMatrix = 0;
+    var sig1;
+    var sig2;
 
-       var parentId = svg.getElementById("notes"); // line ? svg.getElementById(line.get("ident")) : svg.getElementById("opentime");  
-//       var group = document.createElementNS(svgNS, "g");
-//       group.setAttributeNS(null,"id", item.get("ident"));
-//       parentId.appendChild(group);
+    function selectElement(evt) {
+      selectedElement = evt.target.parentNode; // I don't know why we need to get parent node !
+console.log(selectedElement);          
+      currentX = evt.clientX;
+      currentY = evt.clientY;
+      currentMatrix = selectedElement.getAttributeNS(null, "transform").slice(7,-1).split(' ');
+    
+      for(var i=0; i<currentMatrix.length; i++) {
+        currentMatrix[i] = parseFloat(currentMatrix[i]);
+      }
+      
+      sig1 = on(selectedElement, "mousemove"         , function(evt) { moveElement(evt); });
+      sig2 = on(selectedElement, "mouseout, mouseup" , function(evt) { deselectElement(evt); });
+    }
+        
+    function moveElement(evt) {
+      var viewFactor = dom.byId("viewport").getCTM().a;
+      var dx = evt.clientX - currentX;
+      var dy = evt.clientY - currentY;
+      currentMatrix[4] += dx / viewFactor;
+      currentMatrix[5] += dy / viewFactor;
+      
+      selectedElement.setAttributeNS(null, "transform", "matrix(" + currentMatrix.join(' ') + ")");
+      currentX = evt.clientX;
+      currentY = evt.clientY;
+    }
+        
+    function deselectElement(evt) {
+      if(selectedElement != 0){
+          sig1.remove();
+          sig2.remove();
+          selectedElement = 0;
+          }
+        }
+
+
+
+     // The challenge is to manage html formatting into svg, but to get the right box size.
+     function SVG_drawNote(item) {
+       var parentId = svg.getElementById("notes"); 
 console.log("drawNode");
 console.log(item.note);
        var x = 0;
        var y = 0;
 
        var foreignObject = document.createElementNS(svgNS, "foreignObject");
-       foreignObject.setAttributeNS(null,"id", item.get("ident"));
+       foreignObject.setAttributeNS(null,"id", "fo" + item.get("ident"));
+       foreignObject.setAttributeNS(null,"class", "draggable");
        foreignObject.setAttributeNS(null,"x", -100);
        foreignObject.setAttributeNS(null,"y", -100);
-       foreignObject.setAttributeNS(null,"width", 300);
-       foreignObject.setAttributeNS(null,"height", 300);
+       foreignObject.setAttributeNS(null,"width", "4000px");
+       foreignObject.setAttributeNS(null,"height", "100%");
+       foreignObject.setAttributeNS(null,"transform", "matrix(1 0 0 1 0 0)");
+       on(foreignObject, "mousedown", function(evt) {
+         selectElement(evt);
+       });
+       
+
+
        parentId.appendChild(foreignObject);
 
        var body = document.createElement("body");
+       body.setAttributeNS(null,"id", "body" + item.get("ident"));
+       body.setAttributeNS(null,"style", "padding: 5px; background-color:" + item.color);   
        body.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
 
-       var div = document.createElement("div");
-       div.textContent = item.note;
+       // span is not greedy as a div. so logically
+       var span = document.createElement("span");
+       span.setAttributeNS(null,"id", "span" + item.get("ident"));
+
+       span.innerHTML = item.note;
+
+       body.appendChild(span);
 
        foreignObject.appendChild(body);
-       body.appendChild(div);
 
-// console.log(noteText.getComputedTextLength());
-       
+       var pos = domGeom.position(dom.byId("span" + item.get("ident")));
+       var viewFactor = dom.byId("viewport").getCTM().a;
 
-
-
-/*     
-       var crewText = SVG_drawText("crewmember", -50, MARGIN_TOP_CM + HEIGHT_LINE_CM / 2, item.name);
-
-       on(crewText, "dblclick", function(evt) {
-         PopupCrewMemberDetail(item.pk);
-       });
-
-       var group = document.createElementNS(svgNS, "g");
-       var y     = item.GetYCoord();
-
-       group.appendChild(crewText);
-
-       group.setAttributeNS(null,"transform","translate(0, " + y + ")");
-       group.setAttributeNS(null,"id", item.get("ident"));
-       
-       svg.getElementById("crewmembers").appendChild(group);
-
-       var groupBar = document.createElementNS(svgNS, "g");
-
-       groupBar.setAttributeNS(null,"transform","translate(0, " + y + ")");
-       groupBar.setAttributeNS(null,"id", item.get("barident"));
-       groupBar.appendChild(SVG_drawRect("line", 0, 0               , 1, 1));
-       groupBar.appendChild(SVG_drawRect("line", 0, item.GetHeight(), 1, 1));
-
-       svg.getElementById("crewmember_bar").appendChild(groupBar);
-*/
+       var width  = ( ( pos.w / viewFactor) + 12 + 10 ) * 1.1
+       var height = ( ( pos.h / viewFactor) + 12 + 10 ) * 1.1
+       foreignObject.setAttributeNS(null, "width", width + "px");
+       foreignObject.setAttributeNS(null, "height", height + "px");
      }
-
 
 
 
@@ -1301,6 +1342,21 @@ console.log(reusults[0]);
        idProperty      : "id",
        svgId           : "StationStore",
        svgItemNodeName : "station",
+       Reset           : function () {
+                           var self = this;
+console.log("Reset " + self.svgId);                           
+
+                           // 1 - empty svg store.
+                           dojo.query(self.svgId).forEach(dojo.empty);
+
+                           // 2 - empty store.
+                           self.forEach(function(object) {
+                             self.remove(object);
+                           });
+
+                           // 3 - reset pk
+                           self.nextPk = 1;
+                         },
      });
 
 
@@ -1360,6 +1416,22 @@ console.log(self.nextY);
                                yCoordStore.nextY = nextY;
                              });    
                            },
+       Reset           : function () {
+                           var self = this;
+console.log("Reset " + self.svgId);                           
+
+                           // 1 - empty svg store.
+                           dojo.query(self.svgId).forEach(dojo.empty);
+
+                           // 2 - empty store.
+                           self.forEach(function(object) {
+                             self.remove(object);
+                           });
+
+                           // 3 - reset pk
+                           self.nextPk = 1;
+                         },
+
      });
 
 
@@ -1434,6 +1506,27 @@ console.log(self.nextY);
        nextPk            : 1,
        svgId             : "CalendarStore",
        svgItemNodeName   : "calendar",
+       GetNextPKSequence : function() {
+                             var self = this;
+
+                             return self.nextPk;
+                           },
+       Reset           : function () {
+                           var self = this;
+console.log("Reset " + self.svgId);                           
+
+                           // 1 - empty svg store.
+                           dojo.query(self.svgId).forEach(dojo.empty);
+
+                           // 2 - empty store.
+                           self.forEach(function(object) {
+                             self.remove(object);
+                           });
+
+                           // 3 - reset pk
+                           self.nextPk = 1;
+                         },
+
      });
 
 
@@ -1509,6 +1602,22 @@ console.log(self.nextY);
 
                              return self.nextPk;
                            },
+       Reset           : function () {
+                           var self = this;
+console.log("Reset " + self.svgId);                           
+
+                           // 1 - empty svg store.
+                           dojo.query(self.svgId).forEach(dojo.empty);
+
+                           // 2 - empty store.
+                           self.forEach(function(object) {
+                             self.remove(object);
+                           });
+
+                           // 3 - reset pk
+                           self.nextPk = 1;
+                         },
+
      });
 
      crewMemberStore.on("add", function(event) {
@@ -1712,6 +1821,22 @@ console.log(self.nextY);
 
                              return self.nextPk;
                            },
+       Reset           : function () {
+                           var self = this;
+console.log("Reset " + self.svgId);                           
+
+                           // 1 - empty svg store.
+                           dojo.query(self.svgId).forEach(dojo.empty);
+
+                           // 2 - empty store.
+                           self.forEach(function(object) {
+                             self.remove(object);
+                           });
+
+                           // 3 - reset pk
+                           self.nextPk = 1;
+                         },
+
      });
 
 
@@ -1818,6 +1943,22 @@ console.log(self.nextY);
 
                              return self.nextPk;
                            },
+       Reset           : function () {
+                           var self = this;
+console.log("Reset " + self.svgId);                           
+
+                           // 1 - empty svg store.
+                           dojo.query(self.svgId).forEach(dojo.empty);
+
+                           // 2 - empty store.
+                           self.forEach(function(object) {
+                             self.remove(object);
+                           });
+
+                           // 3 - reset pk
+                           self.nextPk = 1;
+                         },
+
      });
 
 
@@ -1887,6 +2028,22 @@ console.log(self.nextY);
 
                              return self.nextPk;
                            },
+       Reset           : function () {
+                           var self = this;
+console.log("Reset " + self.svgId);                           
+
+                           // 1 - empty svg store.
+                           dojo.query(self.svgId).forEach(dojo.empty);
+
+                           // 2 - empty store.
+                           self.forEach(function(object) {
+                             self.remove(object);
+                           });
+
+                           // 3 - reset pk
+                           self.nextPk = 1;
+                         },
+
      });
 
      eventStore.on("add", function(event) {
@@ -1981,6 +2138,23 @@ console.log("remove ycoord...");
 
                              return self.nextPk;
                            },
+       Reset           : function () {
+                           var self = this;
+console.log("Reset " + self.svgId);                           
+
+                           // 1 - empty svg store.
+                           dojo.query(self.svgId).forEach(dojo.empty);
+
+                           // 2 - empty store.
+                           self.forEach(function(object) {
+                             self.remove(object);
+                           });
+
+                           // 3 - reset pk
+                           self.nextPk = 1;
+                         },
+
+ 
      });
 
 
@@ -2266,6 +2440,10 @@ console.log("remove ycoord...");
          item.DrawSVG(crewMemberStore.getSync(item.fk_cm));
        });
 
+       noteStore.forEach(function(item) {
+         item.DrawSVG();
+       });
+
        if( !config.SHCalendarHours ) {
          registry.byId("SHCalendarHours").set("checked", !config.SHCalendarHours);
          registry.byId("SHCalendarHours").set("checked", config.SHCalendarHours);
@@ -2304,9 +2482,6 @@ console.log("remove ycoord...");
          registry.byId("SHActivityDetailStations").set("checked", config.SHActivityDetailStations);
        }
 
-       noteStore.forEach(function(item) {
-         item.DrawSVG();
-       });
      });
 
 
@@ -2429,8 +2604,6 @@ console.log("remove ycoord...");
            registry.byId("CalendarStation").set("value", "" + results[0].id);
          }
        });
-
-       topic.publish("refreshGraph");
      }
 
 
@@ -2749,6 +2922,16 @@ console.log("remove ycoord...");
        var s = registry.byId("basicStandby");
        s.show();
 
+       // configurationStore.Reset();
+       calendarStore.Reset();
+       activityStore.Reset();
+       crewMemberStore.Reset();
+       eventStore.Reset();
+       distanceStore.Reset();
+       stationStore.Reset(); 
+       noteStore.Reset(); 
+       yCoordStore.Reset();
+
        var reader = new FileReader();
 
        // Closure to capture the file information and save it in the store.
@@ -2793,6 +2976,16 @@ console.log("remove ycoord...");
        var s = registry.byId("basicStandby");
        s.show();
 
+       // configurationStore.Reset();
+       calendarStore.Reset();
+       activityStore.Reset();
+       crewMemberStore.Reset();
+       eventStore.Reset();
+       distanceStore.Reset();
+       stationStore.Reset(); 
+       noteStore.Reset(); 
+       yCoordStore.Reset();
+
        var reader = new FileReader();
 
        // Closure to capture the file information and save it in the store.
@@ -2801,6 +2994,8 @@ console.log("remove ycoord...");
            xmlDom = xmlparser.parse(e.target.result);
 
            LoadSvgStores(xmlDom);
+
+           topic.publish("refreshGraph");
          };
        })(f);
 
@@ -2992,11 +3187,11 @@ console.log("offsetZone: " + offsetZone);
          width = nextDay.diff(start, "hours") * 60;
 
          calendarStore.addSync({
-           name: start.format().substring(0, 10),
-           relative: i,
-           pk: i+1, // for unknown reason, checkedmultiselect does not work with 0. 
-           x: x, 
-           width: width - 1, 
+           name     : start.format().substring(0, 10),
+           relative : i,
+           pk       : calendarStore.GetNextPKSequence(),
+           x        : x,
+           width    : width - 1,
          });
 
          // look for DST
@@ -4012,6 +4207,7 @@ console.log(noteStore);
      /**
       * Handle mouse move event.
       */
+/*     
      on(root, touch.move, function(evt) {
        if( evt.preventDefault ) {
          evt.preventDefault();
@@ -4037,10 +4233,11 @@ console.log(noteStore);
          stateOrigin = p;
        }
      });
-
+*/
      /**
       * Handle click event.
       */
+/*     
      on(root, touch.press, function(evt) {
        if( evt.preventDefault ) {
          evt.preventDefault();
@@ -4072,10 +4269,11 @@ console.log(noteStore);
          stateOrigin = getEventPoint(evt).matrixTransform(stateTf);
        }
      });
-
+*/
      /**
       * Handle mouse button release event.
       */
+/*     
      on(root, touch.release, function(evt) {
        if( evt.preventDefault ) { 
          evt.preventDefault();
@@ -4090,6 +4288,7 @@ console.log(noteStore);
          state = "";
        }
      });
+*/
 
 });
 
@@ -4173,7 +4372,7 @@ console.log(noteStore);
 
     <!-- SVG code -->
     <div id="gantt">
-      <svg id="graph" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" height="100%" width="100%">
+      <svg id="graph" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" height="1500" width="28880">
         <style>
 .day_bar {
   fill-opacity: 0.2;
@@ -4309,7 +4508,6 @@ console.log(noteStore);
   fill: purple;
   fill-opacity: 0.6;
 }
-
         </style>
 
         <g id="viewport" transform="matrix(0.75, 0, 0, 0.75, 160, 110)">
@@ -4560,11 +4758,11 @@ console.log(noteStore);
         <div data-dojo-type="dijit/form/Form" id="SaveFileToPIForm" data-dojo-id="SaveFileToPIForm" encType="multipart/form-data" action="" method="">
           <table >
             <tr>
-              <td><label for="filename">Zip filename:</label></td>
+              <td><label for="filename">ZIP filename</label></td>
               <td><input data-dojo-type="dijit/form/TextBox" name="filename" id="zipFilename" data-dojo-props="placeHolder: '.zip'" required="true" /></td>
             </tr>
             <tr>
-              <td><label for="data">Xml data:</label></td>
+              <td><label for="data">XML data</label></td>
               <td>
                 <div data-dojo-type="dijit/layout/TabContainer" id="ici" style="width: 100%; height: 100%;">
                   <div data-dojo-type="dijit/layout/ContentPane" title="qual.xml" data-dojo-props="selected:true">
@@ -4743,16 +4941,13 @@ console.log(noteStore);
     <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateDistanceDialog" title="Distance" style="display: none;" data-dojo-props="onHide: function() {CreateDistanceForm.reset();}" >
       <div data-dojo-type="dijit/form/Form" id="CreateDistanceForm" data-dojo-id="CreateDistanceForm" encType="multipart/form-data" action="" method="">
         <table class="dijitDialogPaneContentArea">
+
           <tr>
-            <td><label for="DistanceFromType">From</label></td>
             <td>
-               <input type="radio" name="DistanceFromType" id="DistanceFromActivity" checked value="activity" data-dojo-type="dijit/form/RadioButton" /><label for="DistanceFromActivity">Activity</label><br />
-               <input type="radio" name="DistanceFromType" id="DistanceFromEvent"            value="event"    data-dojo-type="dijit/form/RadioButton" /><label for="DistanceFromEvent">Event</label><br />
+               <input type="radio" name="DistanceFromType" id="DistanceFromActivity" checked value="activity" data-dojo-type="dijit/form/RadioButton" /><label for="DistanceFromActivity">From an activity</label><br />
+               <input type="radio" name="DistanceFromType" id="DistanceFromEvent"            value="event"    data-dojo-type="dijit/form/RadioButton" /><label for="DistanceFromEvent">From an event</label><br />
             </td>
-          </tr>
-          <tr>
-            <td></td>
-            <td>
+            <td style="border: 1px solid gray">
               <table class="dstFromAct">
                 <tr>
                   <td><label for="From">activity name</label></td>
@@ -4773,15 +4968,11 @@ console.log(noteStore);
           </tr>
 
           <tr>
-            <td><label for="DistanceToType">To</label></td>
             <td>
-               <input type="radio" name="DistanceToType" id="DistanceToActivity" checked value="activity" data-dojo-type="dijit/form/RadioButton" /><label for="DistanceToActivity">Activity</label><br />
-               <input type="radio" name="DistanceToType" id="DistanceToEvent"            value="event"    data-dojo-type="dijit/form/RadioButton" /><label for="DistanceToEvent">Event</label><br />
+               <input type="radio" name="DistanceToType" id="DistanceToActivity" checked value="activity" data-dojo-type="dijit/form/RadioButton" /><label for="DistanceToActivity">To an activity</label><br />
+               <input type="radio" name="DistanceToType" id="DistanceToEvent"            value="event"    data-dojo-type="dijit/form/RadioButton" /><label for="DistanceToEvent">To an event</label><br />
             </td>
-          </tr>
-          <tr>
-            <td></td>
-            <td>
+            <td style="border: 1px solid gray">
               <table class="dstToAct">
                 <tr>
                   <td><label for="To">activity name</label></td>
