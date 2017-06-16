@@ -149,10 +149,6 @@
   height: 100%;
 }
 
-.draggable {
-  cursor: move;
-}
-
 #gantt {  
   border:1px solid lightgray;
   overflow: scroll;
@@ -226,6 +222,7 @@ require([
   "dojo/data/ObjectStore", 
   "dojo/store/Memory", 
   "dojo/store/Observable",
+  "dojo/mouse",
   "dijit/_Widget",
   "dijit/registry",
   "dijit/Dialog",
@@ -308,6 +305,7 @@ require([
   ObjectStore, 
   LegacyMemory,
   LegacyObservable,
+  mouse,
   // dijit section
   _WidgetBase,
   registry, 
@@ -659,6 +657,27 @@ require([
          label: "Delete this distance",
          onClick: function() {
            distanceStore.removeSync(distancePk);
+
+           myDialog.hide();
+
+           topic.publish("refreshGraph");
+         }
+       }).placeAt(myDialog);
+
+       myDialog.show();
+     }
+
+     function PopupNoteDetail(notePk) {
+       var myDialog = new Dialog({
+         title: "Detail note",
+         style: "width: 300px",
+         content: "Note PK: " + notePk + "<br/>",
+       });
+
+       var myButton = new Button({
+         label: "Delete this note",
+         onClick: function() {
+           noteStore.removeSync(notePk);
 
            myDialog.hide();
 
@@ -1094,51 +1113,63 @@ console.log(CompressX(dur));
        });
      }
 
-    var selectedElement = 0;
-    var currentX = 0;
-    var currentY = 0;
-    var currentMatrix = 0;
-    var sig1;
-    var sig2;
+     var selectedElement = 0;
+     var currentX = 0;
+     var currentY = 0;
+     var currentMatrix = 0;
+     var sig1;
+     var sig2;
 
-    function selectElement(evt) {
-      selectedElement = evt.target.parentNode; // I don't know why we need to get parent node !
+     function selectElement(evt) {
+       if( evt.ctrlKey ){
+         selectedElement = evt.target.parentNode; // I don't know why target points to body. 
 console.log(selectedElement);          
-      currentX = evt.clientX;
-      currentY = evt.clientY;
-      currentMatrix = selectedElement.getAttributeNS(null, "transform").slice(7,-1).split(' ');
-    
-      for(var i=0; i<currentMatrix.length; i++) {
-        currentMatrix[i] = parseFloat(currentMatrix[i]);
-      }
+         currentX = evt.clientX;
+         currentY = evt.clientY;
+         currentMatrix = selectedElement.getAttributeNS(null, "transform").slice(7,-1).split(' ');
       
-      sig1 = on(selectedElement, "mousemove"         , function(evt) { moveElement(evt); });
-      sig2 = on(selectedElement, "mouseout, mouseup" , function(evt) { deselectElement(evt); });
-    }
+         for(var i=0; i<currentMatrix.length; i++) {
+           currentMatrix[i] = parseFloat(currentMatrix[i]);
+         }
         
-    function moveElement(evt) {
-      var viewFactor = dom.byId("viewport").getCTM().a;
-      var dx = evt.clientX - currentX;
-      var dy = evt.clientY - currentY;
-      currentMatrix[4] += dx / viewFactor;
-      currentMatrix[5] += dy / viewFactor;
+         sig1 = on(selectedElement, "mousemove"         , function(evt) { moveElement(evt); });
+         sig2 = on(selectedElement, "mouseout, mouseup" , function(evt) { deselectElement(evt); });
+       } 
+       else {
+         var pkNote = evt.target.id.replace( /^\D+/g, '');
+         PopupNoteDetail(pkNote);
+       }
+     }
+        
+     function moveElement(evt) {
+       var viewFactor = dom.byId("viewport").getCTM().a;
+       var dx = evt.clientX - currentX;
+       var dy = evt.clientY - currentY;
+       currentMatrix[4] += dx / viewFactor;
+       currentMatrix[5] += dy / viewFactor;
       
-      selectedElement.setAttributeNS(null, "transform", "matrix(" + currentMatrix.join(' ') + ")");
-      currentX = evt.clientX;
-      currentY = evt.clientY;
-    }
+       selectedElement.setAttributeNS(null, "transform", "matrix(" + currentMatrix.join(' ') + ")");
+       currentX = evt.clientX;
+       currentY = evt.clientY;
+     }
         
-    function deselectElement(evt) {
-      if(selectedElement != 0){
-          sig1.remove();
-          sig2.remove();
-          selectedElement = 0;
-          }
-        }
+     function deselectElement(evt) {
+       if(selectedElement != 0){
+         sig1.remove();
+         sig2.remove();
+         selectedElement = 0;
+       }
+     }
 
 
 
-     // The challenge is to manage html formatting into svg, but to get the right box size.
+     // The challenge is to manage html formatting into svg, and to get the right box size.
+     // The foreignObject is created with a huge size, then the user html note is encapsulated 
+     // into a span tag. A span tag is used insteaf of a div, because it is not greedy in 
+     // term of width. As soon as every new tags are appended into the document, the width and
+     // the height of the span tag is used to update the size of the foreignObject. Due to 
+     // zoom factor, the computation needs the ratio factor to compute the real size, not the
+     // rendered one. 
      function SVG_drawNote(item) {
        var parentId = svg.getElementById("notes"); 
 console.log("drawNode");
@@ -1148,7 +1179,6 @@ console.log(item.note);
 
        var foreignObject = document.createElementNS(svgNS, "foreignObject");
        foreignObject.setAttributeNS(null,"id", "fo" + item.get("ident"));
-       foreignObject.setAttributeNS(null,"class", "draggable");
        foreignObject.setAttributeNS(null,"x", -100);
        foreignObject.setAttributeNS(null,"y", -100);
        foreignObject.setAttributeNS(null,"width", "4000px");
@@ -1247,6 +1277,11 @@ console.log(item.note);
        },
        Apply         : function() {
                          var self = this;
+
+                         if( self.CalendarTimezone ) {
+                           // Set default time zone, based on user input.
+                           moment.tz.setDefault(timezoneStore.getSync(self.CalendarTimezone).name);
+                         }
 
                          if( typeof(self.CalendarStart) != "undefined" ) {
                            registry.byId("CalendarStart").set("value", self.CalendarStart);
@@ -1381,6 +1416,7 @@ console.log("Reset " + self.svgId);
        idProperty        : "pk",
        nextPk            : 1,
        nextY             : 0,
+       nextYCM           : 0,
        svgId             : "YCoordStore",
        svgItemNodeName   : "ycoord",
        StretchSVGHeight  : function() {
@@ -1397,20 +1433,24 @@ console.log(self.nextY);
                              svg.getElementById("opentime").setAttribute("transform","translate(0, " + self.nextY + ")");
                            },
        GetNextPKSequence : function() {
-                            var self = this;
-
-                            return self.nextPk;
-                          },
-       GetNextY          : function() {
                              var self = this;
 
-                             return self.nextY;
+                             return self.nextPk;
+                           },
+       GetNextYCM        : function() { // get the y coordinate for the next crewmember, ie before opentime and distance among opentime activities.
+                             var self = this;
+
+                             return self.nextYCM;
                            },  
        ComputeYAndHeigth : function() {
                              yCoordStore.sort('y').fetch().then(function(items) {
-                               var nextY = 0;
+                               var nextY   = 0;
+                               var nextYCM = 0;
                                for (var i = 0 ; i < items.length ; i++) {
                                  items[i].y = nextY;
+                                 if( typeof(items[i].fk_cm) != 'undefined' ) {
+                                   yCoordStore.nextYCM = nextY;
+                                 }
                                  nextY += items[i].height;
                                }
                                yCoordStore.nextY = nextY;
@@ -1629,7 +1669,7 @@ console.log("Reset " + self.svgId);
          var yCoordinate = yCoordStore.addSync({
            pk     : yCoordStore.GetNextPKSequence(),
            fk_cm  : event.target.pk,
-           y      : yCoordStore.GetNextY(),
+           y      : yCoordStore.GetNextYCM(),
            height : MARGIN_TOP_CM + HEIGHT_LINE_CM + MARGIN_BOTTOM_CM,
          });
 
@@ -1668,6 +1708,7 @@ console.log("Reset " + self.svgId);
      registry.byId("DayOffCrewMemberSelect").set("store", crewMemberStoreAdapter);
      registry.byId("TrainingCrewMemberSelect").set("store", crewMemberStoreAdapter);
      registry.byId("TripCrewMemberSelect").set("store", crewMemberStoreAdapter);
+     registry.byId("VacationCrewMemberSelect").set("store", crewMemberStoreAdapter);
 
 
      // -----------------------------------------------
@@ -3127,6 +3168,24 @@ console.log("offsetZone: " + offsetZone);
        }
      }, true);
 
+/*    
+<label for="fromDate">From:</label> <input id="fromDate" data-dojo-type="dijit/form/DateTextBox"
+					data-dojo-props='type:"text", name:"fromDate", required:true,
+					onChange:function(){ registry.byId("toDate").constraints.min = this.get("value"); } '/>
+				<label for="toDate">To:</label> <input id="toDate" data-dojo-type="dijit/form/DateTextBox"
+					data-dojo-props='type:"text", name:"toDate", required:true,
+					onChange:function(){ registry.byId("fromDate").constraints.max = this.get("value"); } '/>
+                                         */
+
+     registry.byId("VacationStartDate").on("change", function() {
+       registry.byId("VacationEndDate").constraints.min = this.get("value"); 
+       registry.byId("VacationEndDate").set("disabled", false);
+     }, true);
+
+     registry.byId("VacationEndDate").on("change", function() {
+       registry.byId("VacationStartDate").constraints.max = this.get("value");
+     }, true);
+     
 
      registry.byId("CalendarStart").on("change", function() {
        registry.byId("CalendarEnd").constraints.min = date.add(this.get("value"), "day", 1);
@@ -3136,6 +3195,8 @@ console.log("offsetZone: " + offsetZone);
        registry.byId("TrainingStartDate").dropDownDefaultValue = this.get("value");
        registry.byId("TripStartDate").constraints.min = this.get("value");
        registry.byId("TripStartDate").dropDownDefaultValue = this.get("value");
+       registry.byId("VacationStartDate").constraints.min = this.get("value");
+       registry.byId("VacationStartDate").dropDownDefaultValue = this.get("value");
      }, true);
 
      registry.byId("CalendarEnd").on("change", function() {
@@ -3145,6 +3206,8 @@ console.log("offsetZone: " + offsetZone);
 
        registry.byId("TrainingStartDate").constraints.max = maxDate;
        registry.byId("TripStartDate").constraints.max = maxDate;
+       registry.byId("VacationStartDate").constraints.max = maxDate;
+       registry.byId("VacationEndDate").constraints.max = maxDate;
      }, true);
 
      registry.byId("SetCalendarDialog").on("show", function() {
@@ -3281,6 +3344,9 @@ console.log("offsetZone: " + offsetZone);
      // Create Crewmember dialog
      // -----------------------------------------------
      registry.byId("CreateCrewMember").on("click", function() {
+       if( !registry.byId("CreateCrewMemberForm").validate() ) {
+         return;
+       }
 
        // Add the new crew in the store. Event will trigger the drawing.
        crewMemberStore.addSync({
@@ -3289,6 +3355,8 @@ console.log("offsetZone: " + offsetZone);
          birthdate : registry.byId("CrewMemberBirthDate").get("value").toISOString().substring(0, 10),
          lineCount : 1,
        });
+
+       registry.byId("CreateCrewMemberForm").reset();
 
        topic.publish("refreshGraph");
 
@@ -3352,6 +3420,65 @@ console.log(activityStore.GetNextPKSequence());
        topic.publish("refreshGraph");
      });
 
+
+     // -----------------------------------------------
+     // Create Vacation dialog
+     // -----------------------------------------------
+     registry.byId("CreateVacation").on("click", function() {
+       if( !registry.byId("CreateVacationForm").validate() ) {
+         return;
+       }
+
+       CreateVacationDialog.hide();
+       var crewMemberPk = parseInt(registry.byId("VacationCrewMemberSelect").get("value"));
+       var dojoDate = registry.byId("VacationStartDate").get("value");
+       var startDate = moment.tz([dojoDate.getYear() + 1900, dojoDate.getMonth(), dojoDate.getDate()], timezoneStore.getSync(config.CalendarTimezone).name);
+       dojoDate = registry.byId("VacationEndDate").get("value"); 
+       var endDate = moment.tz([dojoDate.getYear() + 1900, dojoDate.getMonth(), dojoDate.getDate()], timezoneStore.getSync(config.CalendarTimezone).name);
+
+       var width = endDate.diff(startDate, "minutes");
+
+       // to avoid the "at least one item must be selected" message, form data are save in 
+       // local variables before reseting the form.
+       registry.byId("CreateVacationForm").reset();
+
+
+       var x                = getPositionX(startDate);
+
+         var lineNb = GetActivityLineNumber(crewMemberPk, x + Number(config.midnightOffset), width);
+
+         if( lineNb > 1 ) {  
+           alert("LVE starting " + startDate.format("YYYY-MM-DD") + " is overlapping with another activity."); 
+         }
+
+console.log(activityStore);         
+console.log(activityStore.GetNextPKSequence());
+
+         var activity = activityStore.addSync({
+           name           : "LVE",
+           fullname       : crewMemberStore.getSync(crewMemberPk).name + " -- " + startDate.format("YYYY-MM-DD") + " -- LVE",
+           type           : "LVE",           
+           pk             : activityStore.GetNextPKSequence(),
+           fk_cm          : crewMemberPk,
+           x              : x,
+           midnightoffset : Number(config.midnightOffset),
+           lbtStart       : startDate.format("YYYY-MM-DD HH:mm"),
+           lbtEnd         : endDate.format("YYYY-MM-DD HH:mm"),
+           utcStart       : startDate.utc().format("YYYY-MM-DD HH:mm"),
+           utcEnd         : endDate.utc().format("YYYY-MM-DD HH:mm"),
+           width          : width,
+           tp             : 0,
+           resta          : 0,
+           restb          : 0,
+           lineNb         : lineNb,
+         });
+
+         activity.CreateEvents();
+
+       topic.publish("refreshGraph");
+     });
+
+
      // -----------------------------------------------
      // Create Training dialog
      // -----------------------------------------------
@@ -3409,6 +3536,8 @@ console.log(activityStore.GetNextPKSequence());
        }
 
        CreateTrainingDialog.hide();
+console.log(config.CalendarTimezone);       
+console.log(timezoneStore.getSync(config.CalendarTimezone).name);       
 
        var lbtTrainingStartDate = registry.byId("TrainingStartDate").get("value");
        var lbtTrainingStartTime = registry.byId("TrainingStartTime").get("value");
@@ -4329,9 +4458,10 @@ console.log(noteStore);
             <span>Create activity</span>
             <div id="MenuBusinessObjectCreateActivity" data-dojo-type="dijit/DropDownMenu">
               <div id="MenuBusinessObjectCreateActivityDayOff"        data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateDayOffDialog.show();}">Day off</div>
+              <div id="MenuBusinessObjectCreateActivityVacation"      data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateVacationDialog.show();}">Vacation</div>
+              <div data-dojo-type="dijit/MenuSeparator"></div>
               <div id="MenuBusinessObjectCreateActivityTraining"      data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateTrainingDialog.show();}">Training</div>
               <div id="MenuBusinessObjectCreateActivityTrip"          data-dojo-type="dijit/MenuItem" data-dojo-props="">Trip</div>
-              <div id="MenuBusinessObjectCreateActivityOtherActivity" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {alert('not yet available');}">Other activity</div>
             </div>
           </div>
         </div>
@@ -4458,6 +4588,11 @@ console.log(noteStore);
 .distance {
   stroke: black;
   stroke-width: 1px;
+}
+
+.LVE {
+  fill: red;
+  fill-opacity: 0.5;
 }
 
 .DO {
@@ -5078,6 +5213,29 @@ console.log(noteStore);
 
         <div class="dijitDialogPaneActionBar">
           <button data-dojo-type="dijit/form/Button" type="button" id="SaveNote">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <div data-dojo-type="dijit/Dialog" id="CreateVacationDialog" data-dojo-id="CreateVacationDialog" title="Create vacation" style="display: none;"  data-dojo-props="onHide: function() {CreateVacationForm.reset();}">
+      <div data-dojo-type="dijit/form/Form" id="CreateVacationForm" data-dojo-id="CreateVacationForm" encType="multipart/form-data" action="" method="">
+        <table class="dijitDialogPaneContentArea">
+          <tr>
+            <td><label for="VacationCm">Crew member</label></td>
+            <td><select data-dojo-type="dijit/form/FilteringSelect" name="VacationCm" id="VacationCrewMemberSelect" required="true"/></td>
+          </tr>
+          <tr>
+            <td><label for="VacationStart">Start date</label></td>
+            <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="VacationStart" id="VacationStartDate" required="true" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"></td>
+          </tr>
+          <tr>
+            <td><label for="VacationEnd">End date (excluded)</label></td>
+            <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="VacationEnd" id="VacationEndDate" disabled="true" required="true" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"></td>
+          </tr>
+        </table>
+
+        <div class="dijitDialogPaneActionBar">
+          <button data-dojo-type="dijit/form/Button" type="button" id="CreateVacation">Create</button>
         </div>
       </div>
     </div>
