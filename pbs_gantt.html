@@ -3178,12 +3178,19 @@ console.log("offsetZone: " + offsetZone);
                                          */
 
      registry.byId("VacationStartDate").on("change", function() {
-       registry.byId("VacationEndDate").constraints.min = this.get("value"); 
+       var nextDay = date.add(this.get("value"), "day", 1);
        registry.byId("VacationEndDate").set("disabled", false);
+       registry.byId("VacationEndDate").constraints.min = nextDay;
+       registry.byId("VacationEndDate").dropDownDefaultValue = nextDay;
      }, true);
 
      registry.byId("VacationEndDate").on("change", function() {
-       registry.byId("VacationStartDate").constraints.max = this.get("value");
+       if( this.get("value") < registry.byId("CalendarEnd").get("value") ) {
+         registry.byId("VacationStartDate").constraints.max = this.get("value"); 
+       } 
+       else {
+         registry.byId("VacationStartDate").constraints.max = registry.byId("CalendarEnd").get("value");
+       }
      }, true);
      
 
@@ -3207,7 +3214,7 @@ console.log("offsetZone: " + offsetZone);
        registry.byId("TrainingStartDate").constraints.max = maxDate;
        registry.byId("TripStartDate").constraints.max = maxDate;
        registry.byId("VacationStartDate").constraints.max = maxDate;
-       registry.byId("VacationEndDate").constraints.max = maxDate;
+       registry.byId("VacationEndDate").constraints.max = this.get("value");
      }, true);
 
      registry.byId("SetCalendarDialog").on("show", function() {
