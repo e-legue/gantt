@@ -154,6 +154,19 @@
   overflow: scroll;
 }
 
+
+
+.delete .dijitButtonNode {
+  background-color: orange !important;
+}
+
+.deleteHover .dijitButtonNode {
+  background-color: red !important;
+}
+.deleteActive .dijitButtonNode {
+  background-color: red !important;
+}
+
   </style>
 
   <script>
@@ -214,6 +227,8 @@ require([
   "dojo/dom-style",
   "dojo/dom-construct",
   "dojo/dom-geometry",
+  "dojo/dom-form",
+  "dojo/json",
   "dojo/parser",
   "dojo/request/script",
   "dojo/date",
@@ -222,7 +237,6 @@ require([
   "dojo/data/ObjectStore", 
   "dojo/store/Memory", 
   "dojo/store/Observable",
-  "dojo/mouse",
   "dijit/_Widget",
   "dijit/registry",
   "dijit/Dialog",
@@ -297,6 +311,8 @@ require([
   domStyle,
   domConstruct,
   domGeom,
+  domForm,
+  json,
   parser, 
   script,
   date,
@@ -305,7 +321,6 @@ require([
   ObjectStore, 
   LegacyMemory,
   LegacyObservable,
-  mouse,
   // dijit section
   _WidgetBase,
   registry, 
@@ -584,24 +599,31 @@ require([
      // Display "detail" of activity, or event.
      // ===============================================
      function PopupActivityDetail(activityId) {
-       var myDialog = new Dialog({
-         title: "Detail activity",
-         style: "width: 300px",
-         content: "Activitiy pk : " + activityId + "<br/>name: " + activityStore.getSync(activityId).name + "<br/>",
-       });
+       var object = activityStore.getSync(activityId);
 
-       var myButton = new Button({
-         label: "Delete this activity",
-         onClick: function() {
-           activityStore.removeSync(activityId);
+       if( object.type == "TRN" ) {
+         SetUpTrainingDialog(object);
+       }
+       else {
+         var myDialog = new Dialog({
+           title: "Detail activity",
+           style: "width: 300px",
+           content: "Activitiy pk : " + activityId + "<br/>name: " + activityStore.getSync(activityId).name + "<br/>",
+         });
 
-           myDialog.hide();
+         var myButton = new Button({
+           label: "Delete this activity",
+           onClick: function() {
+             activityStore.removeSync(activityId);
 
-           topic.publish("refreshGraph");
-         }
-       }).placeAt(myDialog);
+             myDialog.hide();
 
-       myDialog.show();
+             topic.publish("refreshGraph");
+           }
+         }).placeAt(myDialog);
+
+         myDialog.show();
+       }
      }
 
      function PopupEventDetail(eventId) {
@@ -978,7 +1000,7 @@ console.log(CompressX(dur));
 
        on(crewText, "click", function(evt) {
          PopupCrewMemberDetail(item.pk);
-       });
+       }); 
 
        var group = document.createElementNS(svgNS, "g");
        var y     = item.GetYCoord();
@@ -1005,7 +1027,7 @@ console.log(CompressX(dur));
      // with a translation on y, and belongs to crewmember or opentime line.
      // Therefore no y translation is necessary, a x is used to draw the activity on
      // the rigth place in the calendar.
-     function SVG_drawActivity(activity) { // , line) {
+     function SVG_drawActivity(activity) { 
        var unitY = HEIGHT_LINE_CM / 14; 
        var parentId = svg.getElementById(activity.GetCrewMemberIdent()); // line ? svg.getElementById(line.get("ident")) : svg.getElementById("opentime");  
 
@@ -3487,7 +3509,7 @@ console.log(activityStore.GetNextPKSequence());
 
 
      // -----------------------------------------------
-     // Create Training dialog
+     // Training dialog
      // -----------------------------------------------
      function TryEnableDuration() {
        if(   registry.byId("TrainingStartTime").get("value") != null 
@@ -3520,29 +3542,92 @@ console.log(activityStore.GetNextPKSequence());
      registry.byId("TrainingDurationHour").on("click", function() {
        UpdateEndDateTime("Training");
      });
-     registry.byId("TrainingDurationHour").on("change", function(val) {
+     registry.byId("TrainingDurationHour").on("change", function(value) {
        UpdateEndDateTime("Training");
      });
 
      registry.byId("TrainingDurationMinute").on("click", function() {
        UpdateEndDateTime("Training");
      });
-     registry.byId("TrainingDurationMinute").on("change", function(val) {
+     registry.byId("TrainingDurationMinute").on("change", function(value) {
        UpdateEndDateTime("Training");
      });
 
-     CreateTrainingDialog.on("show", function() {
-       // reset filteringselect Minute of rest before and after. Those two are not set to zero.
-       registry.byId("TrainingRestBeforeM").set("value", 0);
-       registry.byId("TrainingRestAfterM").set("value", 0);
-     });
+     // new and item are redundant. I could probably delete new parameter.
+     function SetUpTrainingDialog(item) {
+       if( item ) {
+         TrainingDialog.set("title", "Edit training");
 
-     registry.byId("CreateTraining").on("click", function() {
-       if( !registry.byId("CreateTrainingForm").validate() ) {
-         return;
+         domStyle.set(registry.byId("CreateTraining").domNode,    "display", "none");
+         domStyle.set(registry.byId("DeleteTraining").domNode,    "display", "inline");
+         domStyle.set(registry.byId("DuplicateTraining").domNode, "display", "inline");
+         domStyle.set(registry.byId("SaveTraining").domNode,      "display", "inline");
+         
+         registry.byId('TrainingForm').set('value', item);
+       } 
+       else {
+         TrainingDialog.set("title", "Create a training");
+
+         domStyle.set(registry.byId("CreateTraining").domNode,    "display", "inline");
+         domStyle.set(registry.byId("DuplicateTraining").domNode, "display", "none");
+         domStyle.set(registry.byId("DeleteTraining").domNode,    "display", "none");
+         domStyle.set(registry.byId("SaveTraining").domNode,      "display", "none");
+
+         domStyle.set("PkTraining", "display", "none");
+
+         // reset filteringselect Minute of rest before and after. Those two are not set to zero.
+         registry.byId("TrainingRestBeforeM").set("value", 0);
+         registry.byId("TrainingRestAfterM").set("value", 0);
        }
 
-       CreateTrainingDialog.hide();
+       TrainingDialog.show();
+     }
+
+     // connect menu creation training to training dialog
+     registry.byId("MenuBusinessObjectCreateActivityTraining").on("click", function() {
+       SetUpTrainingDialog(); 
+     });
+
+
+     registry.byId("DeleteTraining").on("click", function() {
+       activityStore.removeSync(registry.byId("TrainingPk").get("value"));
+
+       TrainingDialog.hide();
+
+       topic.publish("refreshGraph");
+     });
+
+     registry.byId("DuplicateTraining").on("click", function() {
+       var source = activityStore.getSync(registry.byId("TrainingPk").get("value"));
+console.log(source);       
+
+       var copy = new activityModel(source);
+
+       copy.pk = activityStore.GetNextPKSequence();
+       copy.lineNb = GetActivityLineNumber(copy.fk_cm, copy.x, copy.width);
+       copy.fk_yc = undefined;
+console.log(copy);       
+
+       activityStore.addSync(copy);
+console.log(activityStore);       
+
+       TrainingDialog.hide();
+
+       topic.publish("refreshGraph");
+
+     });
+
+
+     
+     registry.byId("CreateTraining").on("click", function() {
+       if( !registry.byId("TrainingForm").validate() ) {
+         return;
+       }
+var formObject1 = domForm.toObject("TrainingForm");
+console.log(json.stringify(formObject1));       
+console.log("===================================================");
+
+       TrainingDialog.hide();
 console.log(config.CalendarTimezone);       
 console.log(timezoneStore.getSync(config.CalendarTimezone).name);       
 
@@ -4467,7 +4552,7 @@ console.log(noteStore);
               <div id="MenuBusinessObjectCreateActivityDayOff"        data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateDayOffDialog.show();}">Day off</div>
               <div id="MenuBusinessObjectCreateActivityVacation"      data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateVacationDialog.show();}">Vacation</div>
               <div data-dojo-type="dijit/MenuSeparator"></div>
-              <div id="MenuBusinessObjectCreateActivityTraining"      data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateTrainingDialog.show();}">Training</div>
+              <div id="MenuBusinessObjectCreateActivityTraining"      data-dojo-type="dijit/MenuItem">Training</div>
               <div id="MenuBusinessObjectCreateActivityTrip"          data-dojo-type="dijit/MenuItem" data-dojo-props="">Trip</div>
             </div>
           </div>
@@ -4712,60 +4797,67 @@ console.log(noteStore);
       </svg>
     </div>
 
-    <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateTrainingDialog" title="Create training" style="display: none;" data-dojo-props="onHide: function() {CreateTrainingForm.reset();}" >
-      <div data-dojo-type="dijit/form/Form" id="CreateTrainingForm" data-dojo-id="CreateTrainingForm" encType="multipart/form-data" action="" method="">
+    <div data-dojo-type="dijit/Dialog" data-dojo-id="TrainingDialog" title="Create training" style="display: none;" data-dojo-props="onHide: function() {TrainingForm.reset();}" >
+      <div data-dojo-type="dijit/form/Form" id="TrainingForm" data-dojo-id="TrainingForm" encType="multipart/form-data" action="" method="">
         <table class="dijitDialogPaneContentArea">
+          <tr id="PkTraining">
+            <td><label for="pk">Primary key</label></td>
+            <td><input data-dojo-type="dijit/form/TextBox" name="pk" id="TrainingPk" readonly="true" disabled="true"></td>
+          </tr>
           <tr>
             <td><label for="name">Name</label></td>
             <td><input data-dojo-type="dijit/form/TextBox" name="name" id="TrainingName" required="true"></td>
           </tr>
           <tr>
-            <td><label for="TrnCm">Crew member</label></td>
-            <td><select data-dojo-type="dijit/form/FilteringSelect" name="TrnCm" id="TrainingCrewMemberSelect" required="false"/></td>
+            <td><label for="fk_cm">Crew member</label></td>
+            <td><select data-dojo-type="dijit/form/FilteringSelect" name="fk_cm" id="TrainingCrewMemberSelect" required="false"/></td>
           </tr>
           <tr>
-            <td><label for="transportationtime">Transportation time apply</label></td>
-            <td><input data-dojo-type="dijit/form/CheckBox" name="transportationtime" id="TrainingTransportationTime" value="true" required="true"></td>
+            <td><label for="transp_time">Transportation time apply</label></td>
+            <td><input data-dojo-type="dijit/form/CheckBox" name="transp_time" id="TrainingTransportationTime" value="true" required="true"></td>
           </tr>
           <tr>
             <td><label for="restbefore">Rest before</label></td>
             <td>
-              <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="restbefore" id="TrainingRestBeforeH" value="0" data-dojo-props="" required="true">h&nbsp;
-              <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="restbefore" id="TrainingRestBeforeM" value="0" data-dojo-props="" required="true">m
+              <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="rest_before_hour" id="TrainingRestBeforeH" value="0" data-dojo-props="" required="true">h&nbsp;
+              <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="rest_before_minute" id="TrainingRestBeforeM" value="0" data-dojo-props="" required="true">m
             </td>
           </tr>
           <tr>
             <td><label for="start">Start date time</label></td>
             <td class="datetime">
-              <input id="TrainingStartDate" name="start" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"/>
-              <input id="TrainingStartTime" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'"/>
+              <input id="TrainingStartDate" name="start_date" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"/>
+              <input id="TrainingStartTime" name="start_time" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'"/>
             </td>
           </tr>
           <tr>
             <td><label for="duration">Duration</label></td>
             <td>
-              <input id="TrainingDurationHour"   class="durationHour" data-dojo-type="dijit/form/ComboBox" name="duration" data-dojo-props="placeHolder:'0'" required="true" readonly="true" />h&nbsp;
-              <input id="TrainingDurationMinute" class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="duration" data-dojo-props="placeHolder:'0'" required="true" readonly="true" />m
+              <input id="TrainingDurationHour"   class="durationHour" data-dojo-type="dijit/form/ComboBox" name="duration_hour" data-dojo-props="placeHolder:'0'" required="true" readonly="true" />h&nbsp;
+              <input id="TrainingDurationMinute" class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="duration_minute" data-dojo-props="placeHolder:'0'" required="true" readonly="true" />m
             </td>
           </tr>
           <tr>
             <td><label for="end">End date time</label></td>
             <td class="datetime">
-              <input id="TrainingEndDate" name="start" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'" readonly="true" disabled="true" />
-              <input id="TrainingEndTime" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'" readonly="true" disabled="true" />
+              <input id="TrainingEndDate" name="end_date" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'" readonly="true" disabled="true" />
+              <input id="TrainingEndTime" name="end_time" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'" readonly="true" disabled="true" />
             </td>
           </tr>
           <tr>
             <td><label for="restafter">Rest after</label></td>
             <td>
-              <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="restafter" id="TrainingRestAfterH" value="0" data-dojo-props="" required="true">h&nbsp;
-              <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="restafter" id="TrainingRestAfterM" value="0" data-dojo-props="" required="true">m
+              <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="rest_after_hour" id="TrainingRestAfterH" value="0" data-dojo-props="" required="true">h&nbsp;
+              <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="rest_after_minute" id="TrainingRestAfterM" value="0" data-dojo-props="" required="true">m
             </td>
           </tr>
         </table>
 
         <div class="dijitDialogPaneActionBar">
           <button data-dojo-type="dijit/form/Button" type="button" id="CreateTraining">Create</button>
+          <button data-dojo-type="dijit/form/Button" type="button" id="DeleteTraining" class="delete">Delete</button>
+          <button data-dojo-type="dijit/form/Button" type="button" id="DuplicateTraining">Duplicate</button>
+          <button data-dojo-type="dijit/form/Button" type="button" id="SaveTraining">Save</button>
         </div>
       </div>
     </div>
