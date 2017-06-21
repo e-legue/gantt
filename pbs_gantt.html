@@ -721,18 +721,22 @@ require([
      function UpdateEndDateTime(prefixId) {
        var mydate = moment(registry.byId(prefixId + "StartDate").get("value"));
        var mytime = moment(registry.byId(prefixId + "StartTime").get("value"));
-
+console.log(mydate);
+console.log(mytime);
        // rebuild the start date from StartDate and StartTime field values, 
        
        mydate.hours(mytime.hours());
+       mydate.minutes(mytime.minutes());
 
+console.log(mydate);
        // add duration to determine end datetime of the activity..
        var duration = moment.duration({
          hours: registry.byId(prefixId + "DurationHour").get("value"), 
          minutes: registry.byId(prefixId + "DurationMinute").get("value")
        });
        mydate.add(duration);
-
+console.log(duration);
+console.log(mydate);
        // update end date and time fields.
        registry.byId(prefixId + "EndDate").set("value", mydate.toDate());
        registry.byId(prefixId + "EndTime").set("value", mydate.toDate());
@@ -1033,7 +1037,9 @@ console.log(CompressX(dur));
 
        var G = document.createElementNS(svgNS, "g");
        var yLine = MARGIN_TOP_CM + HEIGHT_LINE_CM * ( activity.lineNb - 1 );
-       G.setAttributeNS(null, "transform", "translate(" + CompressX(activity.x + activity.midnightoffset) + "," + yLine +")");
+       
+       var midnightOffset = activity.midnightOffset ? Number(config.midnightOffset) : 0;       
+       G.setAttributeNS(null, "transform", "translate(" + CompressX(activity.x + midnightOffset) + "," + yLine +")");
        G.setAttributeNS(null, "id", activity.get("ident"));
 
        on(G, "click", function(evt) {
@@ -1048,46 +1054,47 @@ console.log(CompressX(dur));
        Rect.setAttributeNS(null, "y", 0);
        Rect.setAttributeNS(null, "rx", Math.min(CompressX(2 * unitY), 20));
        Rect.setAttributeNS(null, "ry", Math.min(CompressX(2 * unitY), 20));
-       Rect.setAttributeNS(null, "width", CompressX(activity.width));
+       Rect.setAttributeNS(null, "width", CompressX(activity.duration));
        Rect.setAttributeNS(null, "height", HEIGHT_LINE_CM);
        G.appendChild(Rect);
 
-       G.appendChild(SVG_drawText("label", 10, 5 * unitY, activity.get("name")));
+       G.appendChild(SVG_drawText("label", 10, 5 * unitY, activity.name));
 
-       var startActivity = moment(activity.get("lbtStart"));
-       startActivity.add(activity.midnightoffset, "m");
+       var startActivity = moment(activity.lbtStart);
+       startActivity.add(midnightOffset, "m");
        var endActivity   = startActivity.clone();
-       endActivity.add(activity.width, "m");
+       endActivity.add(activity.duration, "m");
        var hourSize = 9;  // see font-size of class .hour_start.
 
        G.appendChild(SVG_drawText("act_hour start_hour", 0 , hourSize, startActivity.format("HH:mm")));
-       G.appendChild(SVG_drawText("act_hour end_hour", activity.width , 14 * unitY, endActivity.format("HH:mm")));
+       G.appendChild(SVG_drawText("act_hour end_hour", activity.duration, 14 * unitY, endActivity.format("HH:mm")));
 
-       // transporation time
-       if( activity.tp > 0 ) {
+       var transportationTime = 0;
+       if( activity.transportationTime) {
+         transportationTime = Number(config.transportationTime);
          // before.
-         G.appendChild(SVG_drawRect("TP", activity.tp * -1, 3 * unitY, activity.tp, 4 * unitY));
-         startActivity.subtract(activity.tp, "m");
-         G.appendChild(SVG_drawText("act_hour start_hour", activity.tp * -1, 3 * unitY + hourSize, startActivity.format("HH:mm")));
+         G.appendChild(SVG_drawRect("TP", transportationTime * -1, 3 * unitY, transportationTime, 4 * unitY));
+         startActivity.subtract(transportationTime, "m");
+         G.appendChild(SVG_drawText("act_hour start_hour", transportationTime * -1, 3 * unitY + hourSize, startActivity.format("HH:mm")));
 
          // after.
-         G.appendChild(SVG_drawRect("TP", activity.width, 7 * unitY, activity.tp, 4 * unitY));
-         endActivity.add(activity.tp, "m");
-         G.appendChild(SVG_drawText("act_hour end_hour", activity.width + activity.tp , 11 * unitY, endActivity.format("HH:mm")));
+         G.appendChild(SVG_drawRect("TP", activity.duration, 7 * unitY, transportationTime, 4 * unitY));
+         endActivity.add(transportationTime, "m");
+         G.appendChild(SVG_drawText("act_hour end_hour", activity.duration + transportationTime , 11 * unitY, endActivity.format("HH:mm")));
        }
 
        // rest before
-       if( activity.restb > 0 ) {
-         G.appendChild(SVG_drawRect("REST", ( activity.restb + activity.tp ) * -1, 3 * unitY, activity.restb, 4 * unitY));
-         startActivity.subtract(activity.restb, "m");
-         G.appendChild(SVG_drawText("act_hour start_hour", ( activity.restb + activity.tp ) * -1 , 3 * unitY + hourSize, startActivity.format("HH:mm")));
+       if( activity.restBefore > 0 ) {
+         G.appendChild(SVG_drawRect("REST", ( activity.restBefore + transportationTime ) * -1, 3 * unitY, activity.restBefore, 4 * unitY));
+         startActivity.subtract(activity.restBefore, "m");
+         G.appendChild(SVG_drawText("act_hour start_hour", ( activity.restBefore + transportationTime ) * -1 , 3 * unitY + hourSize, startActivity.format("HH:mm")));
        }
 
        // rest after. 
-       if( activity.resta > 0 ) {
-         G.appendChild(SVG_drawRect("REST", activity.width + activity.tp, 7 * unitY, activity.resta, 4 * unitY));
-         endActivity.add(activity.resta, "m");
-         G.appendChild(SVG_drawText("act_hour end_hour", activity.width + activity.tp + activity.resta, 11 * unitY, endActivity.format("HH:mm")));
+       if( activity.restAfter > 0 ) {
+         G.appendChild(SVG_drawRect("REST", activity.duration + transportationTime, 7 * unitY, activity.restAfter, 4 * unitY));
+         endActivity.add(activity.restAfter, "m");
+         G.appendChild(SVG_drawText("act_hour end_hour", activity.duration + transportationTime + Number(activity.restAfter), 11 * unitY, endActivity.format("HH:mm")));
        }
 
 
@@ -1111,24 +1118,24 @@ console.log(CompressX(dur));
            Rect.setAttributeNS(null, "y", unitY);
            Rect.setAttributeNS(null, "rx", 1);
            Rect.setAttributeNS(null, "ry", 1);
-           Rect.setAttributeNS(null, "width", CompressX(objects[i].width));
+           Rect.setAttributeNS(null, "width", CompressX(objects[i].duration));
            Rect.setAttributeNS(null, "height", 4 * unitY);
 
            Gdetails.appendChild(Rect);
 
            if( i % 2 == 0 && i != 0 && i != objects.length -1 ) {
-             Gdetails.appendChild(SVG_drawText("dtl_station", objects[i].x + objects[i].width / 2 - activity.x, unitY -2, objects[i].station ));
+             Gdetails.appendChild(SVG_drawText("dtl_station", objects[i].x + objects[i].duration / 2 - activity.x, unitY -2, objects[i].station ));
            }
            if( i % 2 == 1 ) {
              Gdetails.appendChild(SVG_drawText("dtl_hour start_hour", objects[i].x - activity.x, unitY + hourSize, endDetailActivity.format("HH:mm")));
              // useless since the distance tool allows to measure duration !          
-             //          Gdetails.appendChild(SVG_drawText("duration", objects[i].x + objects[i].width / 2 - activity.x, 3 * unitY , "<- " + formatDurationInHoursMinutes(objects[i].width) + " ->"));
+             //          Gdetails.appendChild(SVG_drawText("duration", objects[i].x + objects[i].duration / 2 - activity.x, 3 * unitY , "<- " + formatDurationInHoursMinutes(objects[i].duration) + " ->"));
            }
 
-           endDetailActivity.add(objects[i].width, "m");
+           endDetailActivity.add(objects[i].duration, "m");
 
            if( i % 2 == 1 ) {
-             Gdetails.appendChild(SVG_drawText("dtl_hour end_hour" , objects[i].x + objects[i].width - activity.x, 5 * unitY, endDetailActivity.format("HH:mm")));
+             Gdetails.appendChild(SVG_drawText("dtl_hour end_hour" , objects[i].x + objects[i].duration - activity.x, 5 * unitY, endDetailActivity.format("HH:mm")));
            }
 
          }
@@ -1300,14 +1307,18 @@ console.log(item.note);
        Apply         : function() {
                          var self = this;
 
-                         if( self.CalendarTimezone ) {
-                           // Set default time zone, based on user input.
-                           moment.tz.setDefault(timezoneStore.getSync(self.CalendarTimezone).name);
-                         }
+// bad idea. generate pb to compute end date.                         
+//                         if( self.CalendarTimezone ) {
+//                           // Set default time zone, based on user input.
+//                            moment.tz.setDefault(timezoneStore.getSync(self.CalendarTimezone).name);
+//                         }
 
                          if( typeof(self.CalendarStart) != "undefined" ) {
                            registry.byId("CalendarStart").set("value", self.CalendarStart);
                            var start = moment(self.CalendarStart);
+                           if( self.CalendarTimezone ) {
+                             start = moment.tz(self.CalendarStart, timezoneStore.getSync(self.CalendarTimezone).name);
+                           }
                            Xorig = start.unix();
                          }
                          if( typeof(self.CalendarEnd) != "undefined" ) {
@@ -1465,6 +1476,7 @@ console.log(self.nextY);
                              return self.nextYCM;
                            },  
        ComputeYAndHeigth : function() {
+console.log("yCoordStore - ComputeYAndHeight");
                              yCoordStore.sort('y').fetch().then(function(items) {
                                var nextY   = 0;
                                var nextYCM = 0;
@@ -1498,6 +1510,7 @@ console.log("Reset " + self.svgId);
 
 
      yCoordStore.on("add", function(event) {
+console.log("yCoordStore - add");
        // 1 - increment primary key sequence.
        yCoordStore.nextPk = Math.max(event.target.pk + 1, yCoordStore.nextPk); 
 
@@ -1509,6 +1522,7 @@ console.log("Reset " + self.svgId);
 
 
      yCoordStore.on("update", function(event) {
+console.log("yCoordStore - update");
        // 1 - set next primary key value.
        yCoordStore.nextPk = Math.max(event.target.pk + 1, yCoordStore.nextPk); 
 
@@ -1518,6 +1532,7 @@ console.log("Reset " + self.svgId);
 
 
      yCoordStore.on("delete", function(event) {
+console.log("yCoordStore - delete");
        // 1 - recompute y and height of each item.
        yCoordStore.ComputeYAndHeigth();
      });
@@ -1739,31 +1754,31 @@ console.log("Reset " + self.svgId);
      var activityModel = declare(Model, {
        validateOnSet      : false,
        schema             : {
-         pk             : "numeric",
-         fk_cm          : "numeric", // foreign key to CrewMember.
-         fk_parent      : "numeric", // foreign key to parent activity.
-         name           : "string",
-         fullname       : "string",
-         x              : "numeric",
-         midnightoffset : "numeric",
-         width          : "numeric",
-         tp             : "numeric",
-         resta          : "numeric",
-         restb          : "numeric",
-         type           : "string",
-         lbtStart       : "string",
-         lbtEnd         : "string",
-         utcStart       : "string",
-         utcEnd         : "string",
-         block          : "numeric",
-         credit         : "numeric",
-         duty           : "numeric",
-         tafbInPeriod   : "numeric",
-         blockInPeriod  : "numeric",
-         creditInPeriod : "numeric",
-         dutyInPeriod   : "numeric",
-         station        : "string",
-         lineNb         : "numeric",
+         pk                 : "numeric",
+         fk_cm              : "numeric", // foreign key to CrewMember.
+         fk_parent          : "numeric", // foreign key to parent activity.
+         name               : "string",
+         fullName          : "string",
+         x                  : "numeric",
+         midnightOffset    : "boolean",
+         duration           : "numeric",
+         transporation_time : "boolean",
+         restBefore        : "numeric",
+         restAfter         : "numeric",
+         type               : "string",
+         lbtStart           : "string",
+         lbtEnd             : "string",
+         utcStart           : "string",
+         utcEnd             : "string",
+         block              : "numeric",
+         credit             : "numeric",
+         duty               : "numeric",
+         tafbInPeriod       : "numeric",
+         blockInPeriod      : "numeric",
+         creditInPeriod     : "numeric",
+         dutyInPeriod       : "numeric",
+         station            : "string",
+         lineNb             : "numeric",
          ident          : new ComputedProperty({
                             dependsOn    : ["pk", "type"],
                             getValue     : function(pk, type) {
@@ -1870,6 +1885,56 @@ console.log("Reset " + self.svgId);
                                 });
                               }
                             },          
+
+       SetFromTrainingForm : function() {
+         var self = this;
+         var formObject = domForm.toObject("TrainingForm");
+
+         self.set("type", "TRN");
+         self.set("pk", activityStore.GetNextPKSequence());
+         self.set("name", formObject.name);         
+
+         var fk_cm = Number(formObject.fk_cm);
+
+         self.set("fk_cm", fk_cm);
+         self.set("midnightOffset", false);
+         self.set("transportationTime", formObject.transportationTime == "true" );
+
+         var duration = Number(formObject.duration_hour) * 60 + Number(formObject.duration_minute);
+
+         self.set("duration", duration);
+         self.set("restBefore", Number(formObject.rest_before_hour) * 60 + Number(formObject.rest_before_minute));
+         self.set("restAfter", Number(formObject.rest_after_hour) * 60 + Number(formObject.rest_after_minute));
+
+         var startTraining  = moment.tz(formObject.start_date + formObject.start_time, timezoneStore.getSync(config.CalendarTimezone).name);
+         var endTraining    = startTraining.clone().add(duration, 'm');
+         
+         var x = getPositionX(startTraining);
+
+         self.set("lbtStart", startTraining.format("YYYY-MM-DD HH:mm"));
+         self.set("lbtEnd"  , endTraining.format("YYYY-MM-DD HH:mm"));
+         self.set("utcStart", startTraining.utc().format("YYYY-MM-DD HH:mm"));
+         self.set("utcEnd"  , endTraining.utc().format("YYYY-MM-DD HH:mm"));
+
+         self.set("x", x);
+
+         var fullName = fk_cm ? crewMemberStore.getSync(fk_cm).name : "Open time";
+         fullName += " -- " + startTraining.format("YYYY-MM-DD HH:mm") + " -- " + self.get("name");
+
+         self.set("fullName", fullName);
+
+         var lineNb = GetActivityLineNumber(fk_cm, x, duration);
+
+         if( lineNb > 1 ) {
+           alert("The new traininig is overlapping with another activity."); 
+         }
+
+         self.set("lineNb", lineNb);
+
+console.log(self);         
+       },
+ 
+
      });
 
 
@@ -1931,16 +1996,18 @@ console.log("Reset " + self.svgId);
        activityStore.filter({fk_parent: event.target.pk}).forEach(function(item) {
          activityStore.removeSync(item.pk);
        });
+
+       yCoordStore.ComputeYAndHeigth();
      });
 
 
      var activityStoreAdapter = new DstoreAdapter(activityStore.filter({fk_parent: undefined}));
 
-     registry.byId("DistanceFromActSelect").set("labelAttr", "fullname");
-     registry.byId("DistanceFromActSelect").set("searchAttr", "fullname");
+     registry.byId("DistanceFromActSelect").set("labelAttr", "fullName");
+     registry.byId("DistanceFromActSelect").set("searchAttr", "fullName");
      registry.byId("DistanceFromActSelect").set("store", activityStoreAdapter);
-     registry.byId("DistanceToActSelect").set("labelAttr", "fullname");
-     registry.byId("DistanceToActSelect").set("searchAttr", "fullname");
+     registry.byId("DistanceToActSelect").set("labelAttr", "fullName");
+     registry.byId("DistanceToActSelect").set("searchAttr", "fullName");
      registry.byId("DistanceToActSelect").set("store", activityStoreAdapter);
 
      // -----------------------------------------------
@@ -3426,7 +3493,7 @@ console.log(activityStore.GetNextPKSequence());
 
          var activity = activityStore.addSync({
            name           : "DO",
-           fullname       : crewMemberStore.getSync(crewMemberPk).name + " -- " + moment(calendarDay.get("name")).format("YYYY-MM-DD") + " -- DO",
+           fullName       : crewMemberStore.getSync(crewMemberPk).name + " -- " + moment(calendarDay.get("name")).format("YYYY-MM-DD") + " -- DO",
            type           : "DO",           
            pk             : activityStore.GetNextPKSequence(),
            fk_cm          : crewMemberPk,
@@ -3485,7 +3552,7 @@ console.log(activityStore.GetNextPKSequence());
 
          var activity = activityStore.addSync({
            name           : "LVE",
-           fullname       : crewMemberStore.getSync(crewMemberPk).name + " -- " + startDate.format("YYYY-MM-DD") + " -- LVE",
+           fullName       : crewMemberStore.getSync(crewMemberPk).name + " -- " + startDate.format("YYYY-MM-DD") + " -- LVE",
            type           : "LVE",           
            pk             : activityStore.GetNextPKSequence(),
            fk_cm          : crewMemberPk,
@@ -3599,79 +3666,40 @@ console.log(activityStore.GetNextPKSequence());
 
      registry.byId("DuplicateTraining").on("click", function() {
        var source = activityStore.getSync(registry.byId("TrainingPk").get("value"));
-console.log(source);       
 
        var copy = new activityModel(source);
 
        copy.pk = activityStore.GetNextPKSequence();
        copy.lineNb = GetActivityLineNumber(copy.fk_cm, copy.x, copy.width);
        copy.fk_yc = undefined;
-console.log(copy);       
 
        activityStore.addSync(copy);
-console.log(activityStore);       
 
        TrainingDialog.hide();
 
        topic.publish("refreshGraph");
-
      });
-
-
      
      registry.byId("CreateTraining").on("click", function() {
        if( !registry.byId("TrainingForm").validate() ) {
          return;
        }
-var formObject1 = domForm.toObject("TrainingForm");
-console.log(json.stringify(formObject1));       
-console.log("===================================================");
-
        TrainingDialog.hide();
-console.log(config.CalendarTimezone);       
-console.log(timezoneStore.getSync(config.CalendarTimezone).name);       
 
-       var lbtTrainingStartDate = registry.byId("TrainingStartDate").get("value");
-       var lbtTrainingStartTime = registry.byId("TrainingStartTime").get("value");
-       var startTraining    = moment.tz([lbtTrainingStartDate.getYear() + 1900, lbtTrainingStartDate.getMonth(), lbtTrainingStartDate.getDate(), lbtTrainingStartTime.getHours(), lbtTrainingStartTime.getMinutes()], timezoneStore.getSync(config.CalendarTimezone).name);
-       var x                = getPositionX(startTraining);
+       var item = new activityModel();
 
-       var width = Number(registry.byId("TrainingDurationHour").get("value")) * 60 + Number(registry.byId("TrainingDurationMinute").get("value"));
+       item.SetFromTrainingForm();
 
-       var endTraining = startTraining.clone().add(width, 'm');
-       var crewMemberPk = Number(registry.byId("TrainingCrewMemberSelect").get("value"));
+       activityStore.addSync(item);
 
-       var lineNb = GetActivityLineNumber(crewMemberPk, x, width);
+console.log(activityStore);       
 
-       var fullname = crewMemberPk ? crewMemberStore.getSync(crewMemberPk).name : "Open time";
-       fullname += " -- " + startTraining.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TrainingName").get("value");
-
-       if( lineNb > 1 ) {
-         alert("The new traininig is overlapping with another activity."); 
-       }
-       var activity = activityStore.addSync({
-         name           : registry.byId("TrainingName").get("value"),
-         fullname       : fullname,
-         type           : "TRN",
-         pk             : activityStore.GetNextPKSequence(),
-         fk_cm          : crewMemberPk,
-         x              : x,
-         midnightoffset : 0,
-         lbtStart       : startTraining.format("YYYY-MM-DD HH:mm"),
-         lbtEnd         : endTraining.format("YYYY-MM-DD HH:mm"),
-         utcStart       : startTraining.utc().format("YYYY-MM-DD HH:mm"),
-         utcEnd         : endTraining.utc().format("YYYY-MM-DD HH:mm"),
-         width          : width,
-         tp             : registry.byId("TrainingTransportationTime").checked ? Number(config.transportationTime) : 0,
-         resta          : Number(registry.byId("TrainingRestAfterH").get("value")) * 60 + Number(registry.byId("TrainingRestAfterM").get("value")),
-         restb          : Number(registry.byId("TrainingRestBeforeH").get("value")) * 60 + Number(registry.byId("TrainingRestBeforeM").get("value")),
-         lineNb         : lineNb,
-       });
+       item.CreateEvents();
        
-       activity.CreateEvents();
-
        topic.publish("refreshGraph");
      });
+
+      
 
 
      // -----------------------------------------------
@@ -3966,13 +3994,13 @@ console.log(timezoneStore.getSync(config.CalendarTimezone).name);
          }           
        });
 
-       var fullname = crewMemberPk ? crewMemberStore.getSync(crewMemberPk).name : "Open time";
+       var fullName = crewMemberPk ? crewMemberStore.getSync(crewMemberPk).name : "Open time";
 
-       fullname += " -- " + startTrip.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TripName").get("value");  
+       fullName += " -- " + startTrip.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TripName").get("value");  
 
        var trip = activityStore.addSync({
          name           : registry.byId("TripName").get("value"),
-         fullname       : fullname,
+         fullName       : fullName,
          type           : "TRP",
          pk             : activityStore.GetNextPKSequence(),
          fk_cm          : crewMemberPk,
@@ -4018,7 +4046,7 @@ console.log(timezoneStore.getSync(config.CalendarTimezone).name);
 
            activityStore.addSync({
              name      : name,
-             fullname  : name + " -- " + startTrip.format("YYYY-MM-DD HH:mm"),
+             fullName  : name + " -- " + startTrip.format("YYYY-MM-DD HH:mm"),
              type      : type.toUpperCase(),
              pk        : activityStore.GetNextPKSequence(),
              fk_parent : trip.pk,
@@ -4813,8 +4841,8 @@ console.log(noteStore);
             <td><select data-dojo-type="dijit/form/FilteringSelect" name="fk_cm" id="TrainingCrewMemberSelect" required="false"/></td>
           </tr>
           <tr>
-            <td><label for="transp_time">Transportation time apply</label></td>
-            <td><input data-dojo-type="dijit/form/CheckBox" name="transp_time" id="TrainingTransportationTime" value="true" required="true"></td>
+            <td><label for="transportationTime">Transportation time apply</label></td>
+            <td><input data-dojo-type="dijit/form/CheckBox" name="transportationTime" id="TrainingTransportationTime" value="true" required="true"></td>
           </tr>
           <tr>
             <td><label for="restbefore">Rest before</label></td>
@@ -4827,8 +4855,7 @@ console.log(noteStore);
             <td><label for="start">Start date time</label></td>
             <td class="datetime">
               <input id="TrainingStartDate" name="start_date" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"/>
-              <input id="TrainingStartTime" name="start_time" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'"/>
-            </td>
+              <input id="TrainingStartTime" name="start_time" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'"/></td>
           </tr>
           <tr>
             <td><label for="duration">Duration</label></td>
