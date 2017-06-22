@@ -689,27 +689,6 @@ require([
        myDialog.show();
      }
 
-     function PopupNoteDetail(notePk) {
-       var myDialog = new Dialog({
-         title: "Detail note",
-         style: "width: 300px",
-         content: "Note PK: " + notePk + "<br/>",
-       });
-
-       var myButton = new Button({
-         label: "Delete this note",
-         onClick: function() {
-           noteStore.removeSync(notePk);
-
-           myDialog.hide();
-
-           topic.publish("refreshGraph");
-         }
-       }).placeAt(myDialog);
-
-       myDialog.show();
-     }
-
 
 
      // ===============================================
@@ -1152,9 +1131,9 @@ console.log(CompressX(dur));
      function selectElement(evt) {
        if( evt.ctrlKey ){
          selectedElement = evt.target.parentNode; // I don't know why target points to body. 
-console.log(selectedElement);          
          currentX = evt.clientX;
          currentY = evt.clientY;
+console.log("X: " + currentX + ", Y: " + currentY);         
          currentMatrix = selectedElement.getAttributeNS(null, "transform").slice(7,-1).split(' ');
       
          for(var i=0; i<currentMatrix.length; i++) {
@@ -1166,7 +1145,7 @@ console.log(selectedElement);
        } 
        else {
          var pkNote = evt.target.id.replace( /^\D+/g, '');
-         PopupNoteDetail(pkNote);
+         SetUpNoteDialog(pkNote);
        }
      }
         
@@ -1180,10 +1159,23 @@ console.log(selectedElement);
        selectedElement.setAttributeNS(null, "transform", "matrix(" + currentMatrix.join(' ') + ")");
        currentX = evt.clientX;
        currentY = evt.clientY;
+console.log("X: " + currentX + ", Y: " + currentY);         
      }
         
      function deselectElement(evt) {
        if(selectedElement != 0){
+         currentX = evt.clientX;
+         currentY = evt.clientY;
+console.log("X: " + currentX + ", Y: " + currentY);         
+
+         var pkNote = evt.target.id.replace( /^\D+/g, '');
+         var note = noteStore.getSync(pkNote);
+
+         note.x = currentX;
+         note.y = currentY;
+
+         noteStore.putSync(note);
+
          sig1.remove();
          sig2.remove();
          selectedElement = 0;
@@ -1201,15 +1193,11 @@ console.log(selectedElement);
      // rendered one. 
      function SVG_drawNote(item) {
        var parentId = svg.getElementById("notes"); 
-console.log("drawNode");
-console.log(item.note);
-       var x = 0;
-       var y = 0;
 
        var foreignObject = document.createElementNS(svgNS, "foreignObject");
        foreignObject.setAttributeNS(null,"id", "fo" + item.get("ident"));
-       foreignObject.setAttributeNS(null,"x", -100);
-       foreignObject.setAttributeNS(null,"y", -100);
+       foreignObject.setAttributeNS(null,"x", CompressX(item.x));
+       foreignObject.setAttributeNS(null,"y", item.y);
        foreignObject.setAttributeNS(null,"width", "4000px");
        foreignObject.setAttributeNS(null,"height", "100%");
        foreignObject.setAttributeNS(null,"transform", "matrix(1 0 0 1 0 0)");
@@ -1282,9 +1270,10 @@ console.log(item.note);
          MenuBusinessObjectCreateCrewMember            : { type : "boolean", default : false, },
          MenuBusinessObjectCreateActivity              : { type : "boolean", default : false, },
          MenuBusinessObjectCreateActivityDayOff        : { type : "boolean", default : false, },
+         MenuBusinessObjectCreateActivityVacation      : { type : "boolean", default : false, },
          MenuBusinessObjectCreateActivityTrip          : { type : "boolean", default : false, },
          MenuBusinessObjectCreateActivityTraining      : { type : "boolean", default : false, },
-         MenuBusinessObjectCreateActivityOtherActivity : { type : "boolean", default : true, },
+         MenuBusinessObjectCreateActivityStandBy       : { type : "boolean", default : true, },
          MenuGraphOption                               : { type : "boolean", default : true, },
          MenuGraphOptionCalendar                       : { type : "boolean", default : false, },
          MenuGraphOptionActivity                       : { type : "boolean", default : false, },
@@ -1358,13 +1347,21 @@ console.log(reusults[0]);
        svgItemNodeName : "configuration",
      });
 
+     // Change MenuItem visibility base on config updates.
      configurationStore.on("add, update", function(event) {
        var cfg     = event.target;
        var pattern = new RegExp("^Menu");
 
        for(var property in cfg) {
          if( pattern.test(property) ) {
-           registry.byId(property).set("disabled", cfg.get(property));
+           var menuItem = registry.byId(property);
+
+           if( menuItem ) {
+             menuItem.set("disabled", cfg.get(property));
+           } 
+           else {
+             alert("unknown MenuItem: " + property);
+           }
          }
        }
      });
@@ -1886,7 +1883,25 @@ console.log("Reset " + self.svgId);
                               }
                             },          
 
-       SetFromTrainingForm : function() {
+       ConvertModelToForm : function () {
+                     },
+       ConvertFormToModel : function (formId) {
+                              var self = this;
+                              if( formId == "TrainingForm" ){
+                                self.ConvertTrainingFormToModel();
+                              }
+                              else if( formId == "TripForm"){
+                                self.ConvertTripFormToModel();
+                              }
+                              else if( formId == "VacationForm" ){
+                                self.ConvertVacationFormToModel();
+                              }
+                              else {
+                                alert(formId + " is not yet implemented.");
+                              }
+                            },
+
+       ConvertTrainingFormToModel : function() {
          var self = this;
          var formObject = domForm.toObject("TrainingForm");
 
@@ -1933,6 +1948,8 @@ console.log("Reset " + self.svgId);
 
 console.log(self);         
        },
+
+
  
 
      });
@@ -2230,6 +2247,10 @@ console.log("remove ycoord...");
      registry.byId("DistanceFromEventSelect").set("store", eventStoreAdapter);
      registry.byId("DistanceToEventSelect").set("labelAttr", "label");
      registry.byId("DistanceToEventSelect").set("store", eventStoreAdapter);
+
+
+
+
      // -----------------------------------------------
      // note Model and Store
      // -----------------------------------------------
@@ -2241,6 +2262,7 @@ console.log("remove ycoord...");
          y      : "numeric",
          note   : "string",
          color  : "string",
+         fk_evt : "numeric",
          ident  : new ComputedProperty({
                     dependsOn : ["pk"],
                     getValue  : function(pk) {
@@ -3630,6 +3652,8 @@ console.log(activityStore.GetNextPKSequence());
          domStyle.set(registry.byId("DuplicateTraining").domNode, "display", "inline");
          domStyle.set(registry.byId("SaveTraining").domNode,      "display", "inline");
          
+         domStyle.set("PkTraining", "display", "table-row");
+         
          registry.byId('TrainingForm').set('value', item);
        } 
        else {
@@ -3688,11 +3712,9 @@ console.log(activityStore.GetNextPKSequence());
 
        var item = new activityModel();
 
-       item.SetFromTrainingForm();
+       item.ConvertFormToModel("TrainingForm");
 
        activityStore.addSync(item);
-
-console.log(activityStore);       
 
        item.CreateEvents();
        
@@ -4176,33 +4198,76 @@ console.log(activityStore);
 
 
 
-
-
-     cp = dijit.byId('NoteColorPaletteWidget');
-     dojo.connect(cp,'onChange',function(){
-       dojo.style(dojo.byId('NoteColorSwatch'),{backgroundColor: cp.value});
-       dijit.popup.close(dijit.byId("NoteColorPaletteDialog"));
+    registry.byId("NoteColorPaletteWidget").on("change", function(value) {
+       domStyle.set(dom.byId("NoteColorSwatch"), "backgroundColor", value);
+       dijit.popup.close(registry.byId("NoteColorPaletteDialog"));
      });
 
-     registry.byId("SaveNote").on("click", function() {
+     registry.byId("CreateNote").on("click", function() {
+console.log("je passe la 1");                                                       
        if( !registry.byId("NoteForm").validate() ) {
          return;
        }
 
-       CreateNoteDialog.hide();   
+       var formObject = domForm.toJson("NoteForm"); 
+console.log(formObject);                                                       
 
+console.log("je passe la 2");                                                       
+       NoteDialog.hide();   
+
+console.log("je passe la 3");                                                       
        noteStore.addSync({
          pk    : noteStore.GetNextPKSequence(),
          note  : registry.byId("NoteEditor").get("value"),
          color : registry.byId("NoteColorPaletteWidget").get("value"),
+         x: 0,
+         y: 0,                                              
        });
 
+console.log("je passe la 4");                                                       
        // registry.byId("NoteForm").reset();
+console.log("je passe la 5");                                                       
        registry.byId("NoteEditor").set("value", "");
        registry.byId("NoteColorPaletteWidget").set("value", "#fff5ee"),
+console.log("je passe la 6");                                                       
 console.log(noteStore);          
      });
 
+     // connect menu creation training to training dialog
+     registry.byId("MenuHighLightsNote").on("click", function() {
+       SetUpNoteDialog(); 
+     });
+
+
+     function SetUpNoteDialog(pkNote) {
+       if( pkNote ) {
+
+         NoteDialog.set("title", "Edit note");
+
+         domStyle.set(registry.byId("CreateNote").domNode,    "display", "none");
+         domStyle.set(registry.byId("DeleteNote").domNode,    "display", "inline");
+         domStyle.set(registry.byId("DuplicateNote").domNode, "display", "inline");
+         domStyle.set(registry.byId("SaveNote").domNode,      "display", "inline");
+         
+         domStyle.set("PkNote", "display", "table-row");
+         
+         var note = noteStore.getSync(pkNote);
+
+         registry.byId('NoteForm').set('value', note);
+       } 
+       else {
+         NoteDialog.set("title", "Create a note");
+
+         domStyle.set(registry.byId("CreateNote").domNode,    "display", "inline");
+         domStyle.set(registry.byId("DuplicateNote").domNode, "display", "none");
+         domStyle.set(registry.byId("DeleteNote").domNode,    "display", "none");
+         domStyle.set(registry.byId("SaveNote").domNode,      "display", "none");
+
+         domStyle.set("PkNote", "display", "none");
+       }
+
+       NoteDialog.show();
+     }
 
 
 
@@ -4577,11 +4642,12 @@ console.log(noteStore);
           <div data-dojo-type="dijit/PopupMenuItem">
             <span>Create activity</span>
             <div id="MenuBusinessObjectCreateActivity" data-dojo-type="dijit/DropDownMenu">
-              <div id="MenuBusinessObjectCreateActivityDayOff"        data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateDayOffDialog.show();}">Day off</div>
-              <div id="MenuBusinessObjectCreateActivityVacation"      data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateVacationDialog.show();}">Vacation</div>
+              <div id="MenuBusinessObjectCreateActivityDayOff"   data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateDayOffDialog.show();}">Day off</div>
+              <div id="MenuBusinessObjectCreateActivityVacation" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateVacationDialog.show();}">Vacation</div>
               <div data-dojo-type="dijit/MenuSeparator"></div>
-              <div id="MenuBusinessObjectCreateActivityTraining"      data-dojo-type="dijit/MenuItem">Training</div>
-              <div id="MenuBusinessObjectCreateActivityTrip"          data-dojo-type="dijit/MenuItem" data-dojo-props="">Trip</div>
+              <div id="MenuBusinessObjectCreateActivityTraining" data-dojo-type="dijit/MenuItem">Training</div>
+              <div id="MenuBusinessObjectCreateActivityTrip"     data-dojo-type="dijit/MenuItem">Trip</div>
+              <div id="MenuBusinessObjectCreateActivityStandBy"  data-dojo-type="dijit/MenuItem">StandBy</div>
             </div>
           </div>
         </div>
@@ -4613,7 +4679,7 @@ console.log(noteStore);
           <div id="MenuHighLightsEvent"    data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateEventDialog.show();}">Event(s)</div>
           <div id="MenuHighLightsDistance" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateDistanceDialog.show();}">Distance</div>
           <div id="MenuHighLightsWindow"   data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {alert('not yet available');}">Window</div>
-          <div id="MenuHighLightsNote"     data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateNoteDialog.show();}">Note</div>
+          <div id="MenuHighLightsNote"     data-dojo-type="dijit/MenuItem">Note</div>
         </div>
       </div>
 
@@ -5316,28 +5382,36 @@ console.log(noteStore);
       </div>
     </div>
 
-    <div data-dojo-type="dijit/Dialog" id="CreateNoteDialog" data-dojo-id="CreateNoteDialog" title="Write a note" style="display: none;">
+    <div data-dojo-type="dijit/Dialog" id="NoteDialog" data-dojo-id="NoteDialog" title="Write a note" style="display: none;" data-dojo-props="onHide: function() {NoteForm.reset();}" >
       <div data-dojo-type="dijit/form/Form" id="NoteForm" data-dojo-id="NoteForm" encType="multipart/form-data" action="" method="">
         <table class="dijitDialogPaneContentArea">
+          <tr id="PkNote">
+            <td><label for="pk">Primary key</label></td>
+            <td><input data-dojo-type="dijit/form/TextBox" name="pk" id="NotePk" readonly="true" disabled="true"></td>
+          </tr>
           <tr>
-            <td><label for="Note">Note</label></td>
+            <td><label for="note">Note</label></td>
             <td>
-              <div data-dojo-type="dijit/Editor" id="NoteEditor" name="Note" data-dojo-props="plugins:['bold','italic','underline','strikethrough','subscript','superscript','|', 'indent', 'outdent', 'justifyLeft', 'justifyCenter', 'justifyRight']" />
+              <!--div data-dojo-type="dijit/Editor" id="NoteEditor" name="note" data-dojo-props="plugins:['bold','italic','underline','strikethrough','subscript','superscript','|', 'indent', 'outdent', 'justifyLeft', 'justifyCenter', 'justifyRight']" /-->
+              <div data-dojo-type="dijit/Editor" id="NoteEditor" name="note" />
             </td>
           </tr>
           <tr>
-            <td><label for="NoteBackgroundColor">Background color</label></td>
+            <td><label for="color">Background color</label></td>
             <td>
               <div id="NoteBackgroundColor" style="background-color: FFFFFF; border-color: black; border-width: 1px;" dojoType="dijit/form/DropDownButton">
                 <span id="colorText"><span id="NoteColorSwatch" style="height: 10px; width: 80px; border: 1px solid black; background-color: #fff5ee;">&nbsp;&nbsp;&nbsp;&nbsp;</span></span>
                 <div dojoType="dijit/TooltipDialog" id="NoteColorPaletteDialog" title="Color Palette">
-                <div dojoType="dijit/ColorPalette" id="NoteColorPaletteWidget"></div>                    
+                <div dojoType="dijit/ColorPalette" name="color" id="NoteColorPaletteWidget"></div>                    
               </div>
             </td>
           </tr>
         </table>
 
         <div class="dijitDialogPaneActionBar">
+          <button data-dojo-type="dijit/form/Button" type="button" id="CreateNote">Create</button>
+          <button data-dojo-type="dijit/form/Button" type="button" id="DeleteNote" class="delete">Delete</button>
+          <button data-dojo-type="dijit/form/Button" type="button" id="DuplicateNote">Duplicate</button>
           <button data-dojo-type="dijit/form/Button" type="button" id="SaveNote">Save</button>
         </div>
       </div>
