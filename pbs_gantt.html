@@ -157,14 +157,11 @@
 
 
 .delete .dijitButtonNode {
-  background-color: orange !important;
+  background-color: #ffd500 !important;
 }
 
-.deleteHover .dijitButtonNode {
-  background-color: red !important;
-}
-.deleteActive .dijitButtonNode {
-  background-color: red !important;
+.delete:hover .dijitButtonNode {
+  background-color: #ffa500 !important;
 }
 
   </style>
@@ -1759,7 +1756,7 @@ console.log("Reset " + self.svgId);
          x                  : "numeric",
          midnightOffset    : "boolean",
          duration           : "numeric",
-         transporation_time : "boolean",
+         transportationTime : "string",
          restBefore        : "numeric",
          restAfter         : "numeric",
          type               : "string",
@@ -1884,7 +1881,30 @@ console.log("Reset " + self.svgId);
                             },          
 
        ConvertModelToForm : function () {
-                     },
+console.log("ConvertModelToForm");         
+                              var self = this;
+console.log(self);
+
+                              if( self.get("type") == "TRN" ) {
+                                var start =  moment(self.get("lbtStart"));
+
+                                self.set({
+                                  start_date: start.toDate(),
+                                  start_time: start.toDate(),
+                                  rest_before_hour: parseInt(self.get("restBefore") / 60),
+                                  rest_before_minute: self.get("restBefore") % 60,
+                                  rest_after_hour: parseInt(self.get("restAfter") / 60),
+                                  rest_after_minute: self.get("restAfter") % 60,
+                                  duration_hour: parseInt(self.get("duration") / 60),
+                                  duration_minute: self.get("duration") % 60,
+                                });
+console.log(self);
+                                registry.byId('TrainingForm').set('value', this);
+                                
+                              }
+
+
+                            },
        ConvertFormToModel : function (formId) {
                               var self = this;
                               if( formId == "TrainingForm" ){
@@ -1913,7 +1933,7 @@ console.log("Reset " + self.svgId);
 
          self.set("fk_cm", fk_cm);
          self.set("midnightOffset", false);
-         self.set("transportationTime", formObject.transportationTime == "true" );
+         self.set("transportationTime", formObject.transportationTime);
 
          var duration = Number(formObject.duration_hour) * 60 + Number(formObject.duration_minute);
 
@@ -3622,9 +3642,9 @@ console.log(activityStore.GetNextPKSequence());
        if(   registry.byId("TrainingStartTime").get("value") != null 
            && registry.byId("TrainingStartDate").get("value") != null ) {
          registry.byId("TrainingDurationHour").readOnly = false;
-         registry.byId("TrainingDurationHour").set("value", 0);
+//         registry.byId("TrainingDurationHour").set("value", 0);
          registry.byId("TrainingDurationMinute").readOnly = false;
-         registry.byId("TrainingDurationMinute").set("value", 0);
+//         registry.byId("TrainingDurationMinute").set("value", 0);
 
          UpdateEndDateTime("Training");
        }
@@ -3671,8 +3691,8 @@ console.log(activityStore.GetNextPKSequence());
          domStyle.set(registry.byId("SaveTraining").domNode,      "display", "inline");
          
          domStyle.set("PkTraining", "display", "table-row");
-         
-         registry.byId('TrainingForm').set('value', item);
+        
+         item.ConvertModelToForm() 
        } 
        else {
          TrainingDialog.set("title", "Create a training");
@@ -3739,7 +3759,25 @@ console.log(activityStore.GetNextPKSequence());
        topic.publish("refreshGraph");
      });
 
-      
+      registry.byId("SaveTraining").on("click", function() {
+       if( !registry.byId("TrainingForm").validate() ) {
+         return;
+       }
+       TrainingDialog.hide();
+
+       var item = activityStore.getSync(registry.byId("TrainingPk").get("value"));
+
+       item.ConvertFormToModel("TrainingForm");
+
+       activityStore.putSync(item);
+
+console.log("TODO - find a nice way to manage event recreation.");
+//        item.CreateEvents();
+       
+       topic.publish("refreshGraph");
+     });
+
+     
 
 
      // -----------------------------------------------
@@ -4255,7 +4293,6 @@ console.log(activityStore.GetNextPKSequence());
 
          domStyle.set(registry.byId("CreateNote").domNode,    "display", "none");
          domStyle.set(registry.byId("DeleteNote").domNode,    "display", "inline");
-         domStyle.set(registry.byId("DuplicateNote").domNode, "display", "inline");
          domStyle.set(registry.byId("SaveNote").domNode,      "display", "inline");
          
          domStyle.set("PkNote", "display", "table-row");
@@ -4269,7 +4306,6 @@ console.log(activityStore.GetNextPKSequence());
          NoteDialog.set("title", "Create a note");
 
          domStyle.set(registry.byId("CreateNote").domNode,    "display", "inline");
-         domStyle.set(registry.byId("DuplicateNote").domNode, "display", "none");
          domStyle.set(registry.byId("DeleteNote").domNode,    "display", "none");
          domStyle.set(registry.byId("SaveNote").domNode,      "display", "none");
 
@@ -5339,7 +5375,6 @@ console.log(activityStore.GetNextPKSequence());
         <div class="dijitDialogPaneActionBar">
           <button data-dojo-type="dijit/form/Button" type="button" id="CreateNote">Create</button>
           <button data-dojo-type="dijit/form/Button" type="button" id="DeleteNote" class="delete">Delete</button>
-          <button data-dojo-type="dijit/form/Button" type="button" id="DuplicateNote">Duplicate</button>
           <button data-dojo-type="dijit/form/Button" type="button" id="SaveNote">Save</button>
         </div>
       </div>
