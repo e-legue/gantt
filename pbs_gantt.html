@@ -1129,7 +1129,7 @@ console.log(CompressX(dur));
      var sig2;
 
      function selectElement(evt) {
-       if( evt.ctrlKey ){
+       if( evt.ctrlKey || evt.altKey ){
          selectedElement = evt.target.parentNode; // I don't know why target points to body. 
          currentX = evt.clientX;
          currentY = evt.clientY;
@@ -2275,7 +2275,25 @@ console.log("remove ycoord...");
                          var self = this;
 
                          SVG_drawNote(self); 
-                       },
+                         },
+       ConvertFormToModel: function() {
+                             var self = this;
+
+                             self.set("pk", noteStore.GetNextPKSequence());
+                             self.set("note", registry.byId("NoteEditor").get("value"));
+                             self.set("color",  registry.byId("NoteColorPaletteWidget").get("value"));
+                             self.set("x", 0);
+                             self.set("y", 0);
+                           },
+       ConvertModelToForm: function() {
+
+
+
+
+                           },
+
+                             
+
      });
 
 
@@ -4197,6 +4215,11 @@ console.log(activityStore.GetNextPKSequence());
 
 
 
+     registry.byId("NoteDialog").on("hide", function() {
+       registry.byId("NoteForm").reset();
+       registry.byId("NoteEditor").set("value", "");
+       registry.byId("NoteColorPaletteWidget").set("value", "#fff5ee");
+     });
 
     registry.byId("NoteColorPaletteWidget").on("change", function(value) {
        domStyle.set(dom.byId("NoteColorSwatch"), "backgroundColor", value);
@@ -4204,33 +4227,19 @@ console.log(activityStore.GetNextPKSequence());
      });
 
      registry.byId("CreateNote").on("click", function() {
-console.log("je passe la 1");                                                       
        if( !registry.byId("NoteForm").validate() ) {
          return;
        }
 
-       var formObject = domForm.toJson("NoteForm"); 
-console.log(formObject);                                                       
+       var item = new noteModel();
 
-console.log("je passe la 2");                                                       
-       NoteDialog.hide();   
+       item.ConvertFormToModel();
 
-console.log("je passe la 3");                                                       
-       noteStore.addSync({
-         pk    : noteStore.GetNextPKSequence(),
-         note  : registry.byId("NoteEditor").get("value"),
-         color : registry.byId("NoteColorPaletteWidget").get("value"),
-         x: 0,
-         y: 0,                                              
-       });
+       noteStore.addSync(item);
 
-console.log("je passe la 4");                                                       
-       // registry.byId("NoteForm").reset();
-console.log("je passe la 5");                                                       
-       registry.byId("NoteEditor").set("value", "");
-       registry.byId("NoteColorPaletteWidget").set("value", "#fff5ee"),
-console.log("je passe la 6");                                                       
-console.log(noteStore);          
+       NoteDialog.hide();
+       
+       topic.publish("refreshGraph");
      });
 
      // connect menu creation training to training dialog
@@ -4254,6 +4263,7 @@ console.log(noteStore);
          var note = noteStore.getSync(pkNote);
 
          registry.byId('NoteForm').set('value', note);
+         registry.byId("NoteColorPaletteWidget").set("value", note.get("color"));
        } 
        else {
          NoteDialog.set("title", "Create a note");
@@ -4485,6 +4495,8 @@ console.log(noteStore);
       * Handle mouse wheel event.
       */
      on(root, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
+       if( !evt.ctrlKey && !evt.altKey )
+         return;
        if(!enableZoom)
          return;
 
@@ -4508,7 +4520,8 @@ console.log(noteStore);
        p = p.matrixTransform(g.getCTM().inverse());
 
        // Compute new scale matrix in current mouse position
-       var k = root.createSVGMatrix().translate(p.x, p.y).scale(z).translate(-p.x, -p.y);
+       var k = root.createSVGMatrix().scale(z);
+       //var k = root.createSVGMatrix().translate(p.x, p.y).scale(z).translate(-p.x, -p.y);
 
        setCTM(g, g.getCTM().multiply(k));
 
@@ -4518,91 +4531,6 @@ console.log(noteStore);
        stateTf = stateTf.multiply(k.inverse());
      });
 
-     /**
-      * Handle mouse move event.
-      */
-/*     
-     on(root, touch.move, function(evt) {
-       if( evt.preventDefault ) {
-         evt.preventDefault();
-       }
-
-       evt.returnValue = false;
-
-       var svgDoc = evt.target.ownerDocument;
-
-       var g = getRoot(svgDoc);
-
-       if(state == "pan" && enablePan) {
-         // Pan mode
-         var p = getEventPoint(evt).matrixTransform(stateTf);
-
-         setCTM(g, stateTf.inverse().translate(p.x - stateOrigin.x, p.y - stateOrigin.y));
-       } else if(state == "drag" && enableDrag) {
-         // Drag mode
-         var p = getEventPoint(evt).matrixTransform(g.getCTM().inverse());
-
-         setCTM(stateTarget, root.createSVGMatrix().translate(p.x - stateOrigin.x, p.y - stateOrigin.y).multiply(g.getCTM().inverse()).multiply(stateTarget.getCTM()));
-
-         stateOrigin = p;
-       }
-     });
-*/
-     /**
-      * Handle click event.
-      */
-/*     
-     on(root, touch.press, function(evt) {
-       if( evt.preventDefault ) {
-         evt.preventDefault();
-       }
-
-       evt.returnValue = false;
-
-       var svgDoc = evt.target.ownerDocument;
-       var g = getRoot(svgDoc);
-
-       if(
-           evt.target.tagName == "svg" 
-           || !enableDrag // Pan anyway when drag is disabled and the user clicked on an element 
-         ) {
-         // Pan mode
-         state = "pan";
-
-         stateTf = g.getCTM().inverse();
-
-         stateOrigin = getEventPoint(evt).matrixTransform(stateTf);
-       } else {
-         // Drag mode
-         state = "drag";
-
-         stateTarget = evt.target;
-
-         stateTf = g.getCTM().inverse();
-
-         stateOrigin = getEventPoint(evt).matrixTransform(stateTf);
-       }
-     });
-*/
-     /**
-      * Handle mouse button release event.
-      */
-/*     
-     on(root, touch.release, function(evt) {
-       if( evt.preventDefault ) { 
-         evt.preventDefault();
-       }
-
-       evt.returnValue = false;
-
-       var svgDoc = evt.target.ownerDocument;
-
-       if( state == "pan" || state == "drag" ) {
-         // Quit pan mode
-         state = "";
-       }
-     });
-*/
 
 });
 
