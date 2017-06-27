@@ -1924,9 +1924,15 @@ console.log(self);
        ConvertTrainingFormToModel : function() {
          var self = this;
          var formObject = domForm.toObject("TrainingForm");
+console.log("ConvertTrainingFormToModel");
+console.log(self);
+console.log(self.pk);
 
-         self.set("type", "TRN");
-         self.set("pk", activityStore.GetNextPKSequence());
+         if( typeof(self.pk) == 'undefined' ) {
+           self.set("type", "TRN");
+           self.set("pk", activityStore.GetNextPKSequence());
+         }
+
          self.set("name", formObject.name);         
 
          var fk_cm = Number(formObject.fk_cm);
@@ -1936,7 +1942,7 @@ console.log(self);
          self.set("transportationTime", formObject.transportationTime);
 
          var duration = Number(formObject.duration_hour) * 60 + Number(formObject.duration_minute);
-
+console.log("duration: " + duration);
          self.set("duration", duration);
          self.set("restBefore", Number(formObject.rest_before_hour) * 60 + Number(formObject.rest_before_minute));
          self.set("restAfter", Number(formObject.rest_after_hour) * 60 + Number(formObject.rest_after_minute));
@@ -1957,17 +1963,55 @@ console.log(self);
          fullName += " -- " + startTraining.format("YYYY-MM-DD HH:mm") + " -- " + self.get("name");
 
          self.set("fullName", fullName);
-
-         var lineNb = GetActivityLineNumber(fk_cm, x, duration);
-
-         if( lineNb > 1 ) {
-           alert("The new traininig is overlapping with another activity."); 
-         }
-
-         self.set("lineNb", lineNb);
+         self.SetLineNb();
 
 console.log(self);         
        },
+
+     /* 
+      * Determine if the new activity is overlapping with other activities
+      * related to a specific crewmember. If there is a collision, then
+      * the new activity will be assigned a new line. 
+      * @param crewMemberPk crew member primary key. if 0, that's opentime.
+      * @param x            new activity starting datetime.
+      * @param width        new activity length.
+      * @param pk           
+      * @return The line number where the new activity will be drawn.
+      */
+     SetLineNb:   function() {
+       var self = this;
+
+       var lineNb = typeof(self.lineNb) == "undefined" ? 1 : self.lineNb;
+
+       activityStore.filter({fk_cm: self.fk_cm}).forEach(function(object) {
+         if( object.pk != self.pk && typeof(object.fk_parent) == "undefined" ) {
+           var A = self.x;
+           var B = self.x + self.duration;
+
+           var C = object.x;
+           var D = object.x + object.duration;
+
+           if( !(( B <= C ) || ( A >= D ))) {    
+             lineNb = Math.max(lineNb, object.lineNb + 1);
+           }
+         }
+       });
+
+       if ( self.fk_cm ) { // a true crewMember.
+         var cm = crewMemberStore.getSync(self.fk_cm);
+         if( cm.lineCount < lineNb ) {
+           cm.lineCount = lineNb;
+           crewMemberStore.putSync(cm);
+         }
+       }
+       else { // opentime
+         if( OpenTimeLineCount < lineNb ) {    
+           OpenTimeLineCount = lineNb;          
+         }  
+       }
+
+       self.set("lineNb", lineNb);
+     }
 
 
  
@@ -2001,6 +2045,40 @@ console.log("Reset " + self.svgId);
                            // 3 - reset pk
                            self.nextPk = 1;
                          },
+       Toto: function() {
+         var self = this;
+
+         if( !registry.byId("TrainingForm").validate() ) {
+           return;
+         }
+         registry.byId("TrainingDialog").hide();
+
+         var pk = registry.byId("TrainingPk");
+console.log("training pk");
+console.log(pk);
+console.log(pk.get("value"));
+         var isNew = false;
+
+         var item = activityStore.getSync(pk.get("value"));
+         
+         if( !item) {
+           item = new activityModel();
+           isNew = true;
+         }
+
+         item.ConvertFormToModel("TrainingForm");
+
+         if( isNew ) {
+           self.addSync(item);
+         }
+         else {
+           self.putSync(item);
+         }
+
+         item.CreateEvents();
+         
+         topic.publish("refreshGraph");
+       },
 
      });
 
@@ -2377,13 +2455,14 @@ console.log("Reset " + self.svgId);
       * @param crewMemberPk crew member primary key. if 0, that's opentime.
       * @param x            new activity starting datetime.
       * @param width        new activity length.
+      * @param pk           
       * @return The line number where the new activity will be drawn.
       */
-     function GetActivityLineNumber(crewMemberPk, x , width) {
+     function GetActivityLineNumber(crewMemberPk, x , width, pk) {
        var lineNb = 1;
 
        activityStore.filter({fk_cm: crewMemberPk}).forEach(function(object) {
-         if( typeof(object.fk_parent) == "undefined" ) {
+         if( object.pk != pk && typeof(object.fk_parent) == "undefined" ) {
            var A = x;
            var B = x + width;
 
@@ -3743,38 +3822,11 @@ console.log(activityStore.GetNextPKSequence());
      });
      
      registry.byId("CreateTraining").on("click", function() {
-       if( !registry.byId("TrainingForm").validate() ) {
-         return;
-       }
-       TrainingDialog.hide();
-
-       var item = new activityModel();
-
-       item.ConvertFormToModel("TrainingForm");
-
-       activityStore.addSync(item);
-
-       item.CreateEvents();
-       
-       topic.publish("refreshGraph");
+       activityStore.Toto();
      });
 
       registry.byId("SaveTraining").on("click", function() {
-       if( !registry.byId("TrainingForm").validate() ) {
-         return;
-       }
-       TrainingDialog.hide();
-
-       var item = activityStore.getSync(registry.byId("TrainingPk").get("value"));
-
-       item.ConvertFormToModel("TrainingForm");
-
-       activityStore.putSync(item);
-
-console.log("TODO - find a nice way to manage event recreation.");
-//        item.CreateEvents();
-       
-       topic.publish("refreshGraph");
+       activityStore.Toto();
      });
 
      
@@ -4855,7 +4907,7 @@ console.log("TODO - find a nice way to manage event recreation.");
       </svg>
     </div>
 
-    <div data-dojo-type="dijit/Dialog" data-dojo-id="TrainingDialog" title="Create training" style="display: none;" data-dojo-props="onHide: function() {TrainingForm.reset();}" >
+    <div data-dojo-type="dijit/Dialog" id="TrainingDialog" data-dojo-id="TrainingDialog" title="Create training" style="display: none;" data-dojo-props="onHide: function() {TrainingForm.reset();}" >
       <div data-dojo-type="dijit/form/Form" id="TrainingForm" data-dojo-id="TrainingForm" encType="multipart/form-data" action="" method="">
         <table class="dijitDialogPaneContentArea">
           <tr id="PkTraining">

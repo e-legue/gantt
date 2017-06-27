@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" /> 
+  
+  <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.12.2/dijit/themes/claro/claro.css" />
+  <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.12.2/dojox/form/resources/CheckedMultiSelect.css" />
+  <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.12.2/dojox/form/resources/UploaderFileList.css" />
+  <link rel="stylesheet" href="http://cdn.rawgit.com/SitePen/dgrid/v1.1.0/css/dgrid.css" />
+  <link rel="stylesheet" href="http://cdn.rawgit.com/SitePen/dgrid/v1.1.0/css/skins/claro.css" />
+  <link rel="stylesheet" href="http://codemirror.net/lib/codemirror.css"/>
+  <link rel="stylesheet" href="http://codemirror.net/addon/fold/foldgutter.css" />
+
+
+  <script>
+var dojoConfig = {
+  async: true, 
+  debug: true,
+  packages: [{
+    name: "dstore",
+    location: "https://cdn.rawgit.com/SitePen/dstore/v1.1.1"
+  }, {
+    name: "dmodel",
+    location: "https://cdn.rawgit.com/SitePen/dmodel/master"
+  }, {
+    name: "dgrid",
+    location: "https://cdn.rawgit.com/SitePen/dgrid/v1.1.0"
+  }, {
+    name: "moment",
+    location: "https://cdn.rawgit.com/moment/moment/2.17.1",
+    main: "moment"
+  }, {
+    name: "moment-timezone",
+    location: "https://cdn.rawgit.com/moment/moment-timezone/0.5.10",
+    main: "timezone"
+  }, {
+    name: "codemirror",
+    location: "http://codemirror.net/",
+  }, {
+    name: "vkbeautify",
+    location: "https://cdn.rawgit.com/vkiryukhin/vkBeautify/0a238953",
+  }, {
+    name: "jszip",
+    location: "https://cdn.rawgit.com/Stuk/jszip/v3.1.3/dist/",
+  }, {
+    name: "filesaver",
+    location: "https://cdn.rawgit.com/eligrey/FileSaver.js/1.3.3",
+  }
+  ]
+};
+  </script>
+
+  <script src="http://ajax.googleapis.com/ajax/libs/dojo/1.12.2/dojo/dojo.js"></script>
+
+
+  <script>
+require([
+  "dojo/_base/declare",
+  "dojo/window",
+  "dojo/sniff",
+  "dojo/on",
+  "dojo/topic",
+  "dojo/touch",
+  "dojo/dom",
+  "dojo/dom-style",
+  "dojo/dom-construct",
+  "dojo/dom-geometry",
+  "dojo/dom-form",
+  "dojo/json",
+  "dojo/parser",
+  "dojo/request/script",
+  "dojo/date",
+  "dojo/Stateful", 
+  "dojo/query", 
+  "dojo/data/ObjectStore", 
+  "dojo/store/Memory", 
+  "dojo/store/Observable",
+  "dijit/_Widget",
+  "dijit/registry",
+  "dijit/Dialog",
+  "dijit/form/Button",
+  "dijit/form/Select",
+  "dijit/form/FilteringSelect",
+  "dijit/form/ComboBox",
+  "dojox/xml/parser", 
+  "dojox/widget/Standby",
+  "dojox/form/CheckedMultiSelect",
+  "dstore/Memory",
+  "dstore/Trackable",
+  "dstore/legacy/DstoreAdapter",
+  "dmodel/Model",
+  "dmodel/ComputedProperty",
+  "dgrid/OnDemandGrid", 
+  "dgrid/Selection", 
+  "dgrid/Keyboard", 
+  "dgrid/Editor", 
+  "dgrid/extensions/CompoundColumns",
+  "moment/moment",
+  "moment-timezone/builds/moment-timezone-with-data",
+  "codemirror/lib/codemirror",
+  "jszip/jszip",
+  "filesaver/FileSaver",
+  
+  "dojo/domReady!",
+
+  "dijit/MenuBar",
+  "dijit/PopupMenuBarItem",
+  "dijit/Menu",
+  "dijit/MenuItem",
+  "dijit/MenuBarItem",
+  "dijit/DropDownMenu",
+  "dijit/CheckedMenuItem",
+  "dijit/ColorPalette",
+  "dijit/form/Form",
+  "dijit/form/CheckBox",
+  "dijit/form/TextBox",
+  "dijit/form/DateTextBox",
+  "dijit/form/TimeTextBox",
+  "dijit/form/DropDownButton",
+  "dijit/form/RadioButton",
+  "dijit/layout/TabContainer", 
+  "dijit/layout/ContentPane", 
+  "dijit/Editor",
+  "dijit/ColorPalette",
+  "dijit/TooltipDialog",
+  "dojox/layout/TableContainer",
+  "dojox/form/Uploader",
+  "dojox/form/uploader/FileList",
+  "codemirror/mode/xml/xml",
+  "codemirror/addon/fold/xml-fold",
+  "codemirror/addon/edit/matchtags",
+  "codemirror/addon/fold/foldgutter",
+  "codemirror/addon/fold/brace-fold",
+  "vkbeautify/vkbeautify",
+], function(
+  // dojo section    
+  declare,
+  win,
+  has,
+  on, 
+  topic,
+  touch,
+  dom, 
+  domStyle,
+  domConstruct,
+  domGeom,
+  domForm,
+  json,
+  parser, 
+  script,
+  date,
+  Stateful,
+  query,
+  ObjectStore, 
+  LegacyMemory,
+  LegacyObservable,
+  // dijit section
+  _WidgetBase,
+  registry, 
+  Dialog,
+  Button,
+  Select,
+  FilteringSelect,
+  ComboBox,
+  // dojox section
+  xmlparser,
+  Standby,
+  CheckedMultiSelect,
+  // dstore section
+  Memory,
+  Trackable,
+  DstoreAdapter,
+  // dmodel section
+  Model,
+  ComputedProperty,
+  // dgrid section
+  OnDemandGrid, 
+  Selection, 
+  Keyboard, 
+  Editor, 
+  CompoundColumns,
+  // moment section
+  moment,
+  timezone,
+  // codemirror section 
+  CodeMirror,
+  JSZip,
+  FileSaver
+//  ganttSVG
+  ) {
+
+
+    // ===============================================
+    // Widget for leg/lay/station.
+    // ===============================================
+    var CustomEditorOperations = declare([_WidgetBase], {
+      value: null,
+      buildRendering: function() {
+        var self = this;
+        this.inherited(arguments);
+
+        self._buttonLeg = new Button({
+          label: "New leg",
+          class: "thinButton",
+        });
+        self._buttonLayover = new Button({
+          label: "New layover",
+          class: "thinButton",
+        });
+        self._buttonDelete = new Button({
+          iconClass: "dijitIconDelete",
+          class: "thinButton",
+        });
+
+        self._buttonLeg.on("click", function() {
+          self.grid.collection.add({
+            pk      : self.grid.collection.nextPk,
+            order   : self.value.order + 0.1,
+            type    : "leg",
+            legType : "A",
+            dhour   : 2,
+            dminute : 0,
+          });
+          self.grid.collection.add({
+            pk      : self.grid.collection.nextPk,
+            order   : self.value.order + 0.2,
+            dhour   : 0,
+            dminute : 45,
+            type    : "sta",
+          });
+          self.grid.collection.process();
+        });
+
+        self._buttonLayover.on("click", function() {
+          // prevoir le chgt de duree de la station d'avant.
+          self.grid.collection.add({
+            pk      : self.grid.collection.nextPk,
+            order   : self.value.order + 0.1,
+            type    : "lay",
+            dhour   : 12,
+            dminute : 0,
+          });
+          self.grid.collection.add({
+            pk      : self.grid.collection.nextPk,
+            order   : self.value.order + 0.2,
+            dhour   : 0,
+            dminute : 20,
+            type    : "sta",
+            station : self.value.station
+          });
+          self.grid.collection.process();
+        });
+
+        self._buttonDelete.on("click", function() {
+          if( self.value.order != self.grid.collection.len -1 ) {
+            self.grid.collection.filter({order: self.value.order + 1}).forEach( function(object) {
+              self.grid.collection.remove(object.pk);
+            });
+          } 
+          else {
+            // as this is the last leg/layover in the ordered list, I need to delete the current
+            // leg/layover and the previous station, because the next one is untouchable, required
+            // as the destination station.
+            self.grid.collection.filter({order: self.value.order - 1}).forEach( function(object) {
+              self.grid.collection.remove(object.pk);
+            });
+          }
+
+          self.grid.collection.remove(self.value.pk);
+          self.grid.collection.process();
+        });
+
+      },
+      _setValueAttr: function(value) {
+        this.value = value;
+
+        if( this.value.newLegButton ) this.domNode.appendChild(this._buttonLeg.domNode);
+        if( this.value.newLayButton ) this.domNode.appendChild(this._buttonLayover.domNode);
+        if( this.value.deleteButton ) this.domNode.appendChild(this._buttonDelete.domNode);
+      },
+      _getValueAttr: function() {
+        return this.value;
+      },
+      destroy: function() {
+        this._buttonLeg.destroy();
+        this._buttonLayover.destroy();
+        this._buttonDelete.destroy();
+        this.inherited(arguments);
+      }
+    });
+
+
+    parser.parse().then(function() { 
+    });
+
+    // ===============================================
+    // Set data for duration input.
+    // ===============================================
+    var zeroTo99 = [];
+    for( i = 0; i < 100; ++i ) {
+      zeroTo99.push({name: i, id: i});
+    } 
+    var zeroTo59 = [];
+    for( i = 0; i < 60; ++i ) {
+      zeroTo59.push({name: i, id: i});
+    } 
+
+    var zeroTo59Store = new LegacyMemory({ data: zeroTo59 });
+    var zeroTo99Store = new LegacyMemory({ data: zeroTo99 });
+
+
+
+
+    registry.byId("TrainingRestBeforeH").set("store", zeroTo99Store);
+    registry.byId("TrainingRestAfterH").set("store", zeroTo99Store);
+    registry.byId("TrainingDurationHour").set("store", zeroTo99Store);
+
+    registry.byId("TrainingRestBeforeH").set("regExp", '[0-9]+');
+    registry.byId("TrainingRestAfterH").set("regExp", '[0-9]+');
+    registry.byId("TrainingDurationHour").set("regExp", '[0-9]+');
+
+    registry.byId("TrainingRestBeforeM").set("store", zeroTo59Store);
+    registry.byId("TrainingRestAfterM").set("store", zeroTo59Store);
+    registry.byId("TrainingDurationMinute").set("store", zeroTo59Store);
+
+ 
+
+});
+
+  </script>
+
+</head>
+<body class="claro">
+      <div data-dojo-type="dijit/form/Form" id="TrainingForm" data-dojo-id="TrainingForm" encType="multipart/form-data" action="" method="">
+        <table class="dijitDialogPaneContentArea">
+          <tr id="PkTraining">
+            <td><label for="pk">Primary key</label></td>
+            <td><input data-dojo-type="dijit/form/TextBox" name="pk" id="TrainingPk" readonly="true" disabled="true"></td>
+          </tr>
+          <tr>
+            <td><label for="name">Name</label></td>
+            <td><input data-dojo-type="dijit/form/TextBox" name="name" id="TrainingName" required="true"></td>
+          </tr>
+          <tr>
+            <td><label for="fk_cm">Crew member</label></td>
+            <td><select data-dojo-type="dijit/form/FilteringSelect" name="fk_cm" id="TrainingCrewMemberSelect" required="false"/></td>
+          </tr>
+          <tr>
+            <td><label for="transportationTime">Transportation time apply</label></td>
+            <td><input data-dojo-type="dijit/form/CheckBox" name="transportationTime" id="TrainingTransportationTime" value="true" required="true"></td>
+          </tr>
+          <tr>
+            <td><label for="restbefore">Rest before</label></td>
+            <td>
+              <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="rest_before_hour" id="TrainingRestBeforeH" value="0" data-dojo-props="" required="true">h&nbsp;
+              <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="rest_before_minute" id="TrainingRestBeforeM" value="0" data-dojo-props="" required="true">m
+            </td>
+          </tr>
+          <tr>
+            <td><label for="start">Start date time</label></td>
+            <td class="datetime">
+              <input id="TrainingStartDate" name="start_date" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"/>
+              <input id="TrainingStartTime" name="start_time" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'"/></td>
+          </tr>
+          <tr>
+            <td><label for="duration">Duration</label></td>
+            <td>
+              <input id="TrainingDurationHour"   class="durationHour" data-dojo-type="dijit/form/ComboBox" name="duration_hour" data-dojo-props="placeHolder:'0'" required="true" readonly="true" />h&nbsp;
+              <input id="TrainingDurationMinute" class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="duration_minute" data-dojo-props="placeHolder:'0'" required="true" readonly="true" />m
+            </td>
+          </tr>
+          <tr>
+            <td><label for="end">End date time</label></td>
+            <td class="datetime">
+              <input id="TrainingEndDate" name="end_date" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'" readonly="true" disabled="true" />
+              <input id="TrainingEndTime" name="end_time" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'" readonly="true" disabled="true" />
+            </td>
+          </tr>
+          <tr>
+            <td><label for="restafter">Rest after</label></td>
+            <td>
+              <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="rest_after_hour" id="TrainingRestAfterH" value="0" data-dojo-props="" required="true">h&nbsp;
+              <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="rest_after_minute" id="TrainingRestAfterM" value="0" data-dojo-props="" required="true">m
+            </td>
+          </tr>
+        </table>
+
+        <div class="dijitDialogPaneActionBar">
+          <button data-dojo-type="dijit/form/Button" type="button" id="CreateTraining">Create</button>
+          <button data-dojo-type="dijit/form/Button" type="button" id="DeleteTraining" class="delete">Delete</button>
+          <button data-dojo-type="dijit/form/Button" type="button" id="DuplicateTraining">Duplicate</button>
+          <button data-dojo-type="dijit/form/Button" type="button" id="SaveTraining">Save</button>
+        </div>
+      </div>
+</body>
+</html>
