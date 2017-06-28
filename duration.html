@@ -76,6 +76,7 @@ require([
   "dojo/store/Memory", 
   "dojo/store/Observable",
   "dijit/_Widget",
+  "dijit/_ListMouseMixin",
   "dijit/registry",
   "dijit/Dialog",
   "dijit/form/Button",
@@ -156,6 +157,7 @@ require([
   LegacyObservable,
   // dijit section
   _WidgetBase,
+  _ListMouseMixin,
   registry, 
   Dialog,
   Button,
@@ -299,9 +301,7 @@ require([
 // ==============================================================================================================
 
 
-
-
-	var DurationPicker = declare("dijit._DurationPicker", [_WidgetBase, _ListMouseMixin], {
+	var DurationPicker = declare(/*"dijit._DurationPicker",*/ [_WidgetBase, _ListMouseMixin], {
 		// summary:
 		//		A time picker dropdown, used by dijit/form/TimeTextBox.
 		//		This widget is not available as a standalone widget due to lack of accessibility support.
@@ -675,15 +675,14 @@ require([
 	});
 
 	/*=====
-	 TimePicker.__Constraints = declare(locale.__FormatOptions, {
+	 DurationPicker.__Constraints = declare(locale.__FormatOptions, {
 		 // clickableIncrement: String
 		 //		See `dijit/_TimePicker.clickableIncrement`
-		 clickableIncrement: "T00:15:00"
+		 clickableIncrement: 5
 	 });
 	 =====*/
 
-	return TimePicker;
-});
+	// return DurationPicker;
 
 
 
