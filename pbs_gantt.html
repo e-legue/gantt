@@ -163,6 +163,10 @@
   background-color: #ffa500 !important;
 }
 
+form {
+  margin: 0;
+}
+
   </style>
 
   <script>
@@ -1081,7 +1085,7 @@ console.log(mydate);
        G.appendChild(SVG_drawText("act_hour end_hour", activity.duration, 14 * unitY, endActivity.format("HH:mm")));
 
        var transportationTime = 0;
-       if( activity.transportationTime) {
+       if( activity.transportationTime ) {
          transportationTime = Number(config.transportationTime);
          // before.
          G.appendChild(SVG_drawRect("TP", transportationTime * -1, 3 * unitY, transportationTime, 4 * unitY));
@@ -1789,7 +1793,7 @@ console.log("Reset " + self.svgId);
          x                  : "numeric",
          midnightOffset    : "boolean",
          duration           : "numeric",
-         transportationTime : "string",
+         transportationTime : "boolean",
          restBefore        : "numeric",
          restAfter         : "numeric",
          type               : "string",
@@ -1916,23 +1920,27 @@ console.log("Reset " + self.svgId);
        ConvertModelToForm : function () {
 console.log("ConvertModelToForm");         
                               var self = this;
+                              var copy = Object.create(self);
 console.log(self);
 
-                              if( self.get("type") == "TRN" ) {
-                                var start =  moment(self.get("lbtStart"));
+                              if( copy.type == "TRN" ) {
+                                var start =  moment(copy.lbtStart);
 
-                                self.set({
+                                copy.set({
                                   start_date: start.toDate(),
                                   start_time: start.toDate(),
-                                  rest_before_hour: parseInt(self.get("restBefore") / 60),
-                                  rest_before_minute: self.get("restBefore") % 60,
-                                  rest_after_hour: parseInt(self.get("restAfter") / 60),
-                                  rest_after_minute: self.get("restAfter") % 60,
-                                  duration_hour: parseInt(self.get("duration") / 60),
-                                  duration_minute: self.get("duration") % 60,
+                                  rest_before_hour: parseInt(copy.restBefore / 60),
+                                  rest_before_minute: copy.restBefore % 60,
+                                  rest_after_hour: parseInt(copy.restAfter / 60),
+                                  rest_after_minute: copy.restAfter % 60,
+                                  duration_hour: parseInt(copy.duration / 60),
+                                  duration_minute: copy.duration % 60,
                                 });
-console.log(self);
-                                registry.byId('TrainingForm').set('value', this);
+                                if( copy.transportationTime ){
+                                  copy.transportationTime = "true";
+                                }
+console.log(copy);
+                                registry.byId('TrainingForm').set('value', copy);
                                 
                               }
 
@@ -1956,46 +1964,48 @@ console.log(self);
 
        ConvertTrainingFormToModel : function() {
          var self = this;
+
          var formObject = domForm.toObject("TrainingForm");
 console.log("ConvertTrainingFormToModel");
-console.log(self);
 console.log(self.pk);
-
+console.log(formObject);
          if( typeof(self.pk) == 'undefined' ) {
-           self.set("type", "TRN");
-           self.set("pk", activityStore.GetNextPKSequence());
+           self.type = "TRN";
+           self.pk = activityStore.GetNextPKSequence();
          }
 
-         self.set("name", formObject.name);         
+         self.name = formObject.name;         
 
          var fk_cm = Number(formObject.fk_cm);
 
-         self.set("fk_cm", fk_cm);
-         self.set("midnightOffset", false);
-         self.set("transportationTime", formObject.transportationTime);
+         self.fk_cm = fk_cm;
+         self.midnightOffset = false;
+         
+
+         self.transportationTime = formObject.transportationTime == "true";
 
          var duration = Number(formObject.duration_hour) * 60 + Number(formObject.duration_minute);
-console.log("duration: " + duration);
-         self.set("duration", duration);
-         self.set("restBefore", Number(formObject.rest_before_hour) * 60 + Number(formObject.rest_before_minute));
-         self.set("restAfter", Number(formObject.rest_after_hour) * 60 + Number(formObject.rest_after_minute));
+console.log(duration);
+         self.duration = duration;
+         self.restBefore = Number(formObject.rest_before_hour) * 60 + Number(formObject.rest_before_minute);
+         self.restAfter  = Number(formObject.rest_after_hour) * 60 + Number(formObject.rest_after_minute);
 
          var startTraining  = moment.tz(formObject.start_date + formObject.start_time, timezoneStore.getSync(config.CalendarTimezone).name);
          var endTraining    = startTraining.clone().add(duration, 'm');
          
          var x = getPositionX(startTraining);
 
-         self.set("lbtStart", startTraining.format("YYYY-MM-DD HH:mm"));
-         self.set("lbtEnd"  , endTraining.format("YYYY-MM-DD HH:mm"));
-         self.set("utcStart", startTraining.utc().format("YYYY-MM-DD HH:mm"));
-         self.set("utcEnd"  , endTraining.utc().format("YYYY-MM-DD HH:mm"));
+         self.lbtStart = startTraining.format("YYYY-MM-DD HH:mm");
+         self.lbtEnd   = endTraining.format("YYYY-MM-DD HH:mm");
+         self.utcStart = startTraining.utc().format("YYYY-MM-DD HH:mm");
+         self.utcEnd   = endTraining.utc().format("YYYY-MM-DD HH:mm");
 
-         self.set("x", x);
+         self.x = x;
 
          var fullName = fk_cm ? crewMemberStore.getSync(fk_cm).name : "Open time";
          fullName += " -- " + startTraining.format("YYYY-MM-DD HH:mm") + " -- " + self.get("name");
 
-         self.set("fullName", fullName);
+         self.fullName = fullName;
          self.SetLineNb();
 
 console.log(self);         
@@ -2043,7 +2053,7 @@ console.log(self);
          }  
        }
 
-       self.set("lineNb", lineNb);
+       self.lineNb = lineNb;
      }
 
 
@@ -2086,27 +2096,29 @@ console.log("Reset " + self.svgId);
          }
          registry.byId("TrainingDialog").hide();
 
-         var pk = registry.byId("TrainingPk");
+         var pk = Number(registry.byId("TrainingPk").get("value"));
 console.log("training pk");
 console.log(pk);
-console.log(pk.get("value"));
+         
          var isNew = false;
 
-         var item = activityStore.getSync(pk.get("value"));
-         
+         var item = pk ? activityStore.getSync(pk): new activityModel();
+        /* 
          if( !item) {
            item = new activityModel();
            isNew = true;
          }
-
+*/
          item.ConvertFormToModel("TrainingForm");
-
+/*
          if( isNew ) {
            self.addSync(item);
          }
          else {
            self.putSync(item);
          }
+          */
+           self.putSync(item);
 
          item.CreateEvents();
          
@@ -2713,9 +2725,6 @@ console.log("Reset " + self.svgId);
      topic.subscribe("refreshGraph", function() {
        yCoordStore.StretchSVGHeight();
 
-console.log(svg);          
-console.log(svg.domViewport.getCTM());
-       svg.SetSizeAttributes();
 
        dojo.query("#calendar").forEach(dojo.empty);
        dojo.query("#calendar_bar").forEach(dojo.empty);
@@ -2787,6 +2796,7 @@ console.log(svg.domViewport.getCTM());
          registry.byId("SHActivityDetailStations").set("checked", config.SHActivityDetailStations);
        }
 
+       svg.SetSizeAttributes();
      });
 
 
@@ -2797,7 +2807,7 @@ console.log(svg.domViewport.getCTM());
        // clean/empty the children.
        dojo.query("#" + store.svgId).forEach(dojo.empty);
 
-       var InsertionPointId = svg.getElementById(store.svgId);
+       var InsertionPointId = svg.dom.getElementById(store.svgId);
        var schema           = store.Model().schema;
        
        store.forEach(function(item) {
@@ -3382,7 +3392,7 @@ console.log(svg.domViewport.getCTM());
 
        //get svg source.
        var serializer = new XMLSerializer();
-       var source = vkbeautify.xml(serializer.serializeToString(svg));
+       var source = vkbeautify.xml(serializer.serializeToString(svg.dom));
        var blob = new Blob([source], {type: "text/plain;charset=utf-8"});
 
        var filename = registry.byId("filename").value;
