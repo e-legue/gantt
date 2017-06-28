@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" /> 
@@ -362,6 +361,50 @@ require([
                                  // tafb, etc...
 
     var OpenTimeLineCount = 0;   // Number of lines required to draw opentime activities without overlaps.
+
+    var svg = {
+      minX : 0,
+      maxX : 1000,
+      minY : 0,
+      maxY : 300,
+
+      Scale: 1,
+
+      dom: dom.byId("graph"),
+      domCalendar: dom.byId("calendar"),
+      domCalendarBar: dom.byId("calendar_bar"),
+      domCrewMembers: dom.byId("crewmembers"),
+      domCrewMemberBar: dom.byId("crewmember_bar"),
+      domNotes: dom.byId("notes"),
+      domOpenTime: dom.byId("opentime"),
+      
+      domViewport: dom.byId("viewport"),
+
+      SetSizeAttributes: function() {
+        var self = this;
+
+        self.dom.setAttribute("width", ( self.maxX - self.minX ) / config.XGraphCompression); 
+        self.dom.setAttribute("height", self.maxY - self.minY);
+
+        var matrix = self.domViewport.getCTM();
+        matrix.e = self.minX * -1;
+        matrix.f = self.minY * -1;
+
+        self.SetCTM(matrix);
+      },
+
+      SetCTM: function(matrix) {
+        var self = this;
+        
+        var s = "matrix(" + matrix.a + "," + matrix.b + "," + matrix.c + "," + matrix.d + "," + matrix.e + "," + matrix.f + ")";
+
+        self.domViewport.setAttribute("transform", s);
+      }
+
+      
+    };
+
+
                                  
     /*
      * Resize graph size according to window size, then svg graph is the bigger it
@@ -747,7 +790,6 @@ console.log(mydate);
      // An attempt to use dojox.gfx module to draw SVG was done, but some problems 
      // occured to identify existing node, in order to add new objects.
 
-     var svg     = dom.byId("graph"); // .getSVGDocument();
      var svgNS   = "http://www.w3.org/2000/svg";
      var xlinkNS = "http://www.w3.org/1999/xlink";
 
@@ -800,13 +842,11 @@ console.log(mydate);
 
      // Draw a event in calendar.
      function SVG_drawEvent(item) {
-       var calendarId    = svg.getElementById("calendar");
-       var calendarBarId = svg.getElementById("calendar_bar");
        var group         = document.createElementNS(svgNS, "g");
        
        group.setAttributeNS(null,"transform","translate(0, " + item.GetYCoord() + ")");
        group.setAttributeNS(null, "id", item.get("ident"));
-       calendarId.appendChild(group);
+       svg.domCalendar.appendChild(group);
 
        var lblText = SVG_drawText("event_label", item.x + 10, HEIGHT_LINE_HL / 2, item.get("short_label"));
        on(lblText, "click", function(evt) {
@@ -818,7 +858,7 @@ console.log(mydate);
        // a specific group.
        var groupBar     = document.createElementNS(svgNS, "g");
        groupBar.setAttributeNS(null, "id", item.get("barident"));
-       calendarBarId.appendChild(groupBar);
+       svg.domCalendarBar.appendChild(groupBar);
 
        groupBar.appendChild(SVG_drawRect("event", item.x, 0, 1, 1));
      }
@@ -826,11 +866,9 @@ console.log(mydate);
 
      // Draw a distance in calendar.
      function SVG_drawDistance(item) {
-       var calendarId    = svg.getElementById("calendar");
-
        var G       = document.createElementNS(svgNS, "g");
        G.setAttributeNS(null, "id", item.get("ident"));
-       calendarId.appendChild(G);
+       svg.domCalendar.appendChild(G);
 
        var xFrom = item.GetEventFrom().x;
        var xTo = item.GetEventTo().x;
@@ -857,11 +895,6 @@ console.log(mydate);
        });
        G.appendChild(lblText);
 
-console.log("lblText length");
-console.log(lblText.getComputedTextLength());
-console.log(dur);
-console.log(CompressX(dur));
-    
        var lblTextLength = lblText.getComputedTextLength();
        var extra = 0;
        var inc = HEIGHT_LINE_CM / 20;
@@ -929,13 +962,10 @@ console.log(CompressX(dur));
      // to the position. This way, each drawing into the g node is strictly the 
      // same for each day, except labels.
      function SVG_drawCalendarDate(item) {
-       var calendarId    = svg.getElementById("calendar");
-       var calendarBarId = svg.getElementById("calendar_bar");
-
        var G       = document.createElementNS(svgNS, "g");
        G.setAttributeNS(null, "transform", "translate(" + CompressX(item.x) + ",0)");
        G.setAttributeNS(null, "id", item.get("ident"));
-       calendarId.appendChild(G);
+       svg.domCalendar.appendChild(G);
 
        G.appendChild(SVG_drawText("day_label relative", 720, -70, "Day " + item.get("relative")));
 
@@ -958,7 +988,7 @@ console.log(CompressX(dur));
        Gbar.setAttributeNS(null, "transform", "translate(" + CompressX(item.x) + ",0)");
        Gbar.setAttributeNS(null, "class", item.get("startperiod") ? "start_period" : item.get("type"));
        Gbar.setAttributeNS(null, "id", item.get("barident"));
-       calendarBarId.appendChild(Gbar);
+       svg.domCalendarBar.appendChild(Gbar);
 
        Gbar.appendChild(SVG_drawRect("day_bar", 0, 0, item.width, 1));
        Gbar.appendChild(SVG_drawRect("line", 0, 0, 1, 1));
@@ -968,6 +998,9 @@ console.log(CompressX(dur));
        for(var i = 60; i < item.width; i += 120) { 
          Gbar.appendChild(SVG_drawRect("hour_bar", i, 0, 60, 1));
        }
+
+       svg.minY = Math.min(svg.minY, -110); // -70 - 40 (line952).
+       svg.maxX = Math.max(svg.maxX, item.x + item.width);
      }
 
 
@@ -990,7 +1023,7 @@ console.log(CompressX(dur));
        group.setAttributeNS(null,"transform","translate(0, " + y + ")");
        group.setAttributeNS(null,"id", item.get("ident"));
        
-       svg.getElementById("crewmembers").appendChild(group);
+       svg.domCrewMembers.appendChild(group);
 
        var groupBar = document.createElementNS(svgNS, "g");
 
@@ -999,7 +1032,9 @@ console.log(CompressX(dur));
        groupBar.appendChild(SVG_drawRect("line", 0, 0               , 1, 1));
        groupBar.appendChild(SVG_drawRect("line", 0, item.GetHeight(), 1, 1));
 
-       svg.getElementById("crewmember_bar").appendChild(groupBar);
+       svg.domCrewMemberBar.appendChild(groupBar);
+
+       svg.minX = Math.min(svg.minX, -50 - crewText.getComputedTextLength());
      }
 
 
@@ -1009,7 +1044,7 @@ console.log(CompressX(dur));
      // the rigth place in the calendar.
      function SVG_drawActivity(activity) { 
        var unitY = HEIGHT_LINE_CM / 14; 
-       var parentId = svg.getElementById(activity.GetCrewMemberIdent()); // line ? svg.getElementById(line.get("ident")) : svg.getElementById("opentime");  
+       var parentId = svg.dom.getElementById(activity.GetCrewMemberIdent());
 
        var G = document.createElementNS(svgNS, "g");
        var yLine = MARGIN_TOP_CM + HEIGHT_LINE_CM * ( activity.lineNb - 1 );
@@ -1147,7 +1182,7 @@ console.log("X: " + currentX + ", Y: " + currentY);
      }
         
      function moveElement(evt) {
-       var viewFactor = dom.byId("viewport").getCTM().a;
+       var viewFactor = svg.domViewport.getCTM().a;
        var dx = evt.clientX - currentX;
        var dy = evt.clientY - currentY;
        currentMatrix[4] += dx / viewFactor;
@@ -1156,7 +1191,6 @@ console.log("X: " + currentX + ", Y: " + currentY);
        selectedElement.setAttributeNS(null, "transform", "matrix(" + currentMatrix.join(' ') + ")");
        currentX = evt.clientX;
        currentY = evt.clientY;
-console.log("X: " + currentX + ", Y: " + currentY);         
      }
         
      function deselectElement(evt) {
@@ -1189,8 +1223,6 @@ console.log("X: " + currentX + ", Y: " + currentY);
      // zoom factor, the computation needs the ratio factor to compute the real size, not the
      // rendered one. 
      function SVG_drawNote(item) {
-       var parentId = svg.getElementById("notes"); 
-
        var foreignObject = document.createElementNS(svgNS, "foreignObject");
        foreignObject.setAttributeNS(null,"id", "fo" + item.get("ident"));
        foreignObject.setAttributeNS(null,"x", CompressX(item.x));
@@ -1204,7 +1236,7 @@ console.log("X: " + currentX + ", Y: " + currentY);
        
 
 
-       parentId.appendChild(foreignObject);
+       svg.domNotes.appendChild(foreignObject);
 
        var body = document.createElement("body");
        body.setAttributeNS(null,"id", "body" + item.get("ident"));
@@ -1222,7 +1254,7 @@ console.log("X: " + currentX + ", Y: " + currentY);
        foreignObject.appendChild(body);
 
        var pos = domGeom.position(dom.byId("span" + item.get("ident")));
-       var viewFactor = dom.byId("viewport").getCTM().a;
+       var viewFactor = svg.domViewport.getCTM().a;
 
        var width  = ( ( pos.w / viewFactor) + 12 + 10 ) * 1.1
        var height = ( ( pos.h / viewFactor) + 12 + 10 ) * 1.1
@@ -1456,8 +1488,9 @@ console.log("Reset " + self.svgId);
                              }
 console.log("strech");
 console.log(self.nextY);
-                             svg.getElementById("calendar_bar").setAttribute("transform", "scale(1," + height + ")");
-                             svg.getElementById("opentime").setAttribute("transform","translate(0, " + self.nextY + ")");
+                             svg.domCalendarBar.setAttribute("transform", "scale(1," + height + ")");
+                             svg.domOpenTime.setAttribute("transform","translate(0, " + self.nextY + ")");
+                             svg.maxY = Math.max(svg.maxY, height);
                            },
        GetNextPKSequence : function() {
                              var self = this;
@@ -2673,13 +2706,16 @@ console.log("Reset " + self.svgId);
 
 
      function AdjustCrewmemberBarScaleX(x) {
-       var bar = svg.getElementById("crewmember_bar");
-       bar.setAttribute("transform", "scale(" + x + ",1)");
+       svg.domCrewMemberBar.setAttribute("transform", "scale(" + x + ",1)");
      }
 
 
      topic.subscribe("refreshGraph", function() {
        yCoordStore.StretchSVGHeight();
+
+console.log(svg);          
+console.log(svg.domViewport.getCTM());
+       svg.SetSizeAttributes();
 
        dojo.query("#calendar").forEach(dojo.empty);
        dojo.query("#calendar_bar").forEach(dojo.empty);
@@ -3089,7 +3125,7 @@ console.log("Reset " + self.svgId);
      // ===============================================
 
      registry.byId("SHCalendarHours").on("change", function(isChecked) {
-       var divs = svg.getElementsByClassName("hour_label");
+       var divs = svg.dom.getElementsByClassName("hour_label");
 
        for (var i = 0; i < divs.length; i++) {
          divs[i].setAttribute("display", isChecked ? "block" : "none");
@@ -3097,7 +3133,7 @@ console.log("Reset " + self.svgId);
      }, true);
 
      registry.byId("SHCalendarDayX").on("change", function(isChecked) {
-       var divs = svg.getElementsByClassName("relative");
+       var divs = svg.dom.getElementsByClassName("relative");
 
        for (var i = 0; i < divs.length; i++) {
          divs[i].setAttribute("display", isChecked ? "block" : "none");
@@ -3105,7 +3141,7 @@ console.log("Reset " + self.svgId);
      }, true);
 
      registry.byId("SHCalendarDayYYYYMMDD").on("change", function(isChecked) {
-       var divs = svg.getElementsByClassName("yyyymmdd");
+       var divs = svg.dom.getElementsByClassName("yyyymmdd");
 
        for (var i = 0; i < divs.length; i++) {
          divs[i].setAttribute("display", isChecked ? "block" : "none");
@@ -3113,7 +3149,7 @@ console.log("Reset " + self.svgId);
      }, true);
 
      registry.byId("SHCalendarDayBars").on("change", function(isChecked) {
-       var divs = svg.getElementsByClassName("day_bar");
+       var divs = svg.dom.getElementsByClassName("day_bar");
 
        for (var i = 0; i < divs.length; i++) {
          divs[i].setAttribute("display", isChecked ? "block" : "none");
@@ -3121,7 +3157,7 @@ console.log("Reset " + self.svgId);
      }, true);
 
      registry.byId("SHCalendarHourBars").on("change", function(isChecked) {
-       var divs = svg.getElementsByClassName("hour_bar");
+       var divs = svg.dom.getElementsByClassName("hour_bar");
 
        for (var i = 0; i < divs.length; i++) {
          divs[i].setAttribute("display", isChecked ? "block" : "none");
@@ -3140,7 +3176,7 @@ console.log("Reset " + self.svgId);
      // Show/Hide activity dialog
      // -----------------------------------------------
      registry.byId("SHActivityHours").on("change", function(isChecked) {
-       var divs = svg.getElementsByClassName("act_hour");
+       var divs = svg.dom.getElementsByClassName("act_hour");
 
        for (var i = 0; i < divs.length; i++) {
          divs[i].setAttribute("display", isChecked ? "block" : "none");
@@ -3148,7 +3184,7 @@ console.log("Reset " + self.svgId);
      }, true);
 
      registry.byId("SHActivityDetails").on("change", function(isChecked) {
-       var divs = svg.getElementsByClassName("details");
+       var divs = svg.dom.getElementsByClassName("details");
 
        for (var i = 0; i < divs.length; i++) {
          divs[i].setAttribute("display", isChecked ? "block" : "none");
@@ -3156,7 +3192,7 @@ console.log("Reset " + self.svgId);
      }, true);
 
      registry.byId("SHActivityDetailHours").on("change", function(isChecked) {
-       var divs = svg.getElementsByClassName("dtl_hour");
+       var divs = svg.dom.getElementsByClassName("dtl_hour");
 
        for (var i = 0; i < divs.length; i++) {
          divs[i].setAttribute("display", isChecked ? "block" : "none");
@@ -3164,7 +3200,7 @@ console.log("Reset " + self.svgId);
      }, true);
 
      registry.byId("SHActivityDetailStations").on("change", function(isChecked) {
-       var divs = svg.getElementsByClassName("dtl_station");
+       var divs = svg.dom.getElementsByClassName("dtl_station");
 
        for (var i = 0; i < divs.length; i++) {
          divs[i].setAttribute("display", isChecked ? "block" : "none");
@@ -4440,152 +4476,11 @@ console.log(activityStore.GetNextPKSequence());
      }
 
 
-
-    /** 
-     *  SVGPan library 1.2.1
-     * ======================
-     *
-     * Given an unique existing element with id "viewport" (or when missing, the first g 
-     * element), including the the library into any SVG adds the following capabilities:
-     *
-     *  - Mouse panning
-     *  - Mouse zooming (using the wheel)
-     *  - Object dragging
-     *
-     * You can configure the behaviour of the pan/zoom/drag with the variables
-     * listed in the CONFIGURATION section of this file.
-     *
-     * Known issues:
-     *
-     *  - Zooming (while panning) on Safari has still some issues
-     *
-     * Releases:
-     *
-     * 1.2.1, Mon Jul  4 00:33:18 CEST 2011, Andrea Leofreddi
-     *	- Fixed a regression with mouse wheel (now working on Firefox 5)
-     *	- Working with viewBox attribute (#4)
-     *	- Added "use strict;" and fixed resulting warnings (#5)
-     *	- Added configuration variables, dragging is disabled by default (#3)
-     *
-     * 1.2, Sat Mar 20 08:42:50 GMT 2010, Zeng Xiaohui
-     *	Fixed a bug with browser mouse handler interaction
-     *
-     * 1.1, Wed Feb  3 17:39:33 GMT 2010, Zeng Xiaohui
-     *	Updated the zoom code to support the mouse wheel on Safari/Chrome
-     *
-     * 1.0, Andrea Leofreddi
-     *	First release
-     *
-     * This code is licensed under the following BSD license:
-     *
-     * Copyright 2009-2010 Andrea Leofreddi <a.leofreddi@itcharm.com>. All rights reserved.
-     * 
-     * Redistribution and use in source and binary forms, with or without modification, are
-     * permitted provided that the following conditions are met:
-     * 
-     *    1. Redistributions of source code must retain the above copyright notice, this list of
-     *       conditions and the following disclaimer.
-     * 
-     *    2. Redistributions in binary form must reproduce the above copyright notice, this list
-     *       of conditions and the following disclaimer in the documentation and/or other materials
-     *       provided with the distribution.
-     * 
-     * THIS SOFTWARE IS PROVIDED BY Andrea Leofreddi ``AS IS'' AND ANY EXPRESS OR IMPLIED
-     * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
-     * FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL Andrea Leofreddi OR
-     * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-     * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-     * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-     * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-     * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
-     * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-     * 
-     * The views and conclusions contained in the software and documentation are those of the
-     * authors and should not be interpreted as representing official policies, either expressed
-     * or implied, of Andrea Leofreddi.
-     */
-
-    /// CONFIGURATION 
-    /// ====>
-
-     var enablePan = 1; // 1 or 0: enable or disable panning (default enabled)
-     var enableZoom = 1; // 1 or 0: enable or disable zooming (default enabled)
-     var enableDrag = 0; // 1 or 0: enable or disable dragging (default disabled)
-
-     /// <====
-     /// END OF CONFIGURATION 
-
-     var root = dom.byId("graph");
-
-     var state = "none", svgRoot, stateTarget, stateOrigin, stateTf;
-
-     /**
-      * Retrieves the root element for SVG manipulation. The element is then cached into the svgRoot global variable.
-      */
-     function getRoot(root) {
-       if(typeof(svgRoot) == "undefined") {
-         var g = null;
-
-         g = dom.byId("viewport");
-
-         if(g == null)
-           alert("Unable to obtain SVG root element");
-
-         setCTM(g, g.getCTM());
-
-         g.removeAttribute("viewBox");
-
-         svgRoot = g;
-       }
-
-       return svgRoot;
-     }
-
-     /**
-      * Instance an SVGPoint object with given event coordinates.
-      */
-     function getEventPoint(evt) {
-       var p = root.createSVGPoint();
-
-       p.x = evt.clientX;
-       p.y = evt.clientY;
-
-       return p;
-     }
-
-     /**
-      * Sets the current transform matrix of an element.
-      */
-     function setCTM(element, matrix) {
-       var s = "matrix(" + matrix.a + "," + matrix.b + "," + matrix.c + "," + matrix.d + "," + matrix.e + "," + matrix.f + ")";
-
-       element.setAttribute("transform", s);
-     }
-
-     /**
-      * Dumps a matrix to a string (useful for debug).
-      */
-     function dumpMatrix(matrix) {
-       var s = "[ " + matrix.a + ", " + matrix.c + ", " + matrix.e + "\n  " + matrix.b + ", " + matrix.d + ", " + matrix.f + "\n  0, 0, 1 ]";
-
-       return s;
-     }
-
-     /**
-      * Sets attributes of an element.
-      */
-     function setAttributes(element, attributes) {
-       for (var i in attributes)
-         element.setAttributeNS(null, i, attributes[i]);
-     }
-
      /**
       * Handle mouse wheel event.
       */
-     on(root, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
+     on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
        if( !evt.ctrlKey && !evt.altKey )
-         return;
-       if(!enableZoom)
          return;
 
        if(evt.preventDefault)
@@ -4593,30 +4488,12 @@ console.log(activityStore.GetNextPKSequence());
 
        evt.returnValue = false;
 
-       var svgDoc = evt.target.ownerDocument;
-       var delta;
-
-       if(evt.wheelDelta)
-         delta = evt.wheelDelta / 3600; // Chrome/Safari
-       else
-         delta = evt.detail / -90; // Mozilla
-
-       var z = 1 + delta; // Zoom factor: 0.9/1.1
-       var g = getRoot(svgDoc);
-       var p = getEventPoint(evt);
-
-       p = p.matrixTransform(g.getCTM().inverse());
+       var delta = evt.wheelDelta ? evt.wheelDelta / 3600 : evt.detail / -90;
 
        // Compute new scale matrix in current mouse position
-       var k = root.createSVGMatrix().scale(z);
-       //var k = root.createSVGMatrix().translate(p.x, p.y).scale(z).translate(-p.x, -p.y);
+       var k =svg.dom.createSVGMatrix().scale(1 + delta);
 
-       setCTM(g, g.getCTM().multiply(k));
-
-       if(typeof(stateTf) == "undefined")
-         stateTf = g.getCTM().inverse();
-
-       stateTf = stateTf.multiply(k.inverse());
+       svg.SetCTM(svg.domViewport.getCTM().multiply(k));
      });
 
 
@@ -4628,7 +4505,7 @@ console.log(activityStore.GetNextPKSequence());
 <body class="claro">
   <div id="loader">
     <div id="loaderInner" style="direction:ltr;">Loading libraries ...</div> 
-  </div> 
+  </div>
   <div id="basicStandby" data-dojo-type="dojox/widget/Standby" data-dojo-props="target:'content', zIndex:1000"></div>
   <div id="content" style="display:none;">
     <div data-dojo-type="dijit/MenuBar" id="navMenu" style="margin-bottom: 8px;">
@@ -4704,7 +4581,7 @@ console.log(activityStore.GetNextPKSequence());
 
     <!-- SVG code -->
     <div id="gantt">
-      <svg id="graph" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" height="1500" width="28880">
+      <svg id="graph" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" height="300" width="1000">
         <style>
 .day_bar {
   fill-opacity: 0.2;
@@ -4847,7 +4724,7 @@ console.log(activityStore.GetNextPKSequence());
 }
         </style>
 
-        <g id="viewport" transform="matrix(0.75, 0, 0, 0.75, 160, 110)">
+        <g id="viewport" transform="matrix(1, 0, 0, 1, 0, 0)">
         <!--
           ====================================================================================
           CALENDAR
@@ -4856,12 +4733,12 @@ console.log(activityStore.GetNextPKSequence());
         <g id="calendar_bar" transform="scale(1,1)"></g>
         <g id="calendar">
         <g id="intro">
-        <image x="220" y="20" width="140" height="195" xlink:href="https://i.ebayimg.com/00/s/MzkwWDI4MA==/z/YKQAAOSwYqxXi7cf/$_86.JPG" />
+        <image x="20" y="20" width="140" height="195" xlink:href="https://i.ebayimg.com/00/s/MzkwWDI4MA==/z/YKQAAOSwYqxXi7cf/$_86.JPG" />
 
-        <text x="400" y="50"  style="fill:black;font-size:40px;">Bob, the "problem" builder v0.1</text>
-        <text x="400" y="90"  style="fill:black;font-size:20px;">To start, please do one of: </text>
-        <text x="420" y="120" style="fill:black;font-size:20px;">- Use File menu to load an XML station file and then Calendar menu to set a period or</text>
-        <text x="420" y="150" style="fill:black;font-size:20px;">- Use File menu to load an SVG file.</text>
+        <text x="200" y="50"  style="fill:black;font-size:30px;">Bob, the "problem" builder v0.1</text>
+        <text x="200" y="90"  style="fill:black;font-size:15px;">To start, please do one of: </text>
+        <text x="220" y="120" style="fill:black;font-size:15px;">- Use File menu to load an XML station file and then Calendar menu to set a period or</text>
+        <text x="220" y="150" style="fill:black;font-size:15px;">- Use File menu to load an SVG file.</text>
         </g>
         </g>
 
