@@ -1918,10 +1918,8 @@ console.log("Reset " + self.svgId);
                             },          
 
        ConvertModelToForm : function () {
-console.log("ConvertModelToForm");         
                               var self = this;
                               var copy = Object.create(self);
-console.log(self);
 
                               if( copy.type == "TRN" ) {
                                 var start =  moment(copy.lbtStart);
@@ -1939,9 +1937,7 @@ console.log(self);
                                 if( copy.transportationTime ){
                                   copy.transportationTime = "true";
                                 }
-console.log(copy);
                                 registry.byId('TrainingForm').set('value', copy);
-                                
                               }
 
 
@@ -1965,14 +1961,12 @@ console.log(copy);
        ConvertTrainingFormToModel : function() {
          var self = this;
 
-         var formObject = domForm.toObject("TrainingForm");
-console.log("ConvertTrainingFormToModel");
-console.log(self.pk);
-console.log(formObject);
          if( typeof(self.pk) == 'undefined' ) {
            self.type = "TRN";
            self.pk = activityStore.GetNextPKSequence();
          }
+         
+         var formObject = domForm.toObject("TrainingForm");
 
          self.name = formObject.name;         
 
@@ -1980,12 +1974,10 @@ console.log(formObject);
 
          self.fk_cm = fk_cm;
          self.midnightOffset = false;
-         
-
          self.transportationTime = formObject.transportationTime == "true";
 
          var duration = Number(formObject.duration_hour) * 60 + Number(formObject.duration_minute);
-console.log(duration);
+
          self.duration = duration;
          self.restBefore = Number(formObject.rest_before_hour) * 60 + Number(formObject.rest_before_minute);
          self.restAfter  = Number(formObject.rest_after_hour) * 60 + Number(formObject.rest_after_minute);
@@ -2007,8 +1999,6 @@ console.log(duration);
 
          self.fullName = fullName;
          self.SetLineNb();
-
-console.log(self);         
        },
 
      /* 
