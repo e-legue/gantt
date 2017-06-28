@@ -70,13 +70,16 @@ require([
   "dojo/parser",
   "dojo/request/script",
   "dojo/date",
+  "dojo/date/stamp", // added.
   "dojo/Stateful", 
   "dojo/query", 
   "dojo/data/ObjectStore", 
   "dojo/store/Memory", 
   "dojo/store/Observable",
   "dijit/_Widget",
-  "dijit/form/_ListMouseMixin",
+  "dijit/_TimePicker",
+  "dijit/form/_ListMouseMixin", // added
+  "dijit/form/_DateTimeTextBox",
   "dijit/registry",
   "dijit/Dialog",
   "dijit/form/Button",
@@ -150,6 +153,7 @@ require([
   parser, 
   script,
   date,
+  stamp,
   Stateful,
   query,
   ObjectStore, 
@@ -157,7 +161,9 @@ require([
   LegacyObservable,
   // dijit section
   _WidgetBase,
+  _TimePicker,
   _ListMouseMixin,
+  _DateTimeTextBox,
   registry, 
   Dialog,
   Button,
@@ -192,106 +198,6 @@ require([
   ) {
 
 
-    // ===============================================
-    // Widget for leg/lay/station.
-    // ===============================================
-    var CustomEditorOperations = declare([_WidgetBase], {
-      value: null,
-      buildRendering: function() {
-        var self = this;
-        this.inherited(arguments);
-
-        self._buttonLeg = new Button({
-          label: "New leg",
-          class: "thinButton",
-        });
-        self._buttonLayover = new Button({
-          label: "New layover",
-          class: "thinButton",
-        });
-        self._buttonDelete = new Button({
-          iconClass: "dijitIconDelete",
-          class: "thinButton",
-        });
-
-        self._buttonLeg.on("click", function() {
-          self.grid.collection.add({
-            pk      : self.grid.collection.nextPk,
-            order   : self.value.order + 0.1,
-            type    : "leg",
-            legType : "A",
-            dhour   : 2,
-            dminute : 0,
-          });
-          self.grid.collection.add({
-            pk      : self.grid.collection.nextPk,
-            order   : self.value.order + 0.2,
-            dhour   : 0,
-            dminute : 45,
-            type    : "sta",
-          });
-          self.grid.collection.process();
-        });
-
-        self._buttonLayover.on("click", function() {
-          // prevoir le chgt de duree de la station d'avant.
-          self.grid.collection.add({
-            pk      : self.grid.collection.nextPk,
-            order   : self.value.order + 0.1,
-            type    : "lay",
-            dhour   : 12,
-            dminute : 0,
-          });
-          self.grid.collection.add({
-            pk      : self.grid.collection.nextPk,
-            order   : self.value.order + 0.2,
-            dhour   : 0,
-            dminute : 20,
-            type    : "sta",
-            station : self.value.station
-          });
-          self.grid.collection.process();
-        });
-
-        self._buttonDelete.on("click", function() {
-          if( self.value.order != self.grid.collection.len -1 ) {
-            self.grid.collection.filter({order: self.value.order + 1}).forEach( function(object) {
-              self.grid.collection.remove(object.pk);
-            });
-          } 
-          else {
-            // as this is the last leg/layover in the ordered list, I need to delete the current
-            // leg/layover and the previous station, because the next one is untouchable, required
-            // as the destination station.
-            self.grid.collection.filter({order: self.value.order - 1}).forEach( function(object) {
-              self.grid.collection.remove(object.pk);
-            });
-          }
-
-          self.grid.collection.remove(self.value.pk);
-          self.grid.collection.process();
-        });
-
-      },
-      _setValueAttr: function(value) {
-        this.value = value;
-
-        if( this.value.newLegButton ) this.domNode.appendChild(this._buttonLeg.domNode);
-        if( this.value.newLayButton ) this.domNode.appendChild(this._buttonLayover.domNode);
-        if( this.value.deleteButton ) this.domNode.appendChild(this._buttonDelete.domNode);
-      },
-      _getValueAttr: function() {
-        return this.value;
-      },
-      destroy: function() {
-        this._buttonLeg.destroy();
-        this._buttonLayover.destroy();
-        this._buttonDelete.destroy();
-        this.inherited(arguments);
-      }
-    });
-
-
 
 
 
@@ -301,39 +207,56 @@ require([
 // ==============================================================================================================
 
 
-
-
-	declare("DurationPicker", [_WidgetBase, _ListMouseMixin], {
+	declare("dijit._TimePicker", [_WidgetBase, _ListMouseMixin], {
 		// summary:
 		//		A time picker dropdown, used by dijit/form/TimeTextBox.
 		//		This widget is not available as a standalone widget due to lack of accessibility support.
 
 		// baseClass: [protected] String
 		//		The root className to use for the various states of this widget
-		baseClass: "dijitDurationPicker",
+		baseClass: "dijitTimePicker",
 
-		// pickerMin: Integer
-		//		Number of minutes representing the time of the first
-		//		visible element in the duration picker.
-		pickerMin: 0,
+		// pickerMin: String
+		//		ISO-8601 string representing the time of the first
+		//		visible element in the time picker.
+		//		Set in local time, without a time zone.
+		pickerMin: "T00:00:00",
 
-		// pickerMax: Integer
-		//		Number of minutes representing the last (possible) time
-		//		added to the duration picker.
-		pickerMax: 6000,
+		// pickerMax: String
+		//		ISO-8601 string representing the last (possible) time
+		//		added to the time picker.
+		//		Set in local time, without a time zone.
+		pickerMax: "T23:59:59",
 
-		// clickableIncrement: Integer
-		//		Number representing the interval between choices in the duration picker.
-		clickableIncrement: 5,
+		// clickableIncrement: String
+		//		ISO-8601 string representing the interval between choices in the time picker.
+		//		Set in local time, without a time zone.
+		//		Example: `T00:15:00` creates 15 minute increments
+		//		Must divide dijit/_TimePicker.visibleIncrement evenly
+		clickableIncrement: "T00:15:00",
 
-		// visibleIncrement: Integer
-		//		Number of minutes representing the interval between "major" choices in the duration picker.
+		// visibleIncrement: String
+		//		ISO-8601 string representing the interval between "major" choices in the time picker.
 		//		Each theme will highlight the major choices with a larger font / different color / etc.
-		visibleIncrement: 60,
+		//		Set in local time, without a time zone.
+		//		Example: `T01:00:00` creates text in every 1 hour increment
+		visibleIncrement: "T01:00:00",
 
-		// value: Integer
-		//		Duration to display.
-		value: 0,
+		// value: String
+		//		Time to display.
+		//		Defaults to current time.
+		//		Can be a Date object or an ISO-8601 string.
+		//		If you specify the GMT time zone (`-01:00`),
+		//		the time will be converted to the local time in the local time zone.
+		//		Otherwise, the time is considered to be in the local time zone.
+		//		If you specify the date and isDate is true, the date is used.
+		//		Example: if your local time zone is `GMT -05:00`,
+		//		`T10:00:00` becomes `T10:00:00-05:00` (considered to be local time),
+		//		`T10:00:00-01:00` becomes `T06:00:00-05:00` (4 hour difference),
+		//		`T10:00:00Z` becomes `T05:00:00-05:00` (5 hour difference between Zulu and local time)
+		//		`yyyy-mm-ddThh:mm:ss` is the format to set the date and time
+		//		Example: `2007-06-01T09:00:00`
+		value: new Date(),
 
 		_visibleIncrement: 2,
 		_clickableIncrement: 1,
@@ -355,7 +278,7 @@ require([
 			 //		protected
 		 },
 		 =====*/
-//		serialize: stamp.toISOString,
+		serialize: stamp.toISOString,
 
 		/*=====
 		 // filterString: string
@@ -369,24 +292,24 @@ require([
 			this.timeMenu = this.domNode;	// for back-compat
 		},
 
-		setValue: function(/*Integer*/ value){
+		setValue: function(/*Date*/ value){
 			// summary:
 			//		Deprecated.  Used set('value') instead.
 			// tags:
 			//		deprecated
-			kernel.deprecated("dijit._DurationPicker:setValue() is deprecated.  Use set('value', ...) instead.", "", "2.0");
+			kernel.deprecated("dijit._TimePicker:setValue() is deprecated.  Use set('value', ...) instead.", "", "2.0");
 			this.set('value', value);
 		},
 
-		_setValueAttr: function(/*Integer*/ minutes){
+		_setValueAttr: function(/*Date*/ date){
 			// summary:
 			//		Hook so set('value', ...) works.
 			// description:
-			//		Set the value of the DurationPicker.
-			//		Redraws the DurationPicker around the new value.
+			//		Set the value of the TimePicker.
+			//		Redraws the TimePicker around the new date.
 			// tags:
 			//		protected
-			this._set("value", minutes);
+			this._set("value", date);
 			this._showText();
 		},
 
@@ -397,6 +320,15 @@ require([
 			this._showText();
 		},
 
+		isDisabledDate: function(/*===== dateObject, locale =====*/){
+			// summary:
+			//		May be overridden to disable certain dates in the TimePicker e.g. `isDisabledDate=locale.isWeekend`
+			// dateObject: Date
+			// locale: String?
+			// type:
+			//		extension
+			return false; // Boolean
+		},
 
 		_getFilteredNodes: function(/*number*/ start, /*number*/ maxNum, /*Boolean*/ before, /*DOMNode*/ lastNode){
 			// summary:
@@ -424,19 +356,22 @@ require([
 			//		Displays the relevant choices in the drop down list
 			// tags:
 			//		private
-//			var fromIso = stamp.fromISOString;
+			var fromIso = stamp.fromISOString;
 			this.domNode.innerHTML = "";
-			this._clickableIncrementDate = this.clickableIncrement;
-			this._visibleIncrementDate = this.visibleIncrement;
+			this._clickableIncrementDate = fromIso(this.clickableIncrement);
+			this._visibleIncrementDate = fromIso(this.visibleIncrement);
 			// get the value of the increments to find out how many divs to create
 			var
-				clickableIncrementSeconds = this._clickableIncrementDate,
-				visibleIncrementSeconds = this._visibleIncrementDate;
-//				// round reference date to previous visible increment
-//				time = (this.value || this.currentFocus).getTime();
-//
-			this._refDate = this.pickerMin;
-//			this._refDate.setFullYear(1970, 0, 1); // match parse defaults
+				sinceMidnight = function(/*Date*/ date){
+					return date.getHours() * 60 * 60 + date.getMinutes() * 60 + date.getSeconds();
+				},
+				clickableIncrementSeconds = sinceMidnight(this._clickableIncrementDate),
+				visibleIncrementSeconds = sinceMidnight(this._visibleIncrementDate),
+				// round reference date to previous visible increment
+				time = (this.value || this.currentFocus).getTime();
+
+			this._refDate = fromIso(this.pickerMin);
+			this._refDate.setFullYear(1970, 0, 1); // match parse defaults
 
 			// assume clickable increment is the smallest unit
 			this._clickableIncrement = 1;
@@ -447,9 +382,9 @@ require([
 			this._visibleIncrement = visibleIncrementSeconds / clickableIncrementSeconds;
 
 			// get the number of increments (i.e. number of entries in the picker)
-			var endDate = this.pickerMax;
-//			endDate.setFullYear(1970, 0, 1);
-			var visibleRange = (endDate - this._refDate) * 0.001;
+			var endDate = fromIso(this.pickerMax);
+			endDate.setFullYear(1970, 0, 1);
+			var visibleRange = (endDate.getTime() - this._refDate.getTime()) * 0.001;
 			this._maxIncrement = Math.ceil((visibleRange + 1) / clickableIncrementSeconds);
 
 			var nodes = this._getFilteredNodes();
@@ -501,15 +436,15 @@ require([
 			//		Creates a clickable time option, or returns null if the specified index doesn't match the filter
 			// tags:
 			//		private
-			var date = this._refDate;
+			var date = new Date(this._refDate);
 			var incrementDate = this._clickableIncrementDate;
-//			date.setHours(date.getHours() + incrementDate.getHours() * index,
-//				date.getMinutes() + incrementDate.getMinutes() * index,
-//				date.getSeconds() + incrementDate.getSeconds() * index);
-//			if(this.constraints.selector == "time"){
-//				date.setFullYear(1970, 0, 1); // make sure each time is for the same date
-//			}
-			var dateString = parseInt(date / 60 ) + ":" + date % 60; // locale.format(date, this.constraints);
+			date.setHours(date.getHours() + incrementDate.getHours() * index,
+				date.getMinutes() + incrementDate.getMinutes() * index,
+				date.getSeconds() + incrementDate.getSeconds() * index);
+			if(this.constraints.selector == "time"){
+				date.setFullYear(1970, 0, 1); // make sure each time is for the same date
+			}
+			var dateString = locale.format(date, this.constraints);
 			if(this.filterString && dateString.toLowerCase().indexOf(this.filterString) !== 0){
 				// Doesn't match the filter - return null
 				return null;
@@ -532,11 +467,11 @@ require([
 				div.className += " " + this.baseClass + "Tick";
 			}
 
-//			if(this.isDisabledDate(date)){
-//				// set disabled
-//				div.className += " " + this.baseClass + "ItemDisabled";
-//			}
-			if(this.value && this.value == date){
+			if(this.isDisabledDate(date)){
+				// set disabled
+				div.className += " " + this.baseClass + "ItemDisabled";
+			}
+			if(this.value && !ddate.compare(this.value, date, this.constraints.selector)){
 				div.selected = true;
 				div.className += " " + this.baseClass + "ItemSelected";
 				this._selectedDiv = div;
@@ -570,9 +505,9 @@ require([
 			// tags:
 			//		private
 			var tdate = tgt.target.date || tgt.target.parentNode.date;
-//			if(!tdate || this.isDisabledDate(tdate)){
-//				return;
-//			}
+			if(!tdate || this.isDisabledDate(tdate)){
+				return;
+			}
 			this._set('value', tdate);
 			this.emit("input");
 			if(change) {
@@ -681,16 +616,88 @@ require([
 	 });
 	 =====*/
 
+// ==============================================================================================================
 
 
+	declare("DurationTextBox", _DateTimeTextBox, {
+		// summary:
+		//		A validating, serializable, range-bound time text box with a drop down time picker
 
+		baseClass: "dijitTextBox dijitComboBox dijitTimeTextBox",
+		popupClass: _TimePicker,
+		_selector: "time",
 
+/*=====
+		// constraints: TimeTextBox.__Constraints
+		//		Despite the name, this parameter specifies both constraints on the input
+		//		(including minimum/maximum allowed values) as well as
+		//		formatting options.  See `dijit/form/TimeTextBox.__Constraints` for details.
+		constraints:{},
+=====*/
 
+		// value: Date
+		//		The value of this widget as a JavaScript Date object.  Note that the date portion implies time zone and daylight savings rules.
+		//
+		//		Example:
+		// |	new dijit/form/TimeTextBox({value: stamp.fromISOString("T12:59:59", new Date())})
+		//
+		//		When passed to the parser in markup, must be specified according to locale-independent
+		//		`stamp.fromISOString` format.
+		//
+		//		Example:
+		// |	<input data-dojo-type='dijit/form/TimeTextBox' value='T12:34:00'>
+		value: new Date(""),		// value.toString()="NaN"
+		//FIXME: in markup, you have no control over daylight savings
 
+		// Add scrollbars if necessary so that dropdown doesn't cover the <input>
+		maxHeight: -1,
 
+		openDropDown: function(/*Function*/ callback){
+			this.inherited(arguments);
 
+			// Fix #18683
+			var selectedNode = query(".dijitTimePickerItemSelected", this.dropDown.domNode),
+				parentNode=this.dropDown.domNode.parentNode;
+			if(selectedNode[0]){
+				// Center the selected node in the client area of the popup.
+				parentNode.scrollTop=selectedNode[0].offsetTop-(parentNode.clientHeight-selectedNode[0].clientHeight)/2;
+			}else{
+				// There is no currently selected value. Position the list so that the median
+				// node is visible.
+				parentNode.scrollTop=(parentNode.scrollHeight-parentNode.clientHeight)/2;
+            }
 
+			// For screen readers, as user arrows through values, populate <input> with latest value.
+			this.dropDown.on("input", lang.hitch(this, function(){
+				this.set('value', this.dropDown.get("value"), false);
+			}));
+		},
 
+		_onInput: function(){
+			this.inherited(arguments);
+
+			// set this.filterString to the filter to apply to the drop down list;
+			// it will be used in openDropDown()
+			var val = this.get('displayedValue');
+			this.filterString = (val && !this.parse(val, this.constraints)) ? val.toLowerCase() : "";
+
+			// close the drop down and reopen it, in order to filter the items shown in the list
+			// and also since the drop down may need to be repositioned if the number of list items has changed
+			// and it's being displayed above the <input>
+			if(this._opened){
+				this.closeDropDown();
+			}
+			this.openDropDown();
+		}
+	});
+
+	/*=====
+	 TimeTextBox.__Constraints = declare([_DateTimeTextBox.__Constraints, _TimePicker.__Constraints], {
+		 // summary:
+		 //		Specifies both the rules on valid/invalid values (first/last time allowed),
+		 //		and also formatting options for how the time is displayed.
+	 });
+	 =====*/
 
 // ==============================================================================================================
 
@@ -778,9 +785,9 @@ require([
           </tr>
          </tr>
           <tr>
-            <td><label for="duration1">DurationNew</label></td>
+            <td><label for="duration1"><b>DurationNew</b></label></td>
             <td>
-              <input id="TrainingDuration"  class="durationHour" data-dojo-type="DurationPicker" name="duration_hour" required="true" />
+              <input id="TrainingDuration"  class="durationHour" data-dojo-type="DurationTextBox" name="duration_hour" required="true" />
               <!-- <input id="TrainingStartTime" name="start_time" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'"/></td> -->
             </td>
            <tr>
