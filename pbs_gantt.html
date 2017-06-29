@@ -167,6 +167,10 @@ form {
   margin: 0;
 }
 
+.dojoxCheckedMultiSelect .dojoxCheckedMultiSelectWrapper {
+  height: 300px !important;
+}
+
   </style>
 
   <script>
@@ -387,7 +391,7 @@ require([
       SetSizeAttributes: function() {
         var self = this;
 
-        self.dom.setAttribute("width", ( self.maxX - self.minX ) / config.XGraphCompression); 
+        self.dom.setAttribute("width", self.maxX / config.XGraphCompression - self.minX); 
         self.dom.setAttribute("height", self.maxY - self.minY);
 
         var matrix = self.domViewport.getCTM();
@@ -647,6 +651,9 @@ require([
 
        if( object.type == "TRN" ) {
          SetUpTrainingDialog(object);
+       }
+       else if( object.type == "LVE" ) {
+         SetUpVacationDialog(object);
        }
        else {
          var myDialog = new Dialog({
@@ -1013,7 +1020,7 @@ console.log(mydate);
      // There is no x translation, so every activity attached to the 
      // crewmember will be add into the g node.
      function SVG_drawCrewMember(item) {
-       var crewText = SVG_drawText("crewmember", -50, MARGIN_TOP_CM + HEIGHT_LINE_CM / 2, item.name);
+       var crewText = SVG_drawText("crewmember", -50 * config.XGraphCompression, MARGIN_TOP_CM + HEIGHT_LINE_CM / 2, item.name);
 
        on(crewText, "click", function(evt) {
          PopupCrewMemberDetail(item.pk);
@@ -1791,8 +1798,8 @@ console.log("Reset " + self.svgId);
          name               : "string",
          fullName          : "string",
          x                  : "numeric",
-         midnightOffset    : "boolean",
          duration           : "numeric",
+         midnightOffset    : "boolean",
          transportationTime : "boolean",
          restBefore        : "numeric",
          restAfter         : "numeric",
@@ -1939,24 +1946,38 @@ console.log("Reset " + self.svgId);
                                 }
                                 registry.byId('TrainingForm').set('value', copy);
                               }
+                              else if( copy.type == "LVE" ) {
+                                var start =  moment(copy.lbtStart);
+                                var end   =  moment(copy.lbtEnd);
 
-
-                            },
-       ConvertFormToModel : function (formId) {
-                              var self = this;
-                              if( formId == "TrainingForm" ){
-                                self.ConvertTrainingFormToModel();
+                                copy.set({
+                                  start_date: start.toDate(),
+                                  end_date: end.toDate(),
+                                });
+                                registry.byId('VacationForm').set('value', copy);
                               }
-                              else if( formId == "TripForm"){
-                                self.ConvertTripFormToModel();
-                              }
-                              else if( formId == "VacationForm" ){
-                                self.ConvertVacationFormToModel();
-                              }
-                              else {
-                                alert(formId + " is not yet implemented.");
+                              else if( copy.type == "TRP" ) {
+                                registry.byId('TripForm').set('value', copy);
                               }
                             },
+       ConvertFormToModel : function (type) {
+         var self = this;
+
+
+
+         if( type == "Training" ){
+           self.ConvertTrainingFormToModel();
+         }
+         else if( type == "Trip"){
+           self.ConvertTripFormToModel();
+         }
+         else if( type == "Vacation" ){
+           self.ConvertVacationFormToModel();
+         }
+         else {
+           alert(type + " is not yet implemented.");
+         }
+       },
 
        ConvertTrainingFormToModel : function() {
          var self = this;
@@ -1965,7 +1986,7 @@ console.log("Reset " + self.svgId);
            self.type = "TRN";
            self.pk = activityStore.GetNextPKSequence();
          }
-         
+ 
          var formObject = domForm.toObject("TrainingForm");
 
          self.name = formObject.name;         
@@ -1978,28 +1999,60 @@ console.log("Reset " + self.svgId);
 
          var duration = Number(formObject.duration_hour) * 60 + Number(formObject.duration_minute);
 
-         self.duration = duration;
+         self.duration   = duration;
          self.restBefore = Number(formObject.rest_before_hour) * 60 + Number(formObject.rest_before_minute);
          self.restAfter  = Number(formObject.rest_after_hour) * 60 + Number(formObject.rest_after_minute);
 
          var startTraining  = moment.tz(formObject.start_date + formObject.start_time, timezoneStore.getSync(config.CalendarTimezone).name);
          var endTraining    = startTraining.clone().add(duration, 'm');
          
-         var x = getPositionX(startTraining);
 
          self.lbtStart = startTraining.format("YYYY-MM-DD HH:mm");
          self.lbtEnd   = endTraining.format("YYYY-MM-DD HH:mm");
          self.utcStart = startTraining.utc().format("YYYY-MM-DD HH:mm");
          self.utcEnd   = endTraining.utc().format("YYYY-MM-DD HH:mm");
-
-         self.x = x;
+         self.x        = getPositionX(startTraining);
 
          var fullName = fk_cm ? crewMemberStore.getSync(fk_cm).name : "Open time";
-         fullName += " -- " + startTraining.format("YYYY-MM-DD HH:mm") + " -- " + self.get("name");
+         fullName += " -- " + startTraining.format("YYYY-MM-DD HH:mm") + " -- " + self.name;
 
          self.fullName = fullName;
          self.SetLineNb();
        },
+
+       ConvertVacationFormToModel : function() {
+         var self = this;
+        
+         if( typeof(self.pk) == 'undefined' ) {
+           self.type = "LVE";
+           self.pk = activityStore.GetNextPKSequence();
+         }
+
+         var formObject = domForm.toObject("VacationForm");
+
+         self.name = "LVE";
+
+         self.fk_cm = Number(formObject.fk_cm);
+
+         self.midnightOffset = true;
+         self.transportationTime = false;
+         self.restBefore = 0;
+         self.restAfter  = 0;
+
+         var startDate  = moment.tz(formObject.start_date, timezoneStore.getSync(config.CalendarTimezone).name);
+         var endDate    = moment.tz(formObject.end_date, timezoneStore.getSync(config.CalendarTimezone).name);
+
+         self.lbtStart = startDate.format("YYYY-MM-DD HH:mm");
+         self.lbtEnd   = endDate.format("YYYY-MM-DD HH:mm");
+         self.utcStart = startDate.utc().format("YYYY-MM-DD HH:mm");
+         self.utcEnd   = endDate.utc().format("YYYY-MM-DD HH:mm");
+         self.duration = endDate.diff(startDate, "minutes");
+         self.x        = getPositionX(startDate);
+         self.fullName = crewMemberStore.getSync(self.fk_cm).name + " -- " + startDate.format("YYYY-MM-DD") + " -- " + self.name;
+
+         self.SetLineNb();
+       },
+
 
      /* 
       * Determine if the new activity is overlapping with other activities
@@ -2019,10 +2072,16 @@ console.log("Reset " + self.svgId);
        activityStore.filter({fk_cm: self.fk_cm}).forEach(function(object) {
          if( object.pk != self.pk && typeof(object.fk_parent) == "undefined" ) {
            var A = self.x;
-           var B = self.x + self.duration;
+           if( self.midnightOffset ) {
+             A += Number(config.midnightOffset);
+           }
+           var B = A + self.duration;
 
            var C = object.x;
-           var D = object.x + object.duration;
+           if( object.midnightOffset ) {
+             C += Number(config.midnightOffset);
+           }
+           var D = C + object.duration;
 
            if( !(( B <= C ) || ( A >= D ))) {    
              lineNb = Math.max(lineNb, object.lineNb + 1);
@@ -2078,37 +2137,24 @@ console.log("Reset " + self.svgId);
                            // 3 - reset pk
                            self.nextPk = 1;
                          },
-       Toto: function() {
+       Toto: function(type) {
          var self = this;
 
-         if( !registry.byId("TrainingForm").validate() ) {
+         if( !registry.byId(type + "Form").validate() ) {
            return;
          }
-         registry.byId("TrainingDialog").hide();
+         registry.byId(type + "Dialog").hide();
 
-         var pk = Number(registry.byId("TrainingPk").get("value"));
-console.log("training pk");
-console.log(pk);
+         var pk = Number(registry.byId(type + "Pk").get("value"));
+console.log(type + " pk: " + pk);
          
          var isNew = false;
 
          var item = pk ? activityStore.getSync(pk): new activityModel();
-        /* 
-         if( !item) {
-           item = new activityModel();
-           isNew = true;
-         }
-*/
-         item.ConvertFormToModel("TrainingForm");
-/*
-         if( isNew ) {
-           self.addSync(item);
-         }
-         else {
-           self.putSync(item);
-         }
-          */
-           self.putSync(item);
+
+         item.ConvertFormToModel(type);
+         
+         self.putSync(item);
 
          item.CreateEvents();
          
@@ -3432,32 +3478,6 @@ console.log("offsetZone: " + offsetZone);
        }
      }, true);
 
-/*    
-<label for="fromDate">From:</label> <input id="fromDate" data-dojo-type="dijit/form/DateTextBox"
-					data-dojo-props='type:"text", name:"fromDate", required:true,
-					onChange:function(){ registry.byId("toDate").constraints.min = this.get("value"); } '/>
-				<label for="toDate">To:</label> <input id="toDate" data-dojo-type="dijit/form/DateTextBox"
-					data-dojo-props='type:"text", name:"toDate", required:true,
-					onChange:function(){ registry.byId("fromDate").constraints.max = this.get("value"); } '/>
-                                         */
-
-     registry.byId("VacationStartDate").on("change", function() {
-       var nextDay = date.add(this.get("value"), "day", 1);
-       registry.byId("VacationEndDate").set("disabled", false);
-       registry.byId("VacationEndDate").constraints.min = nextDay;
-       registry.byId("VacationEndDate").dropDownDefaultValue = nextDay;
-     }, true);
-
-     registry.byId("VacationEndDate").on("change", function() {
-       if( this.get("value") < registry.byId("CalendarEnd").get("value") ) {
-         registry.byId("VacationStartDate").constraints.max = this.get("value"); 
-       } 
-       else {
-         registry.byId("VacationStartDate").constraints.max = registry.byId("CalendarEnd").get("value");
-       }
-     }, true);
-     
-
      registry.byId("CalendarStart").on("change", function() {
        registry.byId("CalendarEnd").constraints.min = date.add(this.get("value"), "day", 1);
        registry.byId("CalendarEnd").dropDownDefaultValue = this.get("value");     
@@ -3695,58 +3715,92 @@ console.log(activityStore.GetNextPKSequence());
      // -----------------------------------------------
      // Create Vacation dialog
      // -----------------------------------------------
-     registry.byId("CreateVacation").on("click", function() {
-       if( !registry.byId("CreateVacationForm").validate() ) {
-         return;
+     registry.byId("VacationStartDate").on("change", function() {
+       var nextDay = date.add(this.get("value"), "day", 1);
+       registry.byId("VacationEndDate").set("disabled", false);
+       registry.byId("VacationEndDate").constraints.min = nextDay;
+       registry.byId("VacationEndDate").dropDownDefaultValue = nextDay;
+     }, true);
+
+     registry.byId("VacationEndDate").on("change", function() {
+       var self = this;
+       if( self.get("value") < registry.byId("CalendarEnd").get("value") ) {
+         registry.byId("VacationStartDate").constraints.max = self.get("value"); 
+       } 
+       else {
+         registry.byId("VacationStartDate").constraints.max = registry.byId("CalendarEnd").get("value");
+       }
+     }, true);
+ 
+     function SetUpVacationDialog(item) {
+       if( item ) {
+         VacationDialog.set("title", "Edit vacation");
+
+         domStyle.set(registry.byId("CreateVacation").domNode,    "display", "none");
+         domStyle.set(registry.byId("DeleteVacation").domNode,    "display", "inline");
+         domStyle.set(registry.byId("DuplicateVacation").domNode, "display", "inline");
+         domStyle.set(registry.byId("SaveVacation").domNode,      "display", "inline");
+         
+         domStyle.set("PkVacation", "display", "table-row");
+        
+         item.ConvertModelToForm() 
+       } 
+       else {
+         VacationDialog.set("title", "Create a vacation");
+
+         var CalStart = registry.byId("CalendarStart").get("value");
+         var CalEnd   = date.add(registry.byId("CalendarEnd").get("value"), "day", 1);
+
+         registry.byId("VacationStartDate").constraints.min = CalStart;
+         registry.byId("VacationStartDate").constraints.max = CalEnd;
+         registry.byId("VacationStartDate").dropDownDefaultValue = CalStart;
+
+         domStyle.set(registry.byId("CreateVacation").domNode,    "display", "inline");
+         domStyle.set(registry.byId("DuplicateVacation").domNode, "display", "none");
+         domStyle.set(registry.byId("DeleteVacation").domNode,    "display", "none");
+         domStyle.set(registry.byId("SaveVacation").domNode,      "display", "none");
+
+         domStyle.set("PkVacation", "display", "none");
        }
 
-       CreateVacationDialog.hide();
-       var crewMemberPk = parseInt(registry.byId("VacationCrewMemberSelect").get("value"));
-       var dojoDate = registry.byId("VacationStartDate").get("value");
-       var startDate = moment.tz([dojoDate.getYear() + 1900, dojoDate.getMonth(), dojoDate.getDate()], timezoneStore.getSync(config.CalendarTimezone).name);
-       dojoDate = registry.byId("VacationEndDate").get("value"); 
-       var endDate = moment.tz([dojoDate.getYear() + 1900, dojoDate.getMonth(), dojoDate.getDate()], timezoneStore.getSync(config.CalendarTimezone).name);
+       VacationDialog.show();
+     }
 
-       var width = endDate.diff(startDate, "minutes");
-
-       // to avoid the "at least one item must be selected" message, form data are save in 
-       // local variables before reseting the form.
-       registry.byId("CreateVacationForm").reset();
+     registry.byId("MenuBusinessObjectCreateActivityVacation").on("click", function() {
+       SetUpVacationDialog(); 
+     });
 
 
-       var x                = getPositionX(startDate);
+     registry.byId("DeleteVacation").on("click", function() {
+       activityStore.removeSync(registry.byId("VacationPk").get("value"));
 
-         var lineNb = GetActivityLineNumber(crewMemberPk, x + Number(config.midnightOffset), width);
-
-         if( lineNb > 1 ) {  
-           alert("LVE starting " + startDate.format("YYYY-MM-DD") + " is overlapping with another activity."); 
-         }
-
-console.log(activityStore);         
-console.log(activityStore.GetNextPKSequence());
-
-         var activity = activityStore.addSync({
-           name           : "LVE",
-           fullName       : crewMemberStore.getSync(crewMemberPk).name + " -- " + startDate.format("YYYY-MM-DD") + " -- LVE",
-           type           : "LVE",           
-           pk             : activityStore.GetNextPKSequence(),
-           fk_cm          : crewMemberPk,
-           x              : x,
-           midnightoffset : Number(config.midnightOffset),
-           lbtStart       : startDate.format("YYYY-MM-DD HH:mm"),
-           lbtEnd         : endDate.format("YYYY-MM-DD HH:mm"),
-           utcStart       : startDate.utc().format("YYYY-MM-DD HH:mm"),
-           utcEnd         : endDate.utc().format("YYYY-MM-DD HH:mm"),
-           width          : width,
-           tp             : 0,
-           resta          : 0,
-           restb          : 0,
-           lineNb         : lineNb,
-         });
-
-         activity.CreateEvents();
+       VacationDialog.hide();
 
        topic.publish("refreshGraph");
+     });
+
+     registry.byId("DuplicateVacation").on("click", function() {
+       var source = activityStore.getSync(registry.byId("VacationPk").get("value"));
+
+       var copy = new activityModel(source);
+
+       copy.pk = activityStore.GetNextPKSequence();
+       copy.lineNb = GetActivityLineNumber(copy.fk_cm, copy.x, copy.width);
+       copy.fk_yc = undefined;
+
+       activityStore.addSync(copy);
+
+       VacationDialog.hide();
+
+       topic.publish("refreshGraph");
+     });
+     
+     registry.byId("CreateVacation").on("click", function() {
+       activityStore.Toto("Vacation");
+     });
+
+      registry.byId("SaveVacation").on("click", function() {
+       activityStore.Toto("Vacation");
      });
 
 
@@ -3757,9 +3811,7 @@ console.log(activityStore.GetNextPKSequence());
        if(   registry.byId("TrainingStartTime").get("value") != null 
            && registry.byId("TrainingStartDate").get("value") != null ) {
          registry.byId("TrainingDurationHour").readOnly = false;
-//         registry.byId("TrainingDurationHour").set("value", 0);
          registry.byId("TrainingDurationMinute").readOnly = false;
-//         registry.byId("TrainingDurationMinute").set("value", 0);
 
          UpdateEndDateTime("Training");
        }
@@ -3795,7 +3847,6 @@ console.log(activityStore.GetNextPKSequence());
        UpdateEndDateTime("Training");
      });
 
-     // new and item are redundant. I could probably delete new parameter.
      function SetUpTrainingDialog(item) {
        if( item ) {
          TrainingDialog.set("title", "Edit training");
@@ -3811,11 +3862,19 @@ console.log(activityStore.GetNextPKSequence());
        } 
        else {
          TrainingDialog.set("title", "Create a training");
-
+         
          domStyle.set(registry.byId("CreateTraining").domNode,    "display", "inline");
          domStyle.set(registry.byId("DuplicateTraining").domNode, "display", "none");
          domStyle.set(registry.byId("DeleteTraining").domNode,    "display", "none");
          domStyle.set(registry.byId("SaveTraining").domNode,      "display", "none");
+
+         registry.byId("TrainingDurationHour").set("value", 0);
+         registry.byId("TrainingDurationHour").readonly = true;
+         registry.byId("TrainingDurationHour").disabled = true;
+         registry.byId("TrainingDurationMinute").set("value", 0);
+         registry.byId("TrainingDurationMinute").readonly = true;
+         registry.byId("TrainingDurationMinute").disabled = true;
+                                                       
 
          domStyle.set("PkTraining", "display", "none");
 
@@ -3858,11 +3917,11 @@ console.log(activityStore.GetNextPKSequence());
      });
      
      registry.byId("CreateTraining").on("click", function() {
-       activityStore.Toto();
+       activityStore.Toto("Training");
      });
 
       registry.byId("SaveTraining").on("click", function() {
-       activityStore.Toto();
+       activityStore.Toto("Training");
      });
 
      
@@ -4478,7 +4537,16 @@ console.log(activityStore.GetNextPKSequence());
 
      /**
       * Handle mouse wheel event.
-      */
+     */
+      function getEventPoint(evt) {
+       var p = svg.dom.createSVGPoint();
+
+       p.x = evt.clientX;
+       p.y = evt.clientY;
+
+       return p;
+     }
+
      on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
        if( !evt.ctrlKey && !evt.altKey )
          return;
@@ -4489,9 +4557,16 @@ console.log(activityStore.GetNextPKSequence());
        evt.returnValue = false;
 
        var delta = evt.wheelDelta ? evt.wheelDelta / 3600 : evt.detail / -90;
+       var p = getEventPoint(evt);
+
+       p = p.matrixTransform(svg.domViewport.getCTM().inverse());
 
        // Compute new scale matrix in current mouse position
-       var k =svg.dom.createSVGMatrix().scale(1 + delta);
+       var k = svg.dom.createSVGMatrix().translate(p.x, p.y).scale(1 + delta).translate(-p.x, -p.y);
+
+
+       // Compute new scale matrix in current mouse position
+       // var k =svg.dom.createSVGMatrix().scale(1 + delta);
 
        svg.SetCTM(svg.domViewport.getCTM().multiply(k));
      });
@@ -4536,7 +4611,7 @@ console.log(activityStore.GetNextPKSequence());
             <span>Create activity</span>
             <div id="MenuBusinessObjectCreateActivity" data-dojo-type="dijit/DropDownMenu">
               <div id="MenuBusinessObjectCreateActivityDayOff"   data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateDayOffDialog.show();}">Day off</div>
-              <div id="MenuBusinessObjectCreateActivityVacation" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateVacationDialog.show();}">Vacation</div>
+              <div id="MenuBusinessObjectCreateActivityVacation" data-dojo-type="dijit/MenuItem">Vacation</div>
               <div data-dojo-type="dijit/MenuSeparator"></div>
               <div id="MenuBusinessObjectCreateActivityTraining" data-dojo-type="dijit/MenuItem">Training</div>
               <div id="MenuBusinessObjectCreateActivityTrip"     data-dojo-type="dijit/MenuItem">Trip</div>
@@ -5309,25 +5384,32 @@ console.log(activityStore.GetNextPKSequence());
       </div>
     </div>
 
-    <div data-dojo-type="dijit/Dialog" id="CreateVacationDialog" data-dojo-id="CreateVacationDialog" title="Create vacation" style="display: none;"  data-dojo-props="onHide: function() {CreateVacationForm.reset();}">
-      <div data-dojo-type="dijit/form/Form" id="CreateVacationForm" data-dojo-id="CreateVacationForm" encType="multipart/form-data" action="" method="">
+    <div data-dojo-type="dijit/Dialog" id="VacationDialog" data-dojo-id="VacationDialog" title="Create vacation" style="display: none;"  data-dojo-props="onHide: function() {VacationForm.reset();}">
+      <div data-dojo-type="dijit/form/Form" id="VacationForm" data-dojo-id="VacationForm" encType="multipart/form-data" action="" method="">
         <table class="dijitDialogPaneContentArea">
-          <tr>
-            <td><label for="VacationCm">Crew member</label></td>
-            <td><select data-dojo-type="dijit/form/FilteringSelect" name="VacationCm" id="VacationCrewMemberSelect" required="true"/></td>
+          <tr id="PkVacation">
+            <td><label for="pk">Primary key</label></td>
+            <td><input data-dojo-type="dijit/form/TextBox" name="pk" id="VacationPk" readonly="true" disabled="true"></td>
           </tr>
           <tr>
-            <td><label for="VacationStart">Start date</label></td>
-            <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="VacationStart" id="VacationStartDate" required="true" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"></td>
+            <td><label for="fk_cm">Crew member</label></td>
+            <td><select data-dojo-type="dijit/form/FilteringSelect" name="fk_cm" id="VacationCrewMemberSelect" required="true"/></td>
           </tr>
           <tr>
-            <td><label for="VacationEnd">End date (excluded)</label></td>
-            <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="VacationEnd" id="VacationEndDate" disabled="true" required="true" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"></td>
+            <td><label for="start_date">Start date</label></td>
+            <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="start_date" id="VacationStartDate" required="true" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"></td>
+          </tr>
+          <tr>
+            <td><label for="end_date">End date (excluded)</label></td>
+            <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="end_date" id="VacationEndDate" disabled="true" required="true" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"></td>
           </tr>
         </table>
 
         <div class="dijitDialogPaneActionBar">
           <button data-dojo-type="dijit/form/Button" type="button" id="CreateVacation">Create</button>
+          <button data-dojo-type="dijit/form/Button" type="button" id="DeleteVacation" class="delete">Delete</button>
+          <button data-dojo-type="dijit/form/Button" type="button" id="DuplicateVacation">Duplicate</button>
+          <button data-dojo-type="dijit/form/Button" type="button" id="SaveVacation">Save</button>
         </div>
       </div>
     </div>
