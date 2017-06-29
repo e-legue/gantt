@@ -360,6 +360,11 @@ require([
 //  ganttSVG
   ) {
 
+    var TRIP     = "TRP";
+    var TRAINING = "TRN";
+    var LEAVE    = "LVE";
+    var DAY_OFF  = "DO";
+
     // About the coordinates:
     // X axis is the datetime. the first day of the graph start at 0. and a day is 1440 long (except dst ones).
     
@@ -391,10 +396,11 @@ require([
       SetSizeAttributes: function() {
         var self = this;
 
-        self.dom.setAttribute("width", self.maxX / config.XGraphCompression - self.minX); 
-        self.dom.setAttribute("height", self.maxY - self.minY);
-
         var matrix = self.domViewport.getCTM();
+
+        self.dom.setAttribute("width", (self.maxX / config.XGraphCompression - self.minX) * matrix.a ); 
+        self.dom.setAttribute("height", (self.maxY - self.minY) * matrix.a );
+
         matrix.e = self.minX * -1;
         matrix.f = self.minY * -1;
 
@@ -649,10 +655,13 @@ require([
      function PopupActivityDetail(activityId) {
        var object = activityStore.getSync(activityId);
 
-       if( object.type == "TRN" ) {
+       if( object.type == TRIP ) {
+         SetUpTripDialog(object);
+       }
+       else if( object.type == TRAINING ) {
          SetUpTrainingDialog(object);
        }
-       else if( object.type == "LVE" ) {
+       else if( object.type == LEAVE ) {
          SetUpVacationDialog(object);
        }
        else {
@@ -663,7 +672,8 @@ require([
          });
 
          var myButton = new Button({
-           label: "Delete this activity",
+           label: "Delete",
+           class: "delete",
            onClick: function() {
              activityStore.removeSync(activityId);
 
@@ -1928,7 +1938,7 @@ console.log("Reset " + self.svgId);
                               var self = this;
                               var copy = Object.create(self);
 
-                              if( copy.type == "TRN" ) {
+                              if( copy.type == TRAINING ) {
                                 var start =  moment(copy.lbtStart);
 
                                 copy.set({
@@ -1946,7 +1956,7 @@ console.log("Reset " + self.svgId);
                                 }
                                 registry.byId('TrainingForm').set('value', copy);
                               }
-                              else if( copy.type == "LVE" ) {
+                              else if( copy.type == LEAVE ) {
                                 var start =  moment(copy.lbtStart);
                                 var end   =  moment(copy.lbtEnd);
 
@@ -1956,7 +1966,7 @@ console.log("Reset " + self.svgId);
                                 });
                                 registry.byId('VacationForm').set('value', copy);
                               }
-                              else if( copy.type == "TRP" ) {
+                              else if( copy.type == TRIP ) {
                                 registry.byId('TripForm').set('value', copy);
                               }
                             },
@@ -1983,7 +1993,7 @@ console.log("Reset " + self.svgId);
          var self = this;
 
          if( typeof(self.pk) == 'undefined' ) {
-           self.type = "TRN";
+           self.type = TRAINING;
            self.pk = activityStore.GetNextPKSequence();
          }
  
@@ -2024,13 +2034,13 @@ console.log("Reset " + self.svgId);
          var self = this;
         
          if( typeof(self.pk) == 'undefined' ) {
-           self.type = "LVE";
+           self.type = LEAVE;
            self.pk = activityStore.GetNextPKSequence();
          }
 
          var formObject = domForm.toObject("VacationForm");
 
-         self.name = "LVE";
+         self.name = LEAVE;
 
          self.fk_cm = Number(formObject.fk_cm);
 
@@ -2048,6 +2058,76 @@ console.log("Reset " + self.svgId);
          self.utcEnd   = endDate.utc().format("YYYY-MM-DD HH:mm");
          self.duration = endDate.diff(startDate, "minutes");
          self.x        = getPositionX(startDate);
+         self.fullName = crewMemberStore.getSync(self.fk_cm).name + " -- " + startDate.format("YYYY-MM-DD") + " -- " + self.name;
+
+         self.SetLineNb();
+       },
+
+       ConvertTripFormToModel : function() {
+         var self = this;
+
+         if( typeof(self.pk) == 'undefined' ) {
+           self.type = TRIP;
+           self.pk = activityStore.GetNextPKSequence();
+         }
+ 
+         var formObject = domForm.toObject("TripForm");
+
+         self.name = formObject.name;         
+
+         var fk_cm = Number(formObject.fk_cm);
+
+         self.fk_cm = fk_cm;
+         self.midnightOffset = false;
+         self.transportationTime = formObject.transportationTime == "true";
+
+         var duration = Number(formObject.duration_hour) * 60 + Number(formObject.duration_minute);
+
+         self.duration   = duration;
+         self.restBefore = Number(formObject.rest_before_hour) * 60 + Number(formObject.rest_before_minute);
+         self.restAfter  = Number(formObject.rest_after_hour) * 60 + Number(formObject.rest_after_minute);
+
+         var startTraining  = moment.tz(formObject.start_date + formObject.start_time, timezoneStore.getSync(config.CalendarTimezone).name);
+         var endTraining    = startTraining.clone().add(duration, 'm');
+         
+
+         self.lbtStart = startTraining.format("YYYY-MM-DD HH:mm");
+         self.lbtEnd   = endTraining.format("YYYY-MM-DD HH:mm");
+         self.utcStart = startTraining.utc().format("YYYY-MM-DD HH:mm");
+         self.utcEnd   = endTraining.utc().format("YYYY-MM-DD HH:mm");
+         self.x        = getPositionX(startTraining);
+
+         var fullName = fk_cm ? crewMemberStore.getSync(fk_cm).name : "Open time";
+         fullName += " -- " + startTraining.format("YYYY-MM-DD HH:mm") + " -- " + self.name;
+
+         self.fullName = fullName;
+         self.SetLineNb();
+       },
+
+       InitDayOff : function(fk_cm, day) {
+         // this form is not working in edition, only creation.
+         var self = this;
+         
+         var calendarDay = calendarStore.getSync(day); 
+
+         self.type               = DAY_OFF;
+         self.pk                 = activityStore.GetNextPKSequence();
+         self.name               = DAY_OFF;
+         self.fk_cm              = fk_cm;
+         self.midnightOffset     = true;
+         self.transportationTime = false;
+         self.restBefore         = 0;
+         self.restAfter          = 0;
+         self.duration           = calendarDay.get("width");
+         self.x                  = calendarDay.get("x");
+
+         var startDate  = moment.tz(calendarDay.get("name"), timezoneStore.getSync(config.CalendarTimezone).name);
+         var endDate    = startDate.clone().add(self.duration, 'm');
+
+         self.lbtStart = startDate.format("YYYY-MM-DD HH:mm");
+         self.lbtEnd   = endDate.format("YYYY-MM-DD HH:mm");
+         self.utcStart = startDate.utc().format("YYYY-MM-DD HH:mm");
+         self.utcEnd   = endDate.utc().format("YYYY-MM-DD HH:mm");
          self.fullName = crewMemberStore.getSync(self.fk_cm).name + " -- " + startDate.format("YYYY-MM-DD") + " -- " + self.name;
 
          self.SetLineNb();
@@ -3377,6 +3457,8 @@ console.log("Reset " + self.svgId);
        setFromForm(config, dom.byId("ShowConstantsForm"));
 
        configurationStore.putSync(config);
+
+       topic.publish("refreshGraph");
      });
 
      // -----------------------------------------------
@@ -3545,7 +3627,7 @@ console.log("offsetZone: " + offsetZone);
            relative : i,
            pk       : calendarStore.GetNextPKSequence(),
            x        : x,
-           width    : width - 1,
+           width    : width,
          });
 
          // look for DST
@@ -3672,38 +3754,11 @@ console.log("offsetZone: " + offsetZone);
        registry.byId("CreateDayOffForm").reset();
 
        days.forEach(function(day) {
-         var calendarDay = calendarStore.getSync(day); 
-
-         var x     = calendarDay.get("x");
-         var width = calendarDay.get("width") + 1;
-
-         var lineNb = GetActivityLineNumber(crewMemberPk, x + Number(config.midnightOffset), width);
-
-         if( lineNb > 1 ) {  
-           alert("DO starting " + calendarDay.get("name") + " is overlapping with another activity."); 
-         }
-
-console.log(activityStore);         
-console.log(activityStore.GetNextPKSequence());
-
-         var activity = activityStore.addSync({
-           name           : "DO",
-           fullName       : crewMemberStore.getSync(crewMemberPk).name + " -- " + moment(calendarDay.get("name")).format("YYYY-MM-DD") + " -- DO",
-           type           : "DO",           
-           pk             : activityStore.GetNextPKSequence(),
-           fk_cm          : crewMemberPk,
-           x              : x,
-           midnightoffset : Number(config.midnightOffset),
-           lbtStart       : moment(calendarDay.get("name")).format("YYYY-MM-DD HH:mm"),
-           lbtEnd         : moment(calendarDay.get("name")).add(width, 'm').format("YYYY-MM-DD HH:mm"),
-           utcStart       : moment(calendarDay.get("name")).utc().format("YYYY-MM-DD HH:mm"),
-           utcEnd         : moment(calendarDay.get("name")).add(width, 'm').utc().format("YYYY-MM-DD HH:mm"),
-           width          : width,
-           tp             : 0,
-           resta          : 0,
-           restb          : 0,
-           lineNb         : lineNb,
-         });
+         var activity = new activityModel();
+            
+         activity.InitDayOff(crewMemberPk, day);
+          
+         activityStore.addSync(activity);
 
          activity.CreateEvents();
        });
@@ -3810,8 +3865,10 @@ console.log(activityStore.GetNextPKSequence());
      function TryEnableDuration() {
        if(   registry.byId("TrainingStartTime").get("value") != null 
            && registry.byId("TrainingStartDate").get("value") != null ) {
-         registry.byId("TrainingDurationHour").readOnly = false;
-         registry.byId("TrainingDurationMinute").readOnly = false;
+         registry.byId("TrainingDurationHour").set("disabled", false);
+         registry.byId("TrainingDurationMinute").set("disabled" , false);
+         registry.byId("TrainingDurationHour").set("readOnly", false);
+         registry.byId("TrainingDurationMinute").set("readOnly", false);
 
          UpdateEndDateTime("Training");
        }
@@ -3869,11 +3926,11 @@ console.log(activityStore.GetNextPKSequence());
          domStyle.set(registry.byId("SaveTraining").domNode,      "display", "none");
 
          registry.byId("TrainingDurationHour").set("value", 0);
-         registry.byId("TrainingDurationHour").readonly = true;
-         registry.byId("TrainingDurationHour").disabled = true;
+         registry.byId("TrainingDurationHour").set("readonly", true);
+         registry.byId("TrainingDurationHour").set("disabled", true);
          registry.byId("TrainingDurationMinute").set("value", 0);
-         registry.byId("TrainingDurationMinute").readonly = true;
-         registry.byId("TrainingDurationMinute").disabled = true;
+         registry.byId("TrainingDurationMinute").set("readonly", true);
+         registry.byId("TrainingDurationMinute").set("disabled", true);
                                                        
 
          domStyle.set("PkTraining", "display", "none");
@@ -4027,7 +4084,8 @@ console.log(activityStore.GetNextPKSequence());
      registry.byId("CreateDistance").on("click", function() {
 /*       if( !registry.byId("CreateDistanceForm").validate() ) {
          return;
-       }*/
+       }
+*/
        var distance = new distanceModel();
        var yFrom = 0;
        var yTo   = 0;
@@ -4065,6 +4123,69 @@ console.log(activityStore.GetNextPKSequence());
 
        topic.publish("refreshGraph");
      });  
+
+
+
+
+
+
+
+
+
+     function SetUpTripDialog(item) {
+       grid.refresh();
+
+       if( item ) {
+         TripDialog.set("title", "Edit trip");
+
+         domStyle.set(registry.byId("CreateTrip").domNode,    "display", "none");
+         domStyle.set(registry.byId("DeleteTrip").domNode,    "display", "inline");
+         domStyle.set(registry.byId("DuplicateTrip").domNode, "display", "inline");
+         domStyle.set(registry.byId("SaveTrip").domNode,      "display", "inline");
+         
+         domStyle.set("PkTrip", "display", "table-row");
+        
+         item.ConvertModelToForm() 
+       } 
+       else {
+         TripDialog.set("title", "Create a trip");
+         
+         domStyle.set(registry.byId("CreateTrip").domNode,    "display", "inline");
+         domStyle.set(registry.byId("DuplicateTrip").domNode, "display", "none");
+         domStyle.set(registry.byId("DeleteTrip").domNode,    "display", "none");
+         domStyle.set(registry.byId("SaveTrip").domNode,      "display", "none");
+
+          /*
+         registry.byId("TripDurationHour").set("value", 0);
+         registry.byId("TripDurationHour").set("readonly", true);
+         registry.byId("TripDurationHour").set("disabled", true);
+         registry.byId("TripDurationMinute").set("value", 0);
+         registry.byId("TripDurationMinute").set("readonly", true);
+         registry.byId("TripDurationMinute").set("disabled", true);
+            */                                           
+
+         domStyle.set("PkTrip", "display", "none");
+
+         // reset filteringselect Minute of rest before and after. Those two are not set to zero.
+         registry.byId("TripRestBeforeM").set("value", 0);
+         registry.byId("TripRestAfterM").set("value", 0);
+       }
+
+
+       TripDialog.show();
+     }
+
+
+     // connect menu creation trip to trip dialog
+     registry.byId("MenuBusinessObjectCreateActivityTrip").on("click", function() {
+       SetUpTripDialog(); 
+       grid.resize();
+     });
+
+
+
+
+
 
 
      function TryEnableGrid() {
@@ -4127,17 +4248,16 @@ console.log(activityStore.GetNextPKSequence());
        TryEnableGrid();          
      });
 
-     registry.byId("MenuBusinessObjectCreateActivityTrip").on("click", function() {
-       registry.byId("TripRestBeforeM").set("value", 0);
-       registry.byId("TripRestAfterM").set("value", 0);
-
-       registry.byId("CreateTripDialog").show();
-
-       grid.resize();
-     });
 
 
-     registry.byId("CreateTripDialog").on("hide", function() {
+
+
+
+
+
+
+
+     registry.byId("TripDialog").on("hide", function() {
 
        tripDetailStore.fetch().then(function(items) {
          for (var i = items.length - 1; i >= 0; i--) {
@@ -4163,11 +4283,11 @@ console.log(activityStore.GetNextPKSequence());
 
 
      registry.byId("CreateTrip").on("click", function() {
-       if( !registry.byId("CreateTripForm").validate() ) {
+       if( !registry.byId("TripForm").validate() ) {
          return;
        }
 
-       CreateTripDialog.hide();
+       TripDialog.hide();
 
        var lbtTripStartDate   = registry.byId("TripStartDate").get("value");
        var lbtTripStartTime   = registry.byId("TripStartTime").get("value");
@@ -4226,19 +4346,19 @@ console.log(activityStore.GetNextPKSequence());
        var trip = activityStore.addSync({
          name           : registry.byId("TripName").get("value"),
          fullName       : fullName,
-         type           : "TRP",
+         type           : TRIP,
          pk             : activityStore.GetNextPKSequence(),
          fk_cm          : crewMemberPk,
          x              : x,
-         midnightoffset : 0,
+         midnightOffset : false,
          lbtStart       : startTrip.format("YYYY-MM-DD HH:mm"),
          lbtEnd         : endTrip.format("YYYY-MM-DD HH:mm"),
          utcStart       : startTrip.utc().format("YYYY-MM-DD HH:mm"),
          utcEnd         : endTrip.utc().format("YYYY-MM-DD HH:mm"),
-         width          : width,
-         tp             : registry.byId("TripTransportationTime").checked ? Number(config.transportationTime) : 0,
-         resta          : Number(registry.byId("TripRestAfterH").get("value")) * 60 + Number(registry.byId("TripRestAfterM").get("value")),
-         restb          : Number(registry.byId("TripRestBeforeH").get("value")) * 60 + Number(registry.byId("TripRestBeforeM").get("value")),
+         duration       : width,
+         transportationTime : registry.byId("TripTransportationTime").checked ? true : false,
+         restAfter          : Number(registry.byId("TripRestAfterH").get("value")) * 60 + Number(registry.byId("TripRestAfterM").get("value")),
+         restBefore         : Number(registry.byId("TripRestBeforeH").get("value")) * 60 + Number(registry.byId("TripRestBeforeM").get("value")),
          block          : block,
          credit         : credit,
          duty           : duty,
@@ -4277,7 +4397,7 @@ console.log(activityStore.GetNextPKSequence());
              fk_parent : trip.pk,
              fk_cm     : crewMemberPk,
              x         : xDetail,
-             width     : width,
+             duration  : width,
              station   : items[i].station,
            });
            xDetail += width;
@@ -4569,6 +4689,8 @@ console.log(activityStore.GetNextPKSequence());
        // var k =svg.dom.createSVGMatrix().scale(1 + delta);
 
        svg.SetCTM(svg.domViewport.getCTM().multiply(k));
+          
+       svg.SetSizeAttributes();
      });
 
 
@@ -5295,33 +5417,37 @@ console.log(activityStore.GetNextPKSequence());
     </div>
 
 
-    <div data-dojo-type="dijit/Dialog" id="CreateTripDialog" data-dojo-id="CreateTripDialog" title="Create trip" style="display: none;" data-dojo-props="onHide: function() {CreateTripForm.reset();}" >
-      <div data-dojo-type="dijit/form/Form" id="CreateTripForm" data-dojo-id="CreateTripForm" encType="multipart/form-data" action="" method="">
+    <div data-dojo-type="dijit/Dialog" id="TripDialog" data-dojo-id="TripDialog" title="Create trip" style="display: none;" data-dojo-props="onHide: function() {TripForm.reset();}" >
+      <div data-dojo-type="dijit/form/Form" id="TripForm" data-dojo-id="TripForm" encType="multipart/form-data" action="" method="">
         <table class="dijitDialogPaneContentArea">
+          <tr id="PkTrip">
+            <td><label for="pk">Primary key</label></td>
+            <td><input data-dojo-type="dijit/form/TextBox" name="pk" id="TripPk" readonly="true" disabled="true"></td>
+          </tr>
           <tr>
             <td><label for="name">Name</label></td>
             <td><input data-dojo-type="dijit/form/TextBox" name="name" id="TripName" required="true"></td>
           </tr>
           <tr>
-            <td><label for="TrpCm">Crew member</label></td>
-            <td><select data-dojo-type="dijit/form/FilteringSelect" name="TrpCm" id="TripCrewMemberSelect" required="false"/></td>
+            <td><label for="fk_cm">Crew member</label></td>
+            <td><select data-dojo-type="dijit/form/FilteringSelect" name="fk_cm" id="TripCrewMemberSelect" required="false"/></td>
           </tr>
           <tr>
-            <td><label for="transportationtime">Transportation time apply</label></td>
-            <td><input data-dojo-type="dijit/form/CheckBox" name="transportationtime" id="TripTransportationTime" value="true" required="true"></td>
+            <td><label for="transportationTime">Transportation time apply</label></td>
+            <td><input data-dojo-type="dijit/form/CheckBox" name="transportationTime" id="TripTransportationTime" value="true" required="true"></td>
           </tr>
           <tr>
             <td><label for="restbefore">Rest before</label></td>
             <td>
-              <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="restbefore" id="TripRestBeforeH" value="0" data-dojo-props="" required="true">h&nbsp;
-              <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="restbefore" id="TripRestBeforeM" value="0" data-dojo-props="" required="true">m
+              <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="rest_before_hour" id="TripRestBeforeH" value="0" data-dojo-props="" required="true">h&nbsp;
+              <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="rest_before_minute" id="TripRestBeforeM" value="0" data-dojo-props="" required="true">m
             </td>
           </tr>
           <tr>
             <td><label for="start">Start date time</label></td>
             <td class="datetime">
-              <input id="TripStartDate" name="start" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"/>
-              <input id="TripStartTime" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'"/>
+              <input id="TripStartDate" name="start_date" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"/>
+              <input id="TripStartTime" name="start_time" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'"/>
             </td>
           </tr>
           <tr>
@@ -5331,21 +5457,24 @@ console.log(activityStore.GetNextPKSequence());
           <tr>
             <td><label for="end">End date time</label></td>
             <td class="datetime">
-              <input id="TripEndDate" name="start" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'" readonly="true" disabled="true" />
-              <input id="TripEndTime" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'" readonly="true" disabled="true" />
+              <input id="TripEndDate" name="end_date" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'" readonly="true" disabled="true" />
+              <input id="TripEndTime" name="end_time" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'" readonly="true" disabled="true" />
             </td>
           </tr>
           <tr>
             <td><label for="restafter">Rest after</label></td>
             <td>
-              <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="restafter" id="TripRestAfterH" value="0" data-dojo-props="" required="true">h&nbsp;
-              <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="restafter" id="TripRestAfterM" value="0" data-dojo-props="" required="true">m
+              <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="rest_after_hour" id="TripRestAfterH" value="0" data-dojo-props="" required="true">h&nbsp;
+              <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="rest_after_minute" id="TripRestAfterM" value="0" data-dojo-props="" required="true">m
             </td>
           </tr>
         </table>
 
         <div class="dijitDialogPaneActionBar">
           <button data-dojo-type="dijit/form/Button" type="button" id="CreateTrip">Create</button>
+          <button data-dojo-type="dijit/form/Button" type="button" id="DeleteTrip" class="delete">Delete</button>
+          <button data-dojo-type="dijit/form/Button" type="button" id="DuplicateTrip">Duplicate</button>
+          <button data-dojo-type="dijit/form/Button" type="button" id="SaveTrip">Save</button>
         </div>
       </div>
     </div>
