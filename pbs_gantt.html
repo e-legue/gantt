@@ -96,6 +96,10 @@
   height: 14em; /* DOES NOT WORK */
 }
 
+#TripGrid th, #TripGrid tr {
+  font-size: 12px;
+}
+
 .dgrid {
   margin: 0px;
 }
@@ -104,9 +108,6 @@
 }
 .dgrid-list {
   width: 200px;
-}
-.dgrid {
-  font-size: 12px;
 }
 
 .dgrid .field-pk {
@@ -137,6 +138,10 @@
 .dgrid .field-endDateTime {
   width: 11em;
   color: gray;
+}
+
+.dgrid-row {
+  height: 30px;
 }
 
 .dgrid-row-even {
@@ -471,7 +476,8 @@ require([
     // ===============================================
     // Widget for leg/lay/station.
     // ===============================================
-    var CustomEditorOperations = declare([_WidgetBase], {
+//    var CustomEditorOperations = declare([_WidgetBase], {
+    declare("CustomEditorOperations", [_WidgetBase], {
       value: null,
       buildRendering: function() {
         var self = this;
@@ -782,7 +788,15 @@ console.log(mydate);
        registry.byId(prefixId + "EndTime").set("value", mydate.toDate());
      } 
 
-
+//     
+//        _____ __      __ _____  
+//       / ____|\ \    / // ____| 
+//      | (___   \ \  / /| |  __  
+//       \___ \   \ \/ / | | |_ | 
+//       ____) |   \  /  | |__| | 
+//      |_____/     \/    \_____| 
+//                                
+//                            
 
      // ===============================================
      // return the X position in SVG, based on starting
@@ -1283,11 +1297,15 @@ console.log("X: " + currentX + ", Y: " + currentY);
        foreignObject.setAttributeNS(null, "height", height + "px");
      }
 
-
-
-     // ===============================================
-     // Data MODELs and STOREs
-     // ===============================================
+//     
+//       __  __   ____   _____   ______  _                  _____  _______  ____   _____   ______ 
+//      |  \/  | / __ \ |  __ \ |  ____|| |        ___     / ____||__   __|/ __ \ |  __ \ |  ____|
+//      | \  / || |  | || |  | || |__   | |       ( _ )   | (___     | |  | |  | || |__) || |__   
+//      | |\/| || |  | || |  | ||  __|  | |       / _ \/\  \___ \    | |  | |  | ||  _  / |  __|  
+//      | |  | || |__| || |__| || |____ | |____  | (_>  <  ____) |   | |  | |__| || | \ \ | |____ 
+//      |_|  |_| \____/ |_____/ |______||______|  \___/\/ |_____/    |_|   \____/ |_|  \_\|______|
+//                                                                                                
+//                                                                                               
 
      var TrackableMemory = declare([Memory, Trackable]); 
 
@@ -1967,6 +1985,47 @@ console.log("Reset " + self.svgId);
                                 registry.byId('VacationForm').set('value', copy);
                               }
                               else if( copy.type == TRIP ) {
+                                var start =  moment(copy.lbtStart);
+
+                                copy.set({
+                                  start_date: start.toDate(),
+                                  start_time: start.toDate(),
+                                  rest_before_hour: parseInt(copy.restBefore / 60),
+                                  rest_before_minute: copy.restBefore % 60,
+                                  rest_after_hour: parseInt(copy.restAfter / 60),
+                                  rest_after_minute: copy.restAfter % 60,
+                                  duration_hour: parseInt(copy.duration / 60),
+                                  duration_minute: copy.duration % 60,
+                                });
+                                if( copy.transportationTime ){
+                                  copy.transportationTime = "true";
+                                }
+
+                                var i = 1;
+                                activityStore.filter({fk_parent: copy.pk}).forEach(function(item) {
+                                  var detail = new TripDetailModel();
+
+                                  detail.pk    = i;
+                                  detail.order = i; 
+                                  detail.type  = item.type.substring(0,3).toLowerCase();
+                                  detail.dhour = parseInt(item.duration / 60);
+                                  detail.dminute = item.duration % 60;
+                                  if( detail.type == "sta" ) {
+                                    detail.station = item.station;
+                                  } 
+                                  else { // that's a leg.
+                                    detail.legType = item.type.substring(3,4);
+                                  }
+
+                                  tripDetailStore.addSync(detail);
+                                  i += 1;
+                                });
+                                
+
+
+
+
+
                                 registry.byId('TripForm').set('value', copy);
                               }
                             },
@@ -2013,18 +2072,18 @@ console.log("Reset " + self.svgId);
          self.restBefore = Number(formObject.rest_before_hour) * 60 + Number(formObject.rest_before_minute);
          self.restAfter  = Number(formObject.rest_after_hour) * 60 + Number(formObject.rest_after_minute);
 
-         var startTraining  = moment.tz(formObject.start_date + formObject.start_time, timezoneStore.getSync(config.CalendarTimezone).name);
-         var endTraining    = startTraining.clone().add(duration, 'm');
+         var startDateTimeTraining  = moment.tz(formObject.start_date + formObject.start_time, timezoneStore.getSync(config.CalendarTimezone).name);
+         var endDateTimeTraining    = startDateTimeTraining.clone().add(self.duration, 'm');
          
 
-         self.lbtStart = startTraining.format("YYYY-MM-DD HH:mm");
-         self.lbtEnd   = endTraining.format("YYYY-MM-DD HH:mm");
-         self.utcStart = startTraining.utc().format("YYYY-MM-DD HH:mm");
-         self.utcEnd   = endTraining.utc().format("YYYY-MM-DD HH:mm");
-         self.x        = getPositionX(startTraining);
+         self.lbtStart = startDateTimeTraining.format("YYYY-MM-DD HH:mm");
+         self.lbtEnd   = endDateTimeTraining.format("YYYY-MM-DD HH:mm");
+         self.utcStart = startDateTimeTraining.utc().format("YYYY-MM-DD HH:mm");
+         self.utcEnd   = endDateTimeTraining.utc().format("YYYY-MM-DD HH:mm");
+         self.x        = getPositionX(startDateTimeTraining);
 
          var fullName = fk_cm ? crewMemberStore.getSync(fk_cm).name : "Open time";
-         fullName += " -- " + startTraining.format("YYYY-MM-DD HH:mm") + " -- " + self.name;
+         fullName += " -- " + startDateTimeTraining.format("YYYY-MM-DD HH:mm") + " -- " + self.name;
 
          self.fullName = fullName;
          self.SetLineNb();
@@ -2077,31 +2136,109 @@ console.log("Reset " + self.svgId);
 
          var fk_cm = Number(formObject.fk_cm);
 
-         self.fk_cm = fk_cm;
-         self.midnightOffset = false;
+         self.fk_cm              = fk_cm;
+         self.midnightOffset     = false;
          self.transportationTime = formObject.transportationTime == "true";
+         self.restBefore         = Number(formObject.rest_before_hour) * 60 + Number(formObject.rest_before_minute);
+         self.restAfter          = Number(formObject.rest_after_hour) * 60 + Number(formObject.rest_after_minute);
 
-         var duration = Number(formObject.duration_hour) * 60 + Number(formObject.duration_minute);
+         var startDateTimeTrip = moment.tz(formObject.start_date + formObject.start_time, timezoneStore.getSync(config.CalendarTimezone).name);
 
-         self.duration   = duration;
-         self.restBefore = Number(formObject.rest_before_hour) * 60 + Number(formObject.rest_before_minute);
-         self.restAfter  = Number(formObject.rest_after_hour) * 60 + Number(formObject.rest_after_minute);
-
-         var startTraining  = moment.tz(formObject.start_date + formObject.start_time, timezoneStore.getSync(config.CalendarTimezone).name);
-         var endTraining    = startTraining.clone().add(duration, 'm');
-         
-
-         self.lbtStart = startTraining.format("YYYY-MM-DD HH:mm");
-         self.lbtEnd   = endTraining.format("YYYY-MM-DD HH:mm");
-         self.utcStart = startTraining.utc().format("YYYY-MM-DD HH:mm");
-         self.utcEnd   = endTraining.utc().format("YYYY-MM-DD HH:mm");
-         self.x        = getPositionX(startTraining);
+         self.lbtStart = startDateTimeTrip.format("YYYY-MM-DD HH:mm");
+         self.utcStart = startDateTimeTrip.utc().format("YYYY-MM-DD HH:mm");
+         self.x        = getPositionX(startDateTimeTrip);
 
          var fullName = fk_cm ? crewMemberStore.getSync(fk_cm).name : "Open time";
-         fullName += " -- " + startTraining.format("YYYY-MM-DD HH:mm") + " -- " + self.name;
+         fullName += " -- " + startDateTimeTrip.format("YYYY-MM-DD HH:mm") + " -- " + self.name;
 
          self.fullName = fullName;
+
+       var xDetail        = self.x;
+       var credit         = 0;
+       var block          = 0;
+       var duty           = 0;
+       var creditInPeriod = 0;
+       var blockInPeriod  = 0;
+       var dutyInPeriod   = 0;
+
+
+       tripDetailStore.sort('order').fetch().then(function(items) {
+         for (var i = 0; i < items.length ; i++) {
+           var width = Number(items[i].dhour * 60) + Number(items[i].dminute);
+           var inPeriod = getInPeriod(xDetail, width);
+           var type = items[i].type;
+           if( type == "leg" ) {
+             type += items[i].legType;
+             if( items[i].legType == "A" ) {
+               credit         += width;
+               creditInPeriod += inPeriod;
+             }
+             block         += width;
+             blockInPeriod += inPeriod;
+           }
+           if( type != "lay" ) {
+             duty         += width;
+             dutyInPeriod += inPeriod;
+           } 
+
+           xDetail += width;
+         }           
+       });
+
+         self.duration = xDetail - self.x;
+
+         var endDateTimeTrip = startDateTimeTrip.clone().add(self.duration, 'm');
+
+         self.lbtEnd         = endDateTimeTrip.format("YYYY-MM-DD HH:mm");
+         self.utcEnd         = endDateTimeTrip.utc().format("YYYY-MM-DD HH:mm");
+         self.block          = block;
+         self.credit         = credit;
+         self.duty           = duty;
+         self.tafbInPeriod   = getInPeriod(self.x, self.duration);
+         self.blockInPeriod  = blockInPeriod;
+         self.creditInPeriod = creditInPeriod;
+         self.dutyInPeriod   = dutyInPeriod;
+
          self.SetLineNb();
+
+console.log(self);          
+
+       xDetail = self.x;
+
+       tripDetailStore.sort('order').fetch().then(function(items) {
+         var iLeg = 0;
+         var iLay = 0;
+         var name, width, type;
+
+         for (var i = 0; i < items.length ; i++) {
+           width = Number(items[i].dhour * 60) + Number(items[i].dminute);
+           type = items[i].type;
+           if( type == "leg" ) {
+             type += items[i].legType;
+             iLeg += 1;
+             name = type + iLeg;
+           }
+           else {
+             iLay += 1;
+             name = type + iLay;
+           }
+
+           activityStore.addSync({
+             name      : name,
+             fullName  : name + " -- " + startDateTimeTrip.format("YYYY-MM-DD HH:mm"),
+             type      : type.toUpperCase(),
+             pk        : activityStore.GetNextPKSequence(),
+             fk_parent : self.pk,
+             fk_cm     : self.fk_cm,
+             x         : xDetail,
+             duration  : width,
+             station   : items[i].station,
+           });
+           xDetail += width;
+         }           
+       });
+
+          
        },
 
        InitDayOff : function(fk_cm, day) {
@@ -2226,10 +2363,7 @@ console.log("Reset " + self.svgId);
          registry.byId(type + "Dialog").hide();
 
          var pk = Number(registry.byId(type + "Pk").get("value"));
-console.log(type + " pk: " + pk);
          
-         var isNew = false;
-
          var item = pk ? activityStore.getSync(pk): new activityModel();
 
          item.ConvertFormToModel(type);
@@ -4173,13 +4307,13 @@ console.log("offsetZone: " + offsetZone);
 
 
        TripDialog.show();
+       grid.resize();
      }
 
 
      // connect menu creation trip to trip dialog
      registry.byId("MenuBusinessObjectCreateActivityTrip").on("click", function() {
        SetUpTripDialog(); 
-       grid.resize();
      });
 
 
@@ -4282,135 +4416,128 @@ console.log("offsetZone: " + offsetZone);
      }
 
 
-     registry.byId("CreateTrip").on("click", function() {
-       if( !registry.byId("TripForm").validate() ) {
-         return;
-       }
+     registry.byId("DeleteTrip").on("click", function() {
+       activityStore.removeSync(registry.byId("TripPk").get("value"));
 
        TripDialog.hide();
 
-       var lbtTripStartDate   = registry.byId("TripStartDate").get("value");
-       var lbtTripStartTime   = registry.byId("TripStartTime").get("value");
-       var lbtTripEndDate     = registry.byId("TripEndDate").get("value");
-       var lbtTripEndTime     = registry.byId("TripEndTime").get("value");
-
-       var startTrip = moment.tz([lbtTripStartDate.getYear() + 1900, lbtTripStartDate.getMonth(), lbtTripStartDate.getDate(), lbtTripStartTime.getHours(), lbtTripStartTime.getMinutes()], timezoneStore.getSync(config.CalendarTimezone).name);
-       var endTrip   = moment.tz([lbtTripEndDate.getYear() + 1900, lbtTripEndDate.getMonth(), lbtTripEndDate.getDate(), lbtTripEndTime.getHours(), lbtTripEndTime.getMinutes()], timezoneStore.getSync(config.CalendarTimezone).name);
-
-       var x     = getPositionX(startTrip);
-       var width = getPositionX(endTrip) - x;
-
-       var crewMemberPk = Number(registry.byId("TripCrewMemberSelect").get("value"));
-       var lineNb       = GetActivityLineNumber(crewMemberPk, x, width);
-
-       if( lineNb > 1 ) {
-         alert("The new trip is overlapping with another activity."); 
-       }
-
-       var xDetail        = x;
-       var credit         = 0;
-       var block          = 0;
-       var duty           = 0;
-       var creditInPeriod = 0;
-       var blockInPeriod  = 0;
-       var dutyInPeriod   = 0;
-
-
-       tripDetailStore.sort('order').fetch().then(function(items) {
-         for (var i = 0; i < items.length ; i++) {
-           var width = Number(items[i].dhour * 60) + Number(items[i].dminute);
-           var inPeriod = getInPeriod(xDetail, width);
-           var type = items[i].type;
-           if( type == "leg" ) {
-             type += items[i].legType;
-             if( items[i].legType == "A" ) {
-               credit         += width;
-               creditInPeriod += inPeriod;
-             }
-             block         += width;
-             blockInPeriod += inPeriod;
-           }
-           if( type != "lay" ) {
-             duty         += width;
-             dutyInPeriod += inPeriod;
-           } 
-
-           xDetail += width;
-         }           
-       });
-
-       var fullName = crewMemberPk ? crewMemberStore.getSync(crewMemberPk).name : "Open time";
-
-       fullName += " -- " + startTrip.format("YYYY-MM-DD HH:mm") + " -- " + registry.byId("TripName").get("value");  
-
-       var trip = activityStore.addSync({
-         name           : registry.byId("TripName").get("value"),
-         fullName       : fullName,
-         type           : TRIP,
-         pk             : activityStore.GetNextPKSequence(),
-         fk_cm          : crewMemberPk,
-         x              : x,
-         midnightOffset : false,
-         lbtStart       : startTrip.format("YYYY-MM-DD HH:mm"),
-         lbtEnd         : endTrip.format("YYYY-MM-DD HH:mm"),
-         utcStart       : startTrip.utc().format("YYYY-MM-DD HH:mm"),
-         utcEnd         : endTrip.utc().format("YYYY-MM-DD HH:mm"),
-         duration       : width,
-         transportationTime : registry.byId("TripTransportationTime").checked ? true : false,
-         restAfter          : Number(registry.byId("TripRestAfterH").get("value")) * 60 + Number(registry.byId("TripRestAfterM").get("value")),
-         restBefore         : Number(registry.byId("TripRestBeforeH").get("value")) * 60 + Number(registry.byId("TripRestBeforeM").get("value")),
-         block          : block,
-         credit         : credit,
-         duty           : duty,
-         tafbInPeriod   : getInPeriod(x, width),
-         blockInPeriod  : blockInPeriod,
-         creditInPeriod : creditInPeriod,
-         dutyInPeriod   : dutyInPeriod,
-         lineNb         : lineNb,
-       });
-
-       xDetail        = x;
-
-       tripDetailStore.sort('order').fetch().then(function(items) {
-         var iLeg = 0;
-         var iLay = 0;
-         var name, width, type;
-
-         for (var i = 0; i < items.length ; i++) {
-           width = Number(items[i].dhour * 60) + Number(items[i].dminute);
-           type = items[i].type;
-           if( type == "leg" ) {
-             type += items[i].legType;
-             iLeg += 1;
-             name = type + iLeg;
-           }
-           else {
-             iLay += 1;
-             name = type + iLay;
-           }
-
-           activityStore.addSync({
-             name      : name,
-             fullName  : name + " -- " + startTrip.format("YYYY-MM-DD HH:mm"),
-             type      : type.toUpperCase(),
-             pk        : activityStore.GetNextPKSequence(),
-             fk_parent : trip.pk,
-             fk_cm     : crewMemberPk,
-             x         : xDetail,
-             duration  : width,
-             station   : items[i].station,
-           });
-           xDetail += width;
-         }           
-       });
-
-       trip.CreateEvents();          
-
        topic.publish("refreshGraph");
-
      });
 
-    
+
+     registry.byId("DuplicateTrip").on("click", function() {
+       var source = activityStore.getSync(registry.byId("TripPk").get("value"));
+
+       var copy = new activityModel(source);
+
+       copy.pk = activityStore.GetNextPKSequence();
+       copy.lineNb = GetActivityLineNumber(copy.fk_cm, copy.x, copy.width);
+       copy.fk_yc = undefined;
+
+       activityStore.addSync(copy);
+
+      // Duplicate details (legs, layovers and stations) in case of trip.
+       activityStore.filter({fk_parent: source.pk}).forEach(function(item) {
+         var detailCopy = new activityModel(item);
+         
+         detailCopy.pk = activityStore.GetNextPKSequence();
+         detailCopy.fk_parent = copy.pk
+
+         activityStore.addSync(detailCopy);
+       });
+
+       TripDialog.hide();
+
+       topic.publish("refreshGraph");
+     });
+
+     registry.byId("CreateTrip").on("click", function() {
+       activityStore.Toto("Trip");
+     });
+
+      registry.byId("SaveTrip").on("click", function() {
+       activityStore.Toto("Trip");
+     });
+
+
+
+
+//     
+//     
+//     
+//       _   _   ____  _______  ______ 
+//      | \ | | / __ \|__   __||  ____|
+//      |  \| || |  | |  | |   | |__   
+//      | . ` || |  | |  | |   |  __|  
+//      | |\  || |__| |  | |   | |____ 
+//      |_| \_| \____/   |_|   |______|
+//                                    
+//     
+//       ______ __      __ ______  _   _  _______ 
+//      |  ____|\ \    / /|  ____|| \ | ||__   __|
+//      | |__    \ \  / / | |__   |  \| |   | |   
+//      |  __|    \ \/ /  |  __|  | . ` |   | |   
+//      | |____    \  /   | |____ | |\  |   | |   
+//      |______|    \/    |______||_| \_|   |_|   
+//                                                
+//                                             
+//       _____  _____   _____  _______         _   _   _____  ______ 
+//      |  __ \|_   _| / ____||__   __| /\    | \ | | / ____||  ____|
+//      | |  | | | |  | (___     | |   /  \   |  \| || |     | |__   
+//      | |  | | | |   \___ \    | |  / /\ \  | . ` || |     |  __|  
+//      | |__| |_| |_  ____) |   | | / ____ \ | |\  || |____ | |____ 
+//      |_____/|_____||_____/    |_|/_/    \_\|_| \_| \_____||______|
+//                                   
+//     
+//     
+//       _______  _____             _____  _   _  _____  _____ 
+//      |__   __||  __ \     /\    |_   _|| \ | ||_   _|/ ____|
+//         | |   | |__) |   /  \     | |  |  \| |  | | | |  __ 
+//         | |   |  _  /   / /\ \    | |  | . ` |  | | | | |_ |
+//         | |   | | \ \  / ____ \  _| |_ | |\  | _| |_| |__| |
+//         |_|   |_|  \_\/_/    \_\|_____||_| \_||_____|\_____|
+//                                                             
+//                                                           
+//       _____        __     __     ____   ______  ______ 
+//      |  __ \    /\ \ \   / /    / __ \ |  ____||  ____|
+//      | |  | |  /  \ \ \_/ /    | |  | || |__   | |__   
+//      | |  | | / /\ \ \   /     | |  | ||  __|  |  __|  
+//      | |__| |/ ____ \ | |      | |__| || |     | |     
+//      |_____//_/    \_\|_|       \____/ |_|     |_|     
+//                                                        
+//                                                   
+//     
+//     
+//       _       ______       __      __ ______ 
+//      | |     |  ____|    /\\ \    / /|  ____|
+//      | |     | |__      /  \\ \  / / | |__   
+//      | |     |  __|    / /\ \\ \/ /  |  __|  
+//      | |____ | |____  / ____ \\  /   | |____ 
+//      |______||______|/_/    \_\\/    |______|
+//                                             
+//     
+//     
+//       _______  _____   _____  _____  
+//      |__   __||  __ \ |_   _||  __ \ 
+//         | |   | |__) |  | |  | |__) |
+//         | |   |  _  /   | |  |  ___/ 
+//         | |   | | \ \  _| |_ | |     
+//         |_|   |_|  \_\|_____||_|  
+//     
+
+
+
+
+
+//     
+//      __   __  _____  _    _______ 
+//      \ \ / / / ____|| |  |__   __|
+//       \ V / | (___  | |     | |   
+//        > <   \___ \ | |     | |   
+//       / . \  ____) || |____ | |   
+//      /_/ \_\|_____/ |______||_|   
+//                                
+//     
 
      function ProcessXslt(id, strXml, strXslt) {
        var domParser = new DOMParser();
