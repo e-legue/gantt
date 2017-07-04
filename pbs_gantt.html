@@ -106,7 +106,8 @@
     }
 
     .dgrid-grid {
-      width : 900px;
+      width  : 900px;
+      height : 300px;
     }
 
     .dgrid-list {
@@ -1827,19 +1828,19 @@ var activityModel = declare(Model, {
       }
     }),
   },
-  DrawSVG            : function() { 
+  DrawSVG : function() { 
     var self = this;
 
     if( typeof(this.fk_parent) == "undefined" ) {
       SVG_drawActivity(self);
     }
   },
-  GetYCoord          : function() {
+  GetYCoord : function() {
     var self = this;
 
     return self.fk_cm ? crewMemberStore.getSync(self.fk_cm).GetYCoord() : yCoordStore.nextY;
   },
-  GetCrewMember      : function() {
+  GetCrewMember : function() {
     var self = this;
 
     return self.fk_cm ? crewMemberStore.getSync(self.fk_cm) : undefined;
@@ -1850,80 +1851,79 @@ var activityModel = declare(Model, {
 
     return self.fk_cm ? crewMemberStore.getSync(self.fk_cm).get("ident") : "opentime"; 
   },
-  CreateEvents       : function() {
+  CreateEvents : function() {
     var self = this;
 
     var x = self.x; 
     if( self.midnightOffset ) x += config.midnightOffset;
     var tp = self.transportationTime ? config.transportationTime : 0;
-    if( self.restBefore > 0 ) {
+    if( self.restBefore > 0 && !eventStore.RetrieveActivityEvent(-1, self.pk) ) {
       eventStore.addSync({
         pk : eventStore.GetNextPKSequence(),
         x  : -1,
-        long_label : "Start of rest before activity",
-        label : "Start of rest before activity",
+        long_label : "Rest before activity start",
         fk_act : self.pk,
-
-        start : 0,
       });
     }
-    if( self.transportationTime ) {
+    if( self.transportationTime && !eventStore.RetrieveActivityEvent(-2, self.pk) ) {
       eventStore.addSync({
         pk : eventStore.GetNextPKSequence(),
         x  : -2,
-        long_label : "Start of transportation time before activity",
-        label : "Start of transportation time before activity",
+        long_label : "Transportation time before activity start",
+        fk_act : self.pk,
+      });
+    }
+
+    if( !eventStore.RetrieveActivityEvent(-3, self.pk) ) {
+      eventStore.addSync({
+        pk : eventStore.GetNextPKSequence(),
+        x  : -3,
+        long_label : "Activity start",
+        fk_act : self.pk,
+        start : 1,
+      });
+    }
+    activityStore.filter({fk_parent: self.pk}).fetch().then(function(objects) {
+      for(i = 1; i < objects.length; i++) {
+        var event = eventStore.RetrieveActivityEvent(-10, self.pk,  objects[i].pk);
+        if( !event ) {  
+          event = new eventModel();
+
+          event.pk            = eventStore.GetNextPKSequence();
+          event.x             = -10;
+          event.fk_act        = self.pk;
+          event.fk_act_detail = objects[i].pk;
+        }
+        event.long_label    = objects[i].name + " start";
+
+        eventStore.putSync(event);  
+      }
+    });
+           
+    if( !eventStore.RetrieveActivityEvent(-4, self.pk) ) {
+      eventStore.addSync({
+        pk : eventStore.GetNextPKSequence(),
+        x  : -4,
+        long_label : "Activity end",
         fk_act : self.pk,
         start : 0,
       });
     }
-    eventStore.addSync({
-      pk : eventStore.GetNextPKSequence(),
-      x  : -3,
-      long_label : "Start of activity",
-      label : "Start of activity",
-      fk_act : self.pk,
-      start : 1,
-    });
-    activityStore.filter({fk_parent: self.pk}).fetch().then(function(objects) {
-      for(i = 1; i < objects.length; i++) {
-        eventStore.addSync({
-          pk : eventStore.GetNextPKSequence(),
-          x  : -10,
-          long_label : "Start of " + objects[i].name,
-//          label : "Start of " + objects[i].name,
-          fk_act : self.pk,
-          fk_act_detail : objects[i].pk,
-          start : 0,
-        });
-      }
-    });
-    eventStore.addSync({
-      pk : eventStore.GetNextPKSequence(),
-      x  : -4,
-      long_label : " End of activity",
-      label : " End of activity",
-      fk_act : self.pk,
-      start : 0,
-    });
-    if( self.transportationTime ) {
+    if( self.transportationTime && !eventStore.RetrieveActivityEvent(-5, self.pk) ) {
       eventStore.addSync({
         pk : eventStore.GetNextPKSequence(),
         x  : -5,
-        long_label : "End of transportation time after activity",
-        label : "End of transportation time after activity",
+        long_label : "Transportation time after activity end",
         fk_act : self.pk,
-        start : 0,
       });
     }
-    if( self.restAfter > 0 ) {
+    if( self.restAfter > 0 && !eventStore.RetrieveActivityEvent(-6, self.pk) ) {
       eventStore.addSync({
         pk : eventStore.GetNextPKSequence(),
         x  : -6,
-        long_label : "End of rest after activity",
-        label : "End of rest after activity",
+        long_label : "Rest after activity end",
+//        label : "End of rest after activity",
         fk_act : self.pk,
-        start : 0,
       });
     }
   },          
@@ -2592,7 +2592,6 @@ var eventModel = declare(Model, {
     label         : "string",
     fk_act        : "numeric", // 0 means no activity.
     fk_act_detail : "numeric", // 0 means no activity detail.
-    start         : "numeric", // 1 means start activity, 0 otherwise.
     fk_yc         : "numeric",
     ident         : new ComputedProperty({
       dependsOn : ["pk"],
@@ -2671,6 +2670,23 @@ var eventStore = new TrackableMemory({
     // 3 - reset pk
     self.nextPk = 1;
   },
+  RetrieveActivityEvent : function(x, pk_activity, pk_detail_activity) {
+    var self = this;
+
+    if( x >= 0 ) {
+      alert("Bad usage of eventStore.RetrieveEvent() function.");
+    }
+    var filter           = new self.Filter();
+    var eventStoreFilter = pk_detail_activity ?  filter.eq('fk_act', pk_activity).eq('x', x).eq('fk_act_detail', pk_detail_activity) : filter.eq('fk_act', pk_activity).eq('x', x);
+    var event; 
+
+    self.filter(eventStoreFilter).fetch().then(function(items) {
+      if( items.length == 1 ) {
+        event = items[0]; 
+      }
+    });
+    return event;
+  },
   Toto: function(type) {
     var self = this;
 
@@ -2707,8 +2723,8 @@ var eventStore = new TrackableMemory({
         when.minute(time.getMinutes());
 
         if( when.isValid() ) {   
-          eventStore.addSync({
-            pk          : eventStore.GetNextPKSequence(),
+          self.addSync({
+            pk          : self.GetNextPKSequence(),
             label       : label,
             long_label  : when.format("YYYY-MM-DD HH:mm") + " -- " + label, 
             x           : getPositionX(when),
@@ -2718,12 +2734,12 @@ var eventStore = new TrackableMemory({
       }
     }
     else { // update
-      eventStore.filter({fk_yc: item.fk_yc}).fetch().then( function(items) {
+      self.filter({fk_yc: item.fk_yc}).fetch().then( function(items) {
         for( var i = 0; i < items.length ; i++ ) {
           var pk_calendar = calendarStore.GetPkFromX(items[i].x);             
           var index = days.indexOf(pk_calendar);
           if( index == -1 ) {
-            eventStore.removeSync(items[i].pk);
+            self.removeSync(items[i].pk);
           }
           else {
             var calDay = calendarStore.getSync(pk_calendar);
@@ -2737,7 +2753,7 @@ var eventStore = new TrackableMemory({
               items[i].long_label = when.format("YYYY-MM-DD HH:mm") + " -- " + label;
               items[i].x = getPositionX(when);
 
-              eventStore.putSync(items[i]);
+              self.putSync(items[i]);
               days.splice(index, 1);
             }
           }
@@ -2750,8 +2766,8 @@ var eventStore = new TrackableMemory({
           when.minute(time.getMinutes());
 
           if( when.isValid() ) {   
-            eventStore.addSync({
-              pk          : eventStore.GetNextPKSequence(),
+            self.addSync({
+              pk          : self.GetNextPKSequence(),
               label       : label,
               long_label  : when.format("YYYY-MM-DD HH:mm") + " -- " + label, 
               x           : getPositionX(when),
@@ -4487,37 +4503,36 @@ function SetUpDistanceDialog(pk_item) {
 
 
 
-
-function UpdateEvent(val, idEventSelect, pkEvent) {
+// pkEvent is optional.
+function UpdateEvent(pk_activity, idEventSelect, pkEvent) {
   var filter = new eventStore.Filter();
   var selectInput = registry.byId(idEventSelect);   
 
   selectInput.set("sortByLabel", false);
-  selectInput.set("query", {fk_act: val}); 
+  selectInput.set("query", {fk_act: pk_activity}); 
   
   if( pkEvent ) {
     selectInput.set("value", pkEvent);
   }
   else {
-    var eventStoreFilter = filter.eq('fk_act', val).eq('x', -3);
-    eventStore.filter(eventStoreFilter).fetch().then(function(items) {
-      if( items.length == 1 ) {
-        //selectInput.set("displayedValue", items[0].long_lbl);
-        selectInput.set("value", items[0].pk);
-      }
-    });
+    var event = eventStore.RetrieveActivityEvent(-3, pk_activity);
+
+    // if( typeof(event) != 'undefined' ) {
+    if( event ) {
+      selectInput.set("value", event.pk);
+    }
   }
   selectInput.set("disabled", false);
 }
 
 
-registry.byId("DistanceFromActSelect").on("change", function(val) {
-  UpdateEvent(val, "DistanceFromActEventSelect");
+registry.byId("DistanceFromActSelect").on("change", function(pk_activity) {
+  UpdateEvent(pk_activity, "DistanceFromActEventSelect");
 });
 
 
-registry.byId("DistanceToActSelect").on("change", function(val) {
-  UpdateEvent(val, "DistanceToActEventSelect");
+registry.byId("DistanceToActSelect").on("change", function(pk_activity) {
+  UpdateEvent(pk_activity, "DistanceToActEventSelect");
 });
 
 
