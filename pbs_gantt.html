@@ -442,7 +442,6 @@ on(window, "resize", function() {
 var FixedCheckedMultiSelect = declare("dojox/form/FixedCheckedMultiSelect", [ CheckedMultiSelect ], {
   reset: function() {
     var self = this;
-console.log(self);
     self.inherited(arguments);
     if (!self._resetValue || !self._resetValue.length) {
       self._updateSelection();
@@ -453,7 +452,6 @@ console.log(self);
     if (!self.required) {
       return true;
     }
-console.log(self.value);
     return self.value.length > 0 ? true : false; 
   },
 });
@@ -878,8 +876,6 @@ function SVG_drawDistance(item) {
     xFrom = xTo;
     xTo   = xFrom;
   }
-  console.log(xTo);
-  console.log(xFrom);
   var y = item.GetYCoord();
   var yHorizontalLine = y + HEIGHT_LINE_HL / 2;
 
@@ -1168,7 +1164,6 @@ function selectElement(evt) {
     selectedElement = evt.target.parentNode; // I don't know why target points to body. 
     currentX = evt.clientX;
     currentY = evt.clientY;
-    ////console.log("X: " + currentX + ", Y: " + currentY);         
     currentMatrix = selectedElement.getAttributeNS(null, "transform").slice(7,-1).split(' ');
 
     for(var i=0; i<currentMatrix.length; i++) {
@@ -1190,7 +1185,6 @@ function moveElement(evt) {
   var dy = evt.clientY - currentY;
   currentMatrix[4] += dx / viewFactor;
   currentMatrix[5] += dy / viewFactor;
-  ////console.log(currentMatrix);         
   selectedElement.setAttributeNS(null, "transform", "matrix(" + currentMatrix.join(' ') + ")");
   currentX = evt.clientX;
   currentY = evt.clientY;
@@ -1201,16 +1195,8 @@ function deselectElement(evt) {
     var viewFactor = svg.domViewport.getCTM().a;
     var pkNote = evt.target.id.replace( /^\D+/g, '');
     var note = noteStore.getSync(pkNote);
-    //console.log("deselect...note");
-    //console.log(note.x);
-    //console.log(note.y);
-    //console.log(currentMatrix);
     note.x += currentMatrix[4] * config.XGraphCompression;
     note.y += currentMatrix[5];
-    //console.log(viewFactor);
-    //console.log(config.XGraphCompression);
-    //console.log(note.x);
-    //console.log(note.y);
     currentMatrix[4] = 0;
     currentMatrix[5] = 0;
 
@@ -1367,8 +1353,6 @@ var configurationModel = declare(Model, {
       timezoneStore.filter({name: self.CalendarTimezone}).fetchRange({start: 0, end: 1}).then(function(results) {
         if( results.length > 0 ) {
           registry.byId("CalendarTimezone").set("value", "" + results[0].id);
-          console.log("**************************************************");
-          console.log(reusults[0]);
           registry.byId("CalendarTimezone").set("value", timezoneStoreAdapter.getIdentity(results[0].id));
 
         }
@@ -1452,7 +1436,6 @@ var stationStore = new Memory({
   svgItemNodeName : "station",
   Reset           : function () {
     var self = this;
-    console.log("Reset " + self.svgId);                           
 
     // 1 - empty svg store.
     dojo.query(self.svgId).forEach(dojo.empty);
@@ -1503,8 +1486,6 @@ var yCoordStore = new TrackableMemory({
     if( OpenTimeLineCount > 0 ) {
       height += MARGIN_TOP_CM + HEIGHT_LINE_CM * OpenTimeLineCount + MARGIN_BOTTOM_CM;
     }
-    console.log("strech");
-    console.log(self.nextY);
     svg.domCalendarBar.setAttribute("transform", "scale(1," + height + ")");
     svg.domOpenTime.setAttribute("transform","translate(0, " + self.nextY + ")");
     svg.maxY = Math.max(svg.maxY, height);
@@ -1520,7 +1501,6 @@ var yCoordStore = new TrackableMemory({
     return self.nextYCM;
   },  
   ComputeYAndHeigth : function() {
-    console.log("yCoordStore - ComputeYAndHeight");
     yCoordStore.sort('y').fetch().then(function(items) {
       var nextY   = 0;
       var nextYCM = 0;
@@ -1536,7 +1516,6 @@ var yCoordStore = new TrackableMemory({
   },
   Reset           : function () {
     var self = this;
-    console.log("Reset " + self.svgId);                           
 
     // 1 - empty svg store.
     dojo.query(self.svgId).forEach(dojo.empty);
@@ -1553,7 +1532,6 @@ var yCoordStore = new TrackableMemory({
 
 
 yCoordStore.on("add", function(event) {
-  console.log("yCoordStore - add");
   // 1 - increment primary key sequence.
   yCoordStore.nextPk = Math.max(event.target.pk + 1, yCoordStore.nextPk); 
 
@@ -1565,7 +1543,6 @@ yCoordStore.on("add", function(event) {
 
 
 yCoordStore.on("update", function(event) {
-  console.log("yCoordStore - update");
   // 1 - set next primary key value.
   yCoordStore.nextPk = Math.max(event.target.pk + 1, yCoordStore.nextPk); 
 
@@ -1575,7 +1552,6 @@ yCoordStore.on("update", function(event) {
 
 
 yCoordStore.on("delete", function(event) {
-  console.log("yCoordStore - delete");
   // 1 - recompute y and height of each item.
   yCoordStore.ComputeYAndHeigth();
 });
@@ -1636,7 +1612,6 @@ var calendarStore = new TrackableMemory({
   },
   Reset           : function () {
     var self = this;
-    console.log("Reset " + self.svgId);                           
 
     // 1 - empty svg store.
     dojo.query(self.svgId).forEach(dojo.empty);
@@ -1744,7 +1719,6 @@ var crewMemberStore = new TrackableMemory({
   },
   Reset           : function () {
     var self = this;
-    console.log("Reset " + self.svgId);                           
 
     // 1 - empty svg store.
     dojo.query(self.svgId).forEach(dojo.empty);
@@ -1952,8 +1926,6 @@ var activityModel = declare(Model, {
         start : 0,
       });
     }
-
-    console.log(eventStore);
   },          
 
   ConvertModelToForm : function () {
@@ -2005,12 +1977,11 @@ var activityModel = declare(Model, {
         copy.transportationTime = "true";
       }
 
-      var i = 1;
       activityStore.filter({fk_parent: copy.pk}).forEach(function(item) {
         var detail = new TripDetailModel();
 
-        detail.pk    = i;
-        detail.order = i; 
+        detail.pk    = item.pk;
+        detail.order = item.pk; 
         detail.type  = item.type.substring(0,3).toLowerCase();
         detail.dhour = parseInt(item.duration / 60);
         detail.dminute = item.duration % 60;
@@ -2022,7 +1993,6 @@ var activityModel = declare(Model, {
         }
 
         tripDetailStore.addSync(detail);
-        i += 1;
       });
 
       registry.byId('TripForm').set('value', copy);
@@ -2199,11 +2169,9 @@ var activityModel = declare(Model, {
     self.dutyInPeriod   = dutyInPeriod;
 
     self.SetLineNb();
-
-    console.log(self);          
   },
 
-  SaveDetails: function(){
+  SaveDetails : function(){
     var self = this; // current trip.
 
     xDetail = self.x;
@@ -2212,10 +2180,9 @@ var activityModel = declare(Model, {
       var iLeg = 0;
       var iLay = 0;
       var name, width, type;
-
+console.log(items);
       for (var i = 0; i < items.length ; i++) {
         width = Number(items[i].dhour * 60) + Number(items[i].dminute);
-console.log(items[i]);
         type = items[i].type;
         if( type == "leg" ) {
           type += items[i].legType;
@@ -2234,7 +2201,6 @@ console.log(items[i]);
 
         var item = activityStore.addSync({
           name      : name,
-//          fullName  : name + " -- " + self.lbtStart, 
           type      : type.toUpperCase(),
           pk        : activityStore.GetNextPKSequence(),
           fk_parent : self.pk,
@@ -2244,7 +2210,6 @@ console.log(items[i]);
           station   : items[i].station,
         });
         xDetail += width;
-        console.log(item);           
       }           
     });
   },
@@ -2345,7 +2310,6 @@ var activityStore = new TrackableMemory({
   },
   Reset           : function () {
     var self = this;
-    console.log("Reset " + self.svgId);                           
 
     // 1 - empty svg store.
     dojo.query(self.svgId).forEach(dojo.empty);
@@ -2523,11 +2487,10 @@ var distanceModel = declare(Model, {
     self.fk_yc = yCoord.pk;
   },
   ConvertModelToForm : function() {
-    var self = this;
+    var self       = this;
+    var fEmitEvent = false;
 
     registry.byId("DistancePk").set("value", self.pk);
-    console.log(self);
-    var fEmitEvent = false;
     if( self.fk_actFrom ) {
 
       registry.byId("DistanceFromTabContainer").selectChild(registry.byId("DistanceFromActivity"));
@@ -2565,7 +2528,6 @@ var distanceStore = new Memory({
   },
   Reset : function () {
     var self = this;
-    console.log("Reset " + self.svgId);                           
 
     // 1 - empty svg store.
     dojo.query(self.svgId).forEach(dojo.empty);
@@ -2697,7 +2659,6 @@ var eventStore = new TrackableMemory({
   },
   Reset           : function () {
     var self = this;
-    console.log("Reset " + self.svgId);                           
 
     // 1 - empty svg store.
     dojo.query(self.svgId).forEach(dojo.empty);
@@ -2800,7 +2761,6 @@ var eventStore = new TrackableMemory({
         }
       });
     }
-    console.log(eventStore);
     topic.publish("refreshGraph");
   },
 });
@@ -2836,10 +2796,8 @@ eventStore.on("update", function(event) {
 eventStore.on("delete", function(event) {
   eventStore.filter({fk_yc: event.target.fk_yc}).fetch().then( function(items) {
     for (var i = 0 ; i < items.length ; i++) {
-      console.log(items[i]);            
     }
     if( items.length == 0 ) {
-      console.log("remove ycoord...");            
       yCoordStore.removeSync(event.target.fk_yc);
     }
 
@@ -2900,7 +2858,6 @@ var noteModel = declare(Model, {
 
     self.note  = registry.byId("NoteEditor").get("value");
     self.color = registry.byId("NoteColorPaletteWidget").get("value");
-    console.log(self);
   },
 
 });
@@ -2919,7 +2876,6 @@ var noteStore = new TrackableMemory({
   },
   Reset           : function () {
     var self = this;
-    console.log("Reset " + self.svgId);                           
 
     // 1 - empty svg store.
     dojo.query(self.svgId).forEach(dojo.empty);
@@ -2944,11 +2900,9 @@ var noteStore = new TrackableMemory({
     var item = pk ? self.getSync(pk): new noteModel();
 
     item.ConvertFormToModel();
-    console.log(item);         
     self.putSync(item);
 
     NoteDialog.hide();
-    console.log(self);         
     topic.publish("refreshGraph");
   },
 
@@ -3017,7 +2971,7 @@ function GetActivityLineNumber(crewMemberPk, x , width, pk) {
 //   ___                              
 //    | ._ o ._     _|  _ _|_  _. o | 
 //    | |  | |_)   (_| (/_ |_ (_| | | 
-//    |                       
+//           |                       
 //
 var TripDetailModel = declare(Model, {
   validateOnSet : false,
@@ -3374,7 +3328,6 @@ function LoadSvgStores(svgNode) {
   LoadStore(svgNode, configurationStore);
   // load single object (id 0) in config.
   config = configurationStore.getSync(0);
-  console.log(config);          
   config.Apply();
 
   LoadStore(svgNode, calendarStore);
@@ -3888,7 +3841,6 @@ registry.byId("CalendarTimezone").on("focus", function() {
 
 registry.byId("CalendarTimezone").on("change", function() {
   var item = timezoneStore.getSync(this.get("value"));
-  console.log("timezone :" + item); 
 
   // Set default time zone, based on user input.
   moment.tz.setDefault(item.name);
@@ -3899,8 +3851,6 @@ registry.byId("CalendarTimezone").on("change", function() {
     if( !registry.byId("CalendarStation").get("value") ) {
 
       var zone = moment.tz.zone(item.name);
-      console.log("zone: ");  
-      console.log(zone);  
 
       var dateOutsideDST = moment();
 
@@ -3909,7 +3859,6 @@ registry.byId("CalendarTimezone").on("change", function() {
       }
 
       var offsetZone = zone.offset(dateOutsideDST.valueOf());         
-      console.log("offsetZone: " + offsetZone);
 
       registry.byId("CalendarStation").set("value", "");
       registry.byId("CalendarStation").set("query", {offset: offsetZone});
@@ -4043,7 +3992,6 @@ registry.byId("SetStartPeriodsDialog").on("show", function() {
     }
   });
   arrChecked.push(0);          
-  console.log(arrChecked);
   registry.byId("CalendarStartPeriods").setStore(calendarStoreAdapter, arrChecked);
 }, true);
 
@@ -4057,9 +4005,6 @@ registry.byId("SetStartPeriods").on("click", function() {
   calendarStore.forEach(function(item) {
     item.set("relative", item.pk - ref);
     if( i < newStarts.length && newStarts[i] == item.pk ) {
-      console.log("SetStartPeriods");
-      console.log(i);
-      console.log(item);
       item.set("startperiod", true);
       if( i == 0 ) XStartPeriod = item.x;
       if( i == 1 ) XStartNextPeriod = item.x;  
@@ -4551,11 +4496,9 @@ function UpdateEvent(val, idEventSelect, pkEvent) {
   selectInput.set("query", {fk_act: val}); 
   
   if( pkEvent ) {
-console.log("hum, pkEvent: " +  pkEvent);  
     selectInput.set("value", pkEvent);
   }
   else {
-console.log("lalalala");  
     var eventStoreFilter = filter.eq('fk_act', val).eq('x', -3);
     eventStore.filter(eventStoreFilter).fetch().then(function(items) {
       if( items.length == 1 ) {
@@ -4661,15 +4604,6 @@ function SetUpTripDialog(item) {
     domStyle.set(registry.byId("DuplicateTrip").domNode, "display", "none");
     domStyle.set(registry.byId("DeleteTrip").domNode,    "display", "none");
     domStyle.set(registry.byId("SaveTrip").domNode,      "display", "none");
-
-    /*
-    registry.byId("TripDurationHour").set("value", 0);
-    registry.byId("TripDurationHour").set("readonly", true);
-    registry.byId("TripDurationHour").set("disabled", true);
-    registry.byId("TripDurationMinute").set("value", 0);
-    registry.byId("TripDurationMinute").set("readonly", true);
-    registry.byId("TripDurationMinute").set("disabled", true);
-    */                                           
 
     domStyle.set("PkTrip", "display", "none");
 
