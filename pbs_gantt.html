@@ -717,28 +717,6 @@ function PopupCrewMemberDetail(crewMemberPk) {
   myDialog.show();
 }
 
-function PopupDistanceDetail(distancePk) {
-  var myDialog = new Dialog({
-    title: "Detail distance",
-    style: "width: 300px",
-    content: "Distance PK: " + distancePk + "<br/>",
-  });
-
-  var myButton = new Button({
-    label: "Delete this distance",
-    onClick: function() {
-      distanceStore.removeSync(distancePk);
-
-      myDialog.hide();
-
-      topic.publish("refreshGraph");
-    }
-  }).placeAt(myDialog);
-
-  myDialog.show();
-}
-
-
 
 // ===============================================
 // Start Date Time + duration Hour Minute => 
@@ -900,7 +878,8 @@ function SVG_drawDistance(item) {
     xFrom = xTo;
     xTo   = xFrom;
   }
-
+  console.log(xTo);
+  console.log(xFrom);
   var y = item.GetYCoord();
   var yHorizontalLine = y + HEIGHT_LINE_HL / 2;
 
@@ -914,7 +893,7 @@ function SVG_drawDistance(item) {
   var lblText = SVG_drawText("distance_label", (xFrom + xTo) / 2 , yHorizontalLine - 3, label);
 
   on(lblText, "click", function(evt) {
-    PopupDistanceDetail(item.pk);
+    SetUpDistanceDialog(item.pk);
   });
   G.appendChild(lblText);
 
@@ -1938,8 +1917,9 @@ var activityModel = declare(Model, {
           pk : eventStore.GetNextPKSequence(),
           x  : -10,
           long_label : "Start of " + objects[i].name,
-          label : "Start of " + objects[i].name,
+//          label : "Start of " + objects[i].name,
           fk_act : self.pk,
+          fk_act_detail : objects[i].pk,
           start : 0,
         });
       }
@@ -2102,7 +2082,7 @@ var activityModel = declare(Model, {
     self.x        = getPositionX(startDateTimeTraining);
 
     var fullName = fk_cm ? crewMemberStore.getSync(fk_cm).name : "Open time";
-    fullName += " -- " + startDateTimeTraining.format("YYYY-MM-DD HH:mm") + " -- " + self.name;
+    fullName += " -- " + self.lbtStart + " -- " + self.name;
 
     self.fullName = fullName;
     self.SetLineNb();
@@ -2136,7 +2116,7 @@ var activityModel = declare(Model, {
     self.utcEnd   = endDate.utc().format("YYYY-MM-DD HH:mm");
     self.duration = endDate.diff(startDate, "minutes");
     self.x        = getPositionX(startDate);
-    self.fullName = crewMemberStore.getSync(self.fk_cm).name + " -- " + startDate.format("YYYY-MM-DD") + " -- " + self.name;
+    self.fullName = crewMemberStore.getSync(self.fk_cm).name + " -- " + self.lbtStart.substring(0, 10) + " -- " + self.name;
 
     self.SetLineNb();
   },
@@ -2168,7 +2148,7 @@ var activityModel = declare(Model, {
     self.x        = getPositionX(startDateTimeTrip);
 
     var fullName = fk_cm ? crewMemberStore.getSync(fk_cm).name : "Open time";
-    fullName += " -- " + startDateTimeTrip.format("YYYY-MM-DD HH:mm") + " -- " + self.name;
+    fullName += " -- " + self.lbtStart + " -- " + self.name;
 
     self.fullName = fullName;
 
@@ -2235,20 +2215,26 @@ var activityModel = declare(Model, {
 
       for (var i = 0; i < items.length ; i++) {
         width = Number(items[i].dhour * 60) + Number(items[i].dminute);
+console.log(items[i]);
         type = items[i].type;
         if( type == "leg" ) {
           type += items[i].legType;
           iLeg += 1;
-          name = type + iLeg;
+          name = items[i].lblType + " " + iLeg;
+          if( items[i].legType == "D" ) {
+            name += " (D)";
+          }
+          name += " " + items[i-1].station + " -> " + items[i+1].station;
+
         }
         else {
           iLay += 1;
-          name = type + iLay;
+          name = items[i].lblType + " " + items[i].station + " (" + iLay + ")";
         }
 
         var item = activityStore.addSync({
           name      : name,
-          fullName  : name + " -- " + self.lbtStart, 
+//          fullName  : name + " -- " + self.lbtStart, 
           type      : type.toUpperCase(),
           pk        : activityStore.GetNextPKSequence(),
           fk_parent : self.pk,
@@ -2277,17 +2263,17 @@ var activityModel = declare(Model, {
     self.transportationTime = false;
     self.restBefore         = 0;
     self.restAfter          = 0;
-    self.duration           = calendarDay.get("width");
-    self.x                  = calendarDay.get("x");
+    self.duration           = calendarDay.width;
+    self.x                  = calendarDay.x;
 
-    var startDate  = moment.tz(calendarDay.get("name"), timezoneStore.getSync(config.CalendarTimezone).name);
+    var startDate  = moment.tz(calendarDay.name, timezoneStore.getSync(config.CalendarTimezone).name);
     var endDate    = startDate.clone().add(self.duration, 'm');
 
     self.lbtStart = startDate.format("YYYY-MM-DD HH:mm");
     self.lbtEnd   = endDate.format("YYYY-MM-DD HH:mm");
     self.utcStart = startDate.utc().format("YYYY-MM-DD HH:mm");
     self.utcEnd   = endDate.utc().format("YYYY-MM-DD HH:mm");
-    self.fullName = crewMemberStore.getSync(self.fk_cm).name + " -- " + startDate.format("YYYY-MM-DD") + " -- " + self.name;
+    self.fullName = crewMemberStore.getSync(self.fk_cm).name + " -- " + calendarDay.name + " -- " + self.name;
 
     self.SetLineNb();
   },
@@ -2493,6 +2479,76 @@ var distanceModel = declare(Model, {
 
     return eventStore.getSync(self.fk_evtTo);
   },
+  ConvertModelToForm : function() {
+
+  },
+
+  ConvertFormToModel : function() {
+    var self = this;
+
+    if( typeof(self.pk) == 'undefined' ) {
+      self.pk = distanceStore.GetNextPKSequence();
+    }
+    else {
+      yCoordStore.removeSync(self.fk_yc);
+    }
+
+    var yFrom = 0;
+    var yTo   = 0;
+
+    if( registry.byId("DistanceFromActivity").selected ) {
+      self.fk_actFrom = registry.byId("DistanceFromActSelect").value;
+      self.fk_evtFrom = registry.byId("DistanceFromActEventSelect").value;
+      yFrom = activityStore.getSync(registry.byId("DistanceFromActSelect").value).GetYCoord();
+    }
+    else {
+      self.fk_evtFrom = registry.byId("DistanceFromEventSelect").value;
+    }
+    if( registry.byId("DistanceToActivity").selected ) {
+      self.fk_actTo = registry.byId("DistanceToActSelect").value;
+      self.fk_evtTo = registry.byId("DistanceToActEventSelect").value;
+      yTo = activityStore.getSync(registry.byId("DistanceToActSelect").value).GetYCoord();
+    }
+    else {
+      self.fk_evtTo = registry.byId("DistanceToEventSelect").value;
+    }
+
+    // Add the new entry in the y coord store.
+    var yCoord = yCoordStore.addSync({
+      pk     : yCoordStore.GetNextPKSequence(),
+      y      : Math.max(yFrom, yTo) - 1,
+      height : HEIGHT_LINE_HL,
+    });
+
+    self.fk_yc = yCoord.pk;
+  },
+  ConvertModelToForm : function() {
+    var self = this;
+
+    registry.byId("DistancePk").set("value", self.pk);
+    console.log(self);
+    var fEmitEvent = false;
+    if( self.fk_actFrom ) {
+
+      registry.byId("DistanceFromTabContainer").selectChild(registry.byId("DistanceFromActivity"));
+      registry.byId("DistanceFromActSelect").set("value", self.fk_actFrom, fEmitEvent);
+      UpdateEvent(self.fk_actFrom, "DistanceFromActEventSelect", self.fk_evtFrom);
+    }
+    else {
+      registry.byId("DistanceFromTabContainer").selectChild(registry.byId("DistanceFromEvent"));
+      registry.byId("DistanceFromEventSelect").set("value", self.fk_evtFrom);
+    }
+    if( self.fk_actTo ) {
+      registry.byId("DistanceToTabContainer").selectChild(registry.byId("DistanceToActivity"));
+      registry.byId("DistanceToActSelect").set("value", self.fk_actTo, fEmitEvent);
+      UpdateEvent(self.fk_actTo, "DistanceToActEventSelect", self.fk_evtTo);
+    }
+    else {
+      registry.byId("DistanceToTabContainer").selectChild(registry.byId("DistanceToEvent"));
+      registry.byId("DistanceToEventSelect").set("value", self.fk_evtTo);
+    }
+  },
+
 });
 
 
@@ -2507,7 +2563,7 @@ var distanceStore = new Memory({
 
     return self.nextPk;
   },
-  Reset           : function () {
+  Reset : function () {
     var self = this;
     console.log("Reset " + self.svgId);                           
 
@@ -2522,6 +2578,23 @@ var distanceStore = new Memory({
     // 3 - reset pk
     self.nextPk = 1;
   },
+  Toto : function() {
+    var self = this;
+
+    var pk = Number(registry.byId("DistancePk").get("value"));
+
+    var item = pk ? self.getSync(pk): new distanceModel();
+
+    item.ConvertFormToModel();
+   
+    self.putSync(item);
+
+    registry.byId("DistanceForm").reset();
+    DistanceDialog.hide();
+
+    topic.publish("refreshGraph");
+  },
+
 
 });
 
@@ -2555,7 +2628,8 @@ var eventModel = declare(Model, {
     x             : "numeric", // for activity, negative value.
     long_label    : "string",
     label         : "string",
-    fk_act        : "numeric", // 0 means no activity
+    fk_act        : "numeric", // 0 means no activity.
+    fk_act_detail : "numeric", // 0 means no activity detail.
     start         : "numeric", // 1 means start activity, 0 otherwise.
     fk_yc         : "numeric",
     ident         : new ComputedProperty({
@@ -2585,26 +2659,29 @@ var eventModel = declare(Model, {
   },
   GetX : function() {
     var self = this;
-//    console.log(self);
-//    console.log(!self.fk_act);
-//    console.log(typeof(self.fk_act));
-    if( self.x >= 0 ) {
+    if( typeof(self.fk_act) == 'undefined' ){
+    // if( self.x >= 0 ) {
       return self.x;
     }
     var activity = activityStore.getSync(self.fk_act);
-    var tp       = activity.transportationTime ? config.transportationTime : 0;
+    var tp       = activity.transportationTime ? Number(config.transportationTime) : 0;
     var x        = activity.x;
-    x += activity.midnightOffset ? config.midnightOffset : 0;
+    x += activity.midnightOffset ? Number(config.midnightOffset) : 0;
     if( self.x == -1 ) return x - tp - activity.restBefore;
     if( self.x == -2 ) return x - tp;
     if( self.x == -3 ) return x;
     if( self.x == -4 ) return x + activity.duration;
     if( self.x == -5 ) return x + activity.duration + tp;
     if( self.x == -6 ) return x + activity.duration + tp + activity.restAfter;
-    return x;
+
+    if( self.x == -10 ) { // that means a activity detail.
+      x = activityStore.getSync(self.fk_act_detail).x;
+      x += activity.midnightOffset ? Number(config.midnightOffset) : 0;
+      return x;
+    }
+    alert("GetX - should never pass here.");
+    return 0;
   }
-
-
 });
 
 var eventStore = new TrackableMemory({
@@ -4046,8 +4123,8 @@ registry.byId("CreateDayOff").on("click", function() {
   }
 
   CreateDayOffDialog.hide();
-  var crewMemberPk = parseInt(registry.byId("DayOffCrewMemberSelect").get("value"));
-  var days = registry.byId("DayOffDatesSelect").value; 
+  var crewMemberPk = parseInt(registry.byId("DayOffCrewMemberSelect").value);
+  var days         = registry.byId("DayOffDatesSelect").value; 
 
   // to avoid the "at least one item must be selected" message, form data are save in 
   // local variables before reseting the form.
@@ -4418,21 +4495,75 @@ registry.byId("EventInvertSelectionDates").on("click", function() {
 //      | |__| |_| |_  ____) |   | | / ____ \ | |\  || |____ | |____ 
 //      |_____/|_____||_____/    |_|/_/    \_\|_| \_| \_____||______|
 //                                   
-//   
-function UpdateEvent(val, idEventSelect) {
+//
+
+
+// connect menu creation Event to Event dialog
+registry.byId("MenuHighLightsDistance").on("click", function() {
+  SetUpDistanceDialog(); 
+});
+
+
+registry.byId("DeleteDistance").on("click", function() {
+  distanceStore.removeSync(registry.byId("DistancePk").get("value"));
+
+  DistanceDialog.hide();
+
+  topic.publish("refreshGraph");
+});
+
+
+function SetUpDistanceDialog(pk_item) {
+  if( pk_item ) {
+    DistanceDialog.set("title", "Edit distance");
+
+    domStyle.set(registry.byId("CreateDistance").domNode,     "display", "none");
+    domStyle.set(registry.byId("DeleteDistance").domNode,     "display", "inline");
+    domStyle.set(registry.byId("SaveDistance").domNode,       "display", "inline");
+
+    domStyle.set("PkDistance", "display", "table-row");
+
+    var item = distanceStore.getSync(pk_item);
+    
+    item.ConvertModelToForm();
+  } 
+  else {
+    DistanceDialog.set("title", "Create distance");
+
+    domStyle.set(registry.byId("CreateDistance").domNode,     "display", "inline");
+    domStyle.set(registry.byId("DeleteDistance").domNode,     "display", "none");
+    domStyle.set(registry.byId("SaveDistance").domNode,       "display", "none");
+
+    domStyle.set("PkDistance", "display", "none");
+  }
+
+  DistanceDialog.show();
+}
+
+
+
+
+function UpdateEvent(val, idEventSelect, pkEvent) {
   var filter = new eventStore.Filter();
   var selectInput = registry.byId(idEventSelect);   
 
   selectInput.set("sortByLabel", false);
   selectInput.set("query", {fk_act: val}); 
-
-  var totoFilter = filter.eq('fk_act', val).eq('start', 1);
-  eventStore.filter(totoFilter).fetch().then(function(items) {
-    if( items.length == 1 ) {
-      selectInput.set("displayedValue", items[0].long_lbl);
-    }
-  });
-
+  
+  if( pkEvent ) {
+console.log("hum, pkEvent: " +  pkEvent);  
+    selectInput.set("value", pkEvent);
+  }
+  else {
+console.log("lalalala");  
+    var eventStoreFilter = filter.eq('fk_act', val).eq('x', -3);
+    eventStore.filter(eventStoreFilter).fetch().then(function(items) {
+      if( items.length == 1 ) {
+        //selectInput.set("displayedValue", items[0].long_lbl);
+        selectInput.set("value", items[0].pk);
+      }
+    });
+  }
   selectInput.set("disabled", false);
 }
 
@@ -4447,40 +4578,23 @@ registry.byId("DistanceToActSelect").on("change", function(val) {
 });
 
 
-registry.byId("DistanceFromActivity").on("click", function() {
-  dojo.query(".dstFromAct").style("display", "inherit");
-  dojo.query(".dstFromEvt").style("display", "none");
-});
-
-
-registry.byId("DistanceFromEvent").on("click", function() {
-  dojo.query(".dstFromAct").style("display", "none");
-  dojo.query(".dstFromEvt").style("display", "inherit");
-});
-
-
-registry.byId("DistanceToActivity").on("click", function() {
-  dojo.query(".dstToAct").style("display", "inherit");
-  dojo.query(".dstToEvt").style("display", "none");
-});
-
-
-registry.byId("DistanceToEvent").on("click", function() {
-  dojo.query(".dstToAct").style("display", "none");
-  dojo.query(".dstToEvt").style("display", "inherit");
-});
-
 
 registry.byId("CreateDistance").on("click", function() {
-  /*       if( !registry.byId("CreateDistanceForm").validate() ) {
-    return;
-  }
-  */
+  distanceStore.Toto();
+});
+
+
+registry.byId("SaveDistance").on("click", function() {
+  distanceStore.Toto();
+});
+
+/*
+registry.byId("CreateDistance").on("click", function() {
   var distance = new distanceModel();
   var yFrom = 0;
   var yTo   = 0;
 
-  if( registry.byId("DistanceFromActivity").checked ) {
+  if( registry.byId("DistanceFromActivity").selected ) {
     distance.fk_actFrom = registry.byId("DistanceFromActSelect").value;
     distance.fk_evtFrom = registry.byId("DistanceFromActEventSelect").value;
     yFrom = activityStore.getSync(registry.byId("DistanceFromActSelect").value).GetYCoord();
@@ -4488,7 +4602,7 @@ registry.byId("CreateDistance").on("click", function() {
   else {
     distance.fk_evtFrom = registry.byId("DistanceFromEventSelect").value;
   }
-  if( registry.byId("DistanceToActivity").checked ) {
+  if( registry.byId("DistanceToActivity").selected ) {
     distance.fk_actTo = registry.byId("DistanceToActSelect").value;
     distance.fk_evtTo = registry.byId("DistanceToActEventSelect").value;
     yTo = activityStore.getSync(registry.byId("DistanceToActSelect").value).GetYCoord();
@@ -4507,12 +4621,14 @@ registry.byId("CreateDistance").on("click", function() {
   distance.pk    = distanceStore.GetNextPKSequence();
   distance.fk_yc = yCoord.pk;
 
-  CreateDistanceDialog.hide();
+  registry.byId("DistanceForm").reset();
+  
+  DistanceDialog.hide();
   distanceStore.addSync(distance);
 
   topic.publish("refreshGraph");
 });  
-
+*/
 
 //     
 //       _______  _____   _____  _____  
@@ -5083,7 +5199,7 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
         <span>Highlights</span>
         <div data-dojo-type="dijit/DropDownMenu">
           <div id="MenuHighLightsEvent"    data-dojo-type="dijit/MenuItem">Event(s)</div>
-          <div id="MenuHighLightsDistance" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateDistanceDialog.show();}">Distance</div>
+          <div id="MenuHighLightsDistance" data-dojo-type="dijit/MenuItem">Distance</div>
           <div id="MenuHighLightsWindow"   data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {alert('not yet available');}">Window</div>
           <div id="MenuHighLightsNote"     data-dojo-type="dijit/MenuItem">Note</div>
         </div>
@@ -5677,63 +5793,77 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
     </div>
 
 
-    <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateDistanceDialog" title="Distance" style="display: none;" data-dojo-props="onHide: function() {CreateDistanceForm.reset();}" >
-      <div data-dojo-type="dijit/form/Form" id="CreateDistanceForm" data-dojo-id="CreateDistanceForm" encType="multipart/form-data" action="" method="">
+    <div data-dojo-type="dijit/Dialog" id="DistanceDialog" data-dojo-id="DistanceDialog" title="Distance" style="display: none;" data-dojo-props="onHide: function() {DistanceForm.reset();}" >
+      <div data-dojo-type="dijit/form/Form" id="DistanceForm" data-dojo-id="DistanceForm" encType="multipart/form-data" action="" method="">
         <table class="dijitDialogPaneContentArea">
-
+          <tr id="PkDistance">
+            <td><label for="pk">Primary key</label></td>
+            <td><input data-dojo-type="dijit/form/TextBox" name="pk" id="DistancePk" readonly="true" disabled="true"></td>
+          </tr>
           <tr>
+            <td><label for="From">From</label></td>
             <td>
-               <input type="radio" name="DistanceFromType" id="DistanceFromActivity" checked value="activity" data-dojo-type="dijit/form/RadioButton"/><label for="DistanceFromActivity">From an activity</label><br/>
-               <input type="radio" name="DistanceFromType" id="DistanceFromEvent"            value="event"    data-dojo-type="dijit/form/RadioButton"/><label for="DistanceFromEvent">From an event</label><br/>
-            </td>
-            <td style="border: 1px solid gray">
-              <table class="dstFromAct">
-                <tr>
-                  <td><label for="From">activity name</label></td>
-                  <td><select data-dojo-type="dijit/form/FilteringSelect" name="From" id="DistanceFromActSelect" style="width: 30em;"></td>
-                </tr>
-                <tr>
-                  <td><label for="From">activity event</label></td>
-                  <td><select data-dojo-type="dijit/form/Select" id="DistanceFromActEventSelect" disabled="true"></td>
-                </tr>
-              </table>
-              <table class="dstFromEvt" style="display: none;">
-                <tr>
-                  <td><label for="From">event</label></td>
-                  <td><select data-dojo-type="dijit/form/Select" id="DistanceFromEventSelect"></td>
-                </tr>
-              </table>
+              <div style="width: 40em; height: 7em;">
+                <div data-dojo-type="dijit/layout/TabContainer" id="DistanceFromTabContainer" style="width: 100%; height: 100%;">
+                  <div data-dojo-type="dijit/layout/ContentPane" id="DistanceFromActivity" title="an activity" data-dojo-props="selected:true">
+                    <table class="dstFromAct">
+                      <tr>
+                        <td><label for="From">activity name</label></td>
+                        <td><select data-dojo-type="dijit/form/FilteringSelect" name="From" id="DistanceFromActSelect" style="width: 30em;"></td>
+                      </tr>
+                      <tr>
+                        <td><label for="From">activity event</label></td>
+                        <td><select data-dojo-type="dijit/form/Select" id="DistanceFromActEventSelect" disabled="true"></td>
+                      </tr>
+                    </table>
+                  </div>
+                  <div data-dojo-type="dijit/layout/ContentPane" id="DistanceFromEvent" title="an event">
+                    <table class="dstFromEvt">
+                      <tr>
+                        <td><label for="From">event</label></td>
+                        <td><select data-dojo-type="dijit/form/Select" id="DistanceFromEventSelect"></td>
+                      </tr>
+                    </table>
+                  </div>
+                </div>
+              </div>
             </td>
           </tr>
-
           <tr>
+            <td><label for="To">To</label></td>
             <td>
-               <input type="radio" name="DistanceToType" id="DistanceToActivity" checked value="activity" data-dojo-type="dijit/form/RadioButton"/><label for="DistanceToActivity">To an activity</label><br/>
-               <input type="radio" name="DistanceToType" id="DistanceToEvent"            value="event"    data-dojo-type="dijit/form/RadioButton"/><label for="DistanceToEvent">To an event</label><br/>
-            </td>
-            <td style="border: 1px solid gray">
-              <table class="dstToAct">
-                <tr>
-                  <td><label for="To">activity name</label></td>
-                  <td><select data-dojo-type="dijit/form/FilteringSelect" name="To" id="DistanceToActSelect" style="width: 30em;"></td>
-                </tr>
-                <tr>
-                  <td><label for="To">activity event</label></td>
-                  <td><select data-dojo-type="dijit/form/Select" id="DistanceToActEventSelect" disabled="true"></td>
-                </tr>
-              </table>
-              <table class="dstToEvt" style="display: none;">
-                <tr>
-                  <td><label for="To">event</label></td>
-                  <td><select data-dojo-type="dijit/form/Select" id="DistanceToEventSelect"></td>
-                </tr>
-              </table>
+              <div style="width: 40em; height: 7em;">
+                <div data-dojo-type="dijit/layout/TabContainer" id="DistanceToTabContainer" style="width: 100%; height: 100%;">
+                  <div data-dojo-type="dijit/layout/ContentPane" id="DistanceToActivity" title="an activity" data-dojo-props="selected:true">
+                    <table class="dstToAct">
+                      <tr>
+                        <td><label for="To">activity name</label></td>
+                        <td><select data-dojo-type="dijit/form/FilteringSelect" name="To" id="DistanceToActSelect" style="width: 30em;"></td>
+                      </tr>
+                      <tr>
+                        <td><label for="To">activity event</label></td>
+                        <td><select data-dojo-type="dijit/form/Select" id="DistanceToActEventSelect" disabled="true"></td>
+                      </tr>
+                    </table>
+                  </div>
+                  <div data-dojo-type="dijit/layout/ContentPane" id="DistanceToEvent" title="an event">
+                    <table class="dstToEvt">
+                      <tr>
+                        <td><label for="To">event</label></td>
+                        <td><select data-dojo-type="dijit/form/Select" id="DistanceToEventSelect"></td>
+                      </tr>
+                    </table>
+                  </div>
+                </div>
+              </div>
             </td>
           </tr>
         </table>
 
         <div class="dijitDialogPaneActionBar">
           <button data-dojo-type="dijit/form/Button" type="button" id="CreateDistance">Create</button>
+          <button data-dojo-type="dijit/form/Button" type="button" id="DeleteDistance" class="delete">Delete</button>
+          <button data-dojo-type="dijit/form/Button" type="button" id="SaveDistance">Save</button>
         </div>
       </div>
     </div>
