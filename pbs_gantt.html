@@ -4910,7 +4910,7 @@ SaveFileToPIDialog.on("show", function() {
 
   //get svg source.
   var serializer = new XMLSerializer();
-  var strXml = serializer.serializeToString(svg);
+  var strXml = serializer.serializeToString(svg.dom);
 
   ProcessXslt('XMLqual',     strXml, Gantt2QualXsl);
   ProcessXslt('XMLacts',     strXml, Gantt2ActsXsl); 
@@ -4937,7 +4937,7 @@ registry.byId("SaveZipFile").on("click", function() {
 
   //get svg source.
   var serializer = new XMLSerializer();
-  zip.file("data.svg", serializer.serializeToString(svg));
+  zip.file("data.svg", serializer.serializeToString(svg.dom));
 
   var zipFilename = registry.byId("zipFilename").value;
 

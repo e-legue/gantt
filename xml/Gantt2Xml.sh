@@ -8,6 +8,7 @@
 # $2: svg file
 # $3: 0 = Exclude "+" attributes
 #     1 = Include "+" attributes
+set -e 
 
 VERBOSE=false
 xsl_verbose=""
