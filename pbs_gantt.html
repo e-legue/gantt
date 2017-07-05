@@ -186,6 +186,10 @@
       height : 300px !important;
     }
 
+    #MenuCurrentFile {
+      float: right;
+    }
+
   </style>
 
   <script>
@@ -1336,7 +1340,7 @@ var configurationModel = declare(Model, {
       });
     }  
 
-    registry.byId("XGraphCompression").set("value", self.XGraphCompression);
+//     registry.byId("XGraphCompression").set("value", self.XGraphCompression);
 
     registry.byId("SHCalendarHours").set("checked", self.SHCalendarHours);
     registry.byId("SHCalendarDayX").set("checked", self.SHCalendarDayX);
@@ -3653,6 +3657,7 @@ registry.byId("SHCalendarHourBars").on("change", function(isChecked) {
   }
 }, true);
 
+/*
 registry.byId("XGraphCompression").on("change", function(value) {
   config.XGraphCompression = value;
 
@@ -3660,6 +3665,7 @@ registry.byId("XGraphCompression").on("change", function(value) {
 
   topic.publish("refreshGraph");
 }, true);
+*/
 
 // -----------------------------------------------
 // Show/Hide activity dialog
@@ -5218,22 +5224,22 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
       <div id="MenuGraphOption" data-dojo-type="dijit/PopupMenuBarItem">
         <span>Graph options</span>
         <div data-dojo-type="dijit/DropDownMenu">
-          <div data-dojo-type="dijit/PopupMenuItem">
-            <span>Graph factor compression on X axis</span>
-            <select data-dojo-type="dijit/form/Select" name="XGraphCompression" id="XGraphCompression" data-dojo-id="XGraphCompression" style="width: 3em;">
-              <option value=".25">0.25</option>
-              <option value=".5">0.5</option>
-              <option value="1" selected="selected">1</option>
-              <option value="2">2</option>
-              <option value="4">4</option>
-              <option value="5">5</option>
-              <option value="6">6</option>
-              <option value="8">8</option>
-              <option value="10">10</option>
-            </select>
-          </div>
           <div id="MenuGraphOptionCalendar" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {ShowHideCalendarDialog.show();}">Calendar Date/Hours</div>
           <div id="MenuGraphOptionActivity" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {ShowHideActivityDialog.show();}">Activity details</div>
+        </div>
+      </div>
+      <div id="MenuResolution" data-dojo-type="dijit/PopupMenuBarItem">
+        <span>Resolution</span>
+        <div data-dojo-type="dijit/DropDownMenu">
+          <div id="g1r1" data-dojo-id="g1r1" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'g1'">0.25</div>
+          <div id="g1r2" data-dojo-id="g1r2" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'g1'">0.5</div>
+          <div id="g1r3" data-dojo-id="g1r3" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'g1', checked:true">1</div>
+          <div id="g1r4" data-dojo-id="g1r4" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'g1'">2</div>
+          <div id="g1r5" data-dojo-id="g1r5" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'g1'">4</div>
+          <div id="g1r6" data-dojo-id="g1r6" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'g1'">5</div>
+          <div id="g1r7" data-dojo-id="g1r7" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'g1'">6</div>
+          <div id="g1r8" data-dojo-id="g1r8" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'g1'">8</div>
+          <div id="g1r9" data-dojo-id="g1r9" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'g1'">10</div>
         </div>
       </div>
       <div id="MenuHighLights" data-dojo-type="dijit/PopupMenuBarItem">
@@ -5245,6 +5251,7 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
           <div id="MenuHighLightsNote"     data-dojo-type="dijit/MenuItem">Note</div>
         </div>
       </div>
+      <div id="MenuCurrentFile" data-dojo-type="dijit/MenuBarItem" data-dojo-props="disabled:true">No file</div>
     </div>
 
     <!-- SVG code -->
