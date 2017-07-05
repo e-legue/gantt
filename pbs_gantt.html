@@ -694,30 +694,6 @@ function PopupActivityDetail(activityId) {
   }
 }
 
-
-function PopupCrewMemberDetail(crewMemberPk) {
-  var myDialog = new Dialog({
-    title: "Detail crew member",
-    style: "width: 300px",
-    content: "Crewmember pk : " + crewMemberPk + "<br/>name: " + crewMemberStore.getSync(crewMemberPk).name + "<br/>",
-  });
-
-  var myButton = new Button({
-    label: "Delete this crew member",
-    onClick: function() {
-      crewMemberStore.removeSync(crewMemberPk);
-
-      myDialog.hide();
-
-      topic.publish("refreshGraph");
-    }
-  }).placeAt(myDialog);
-
-  myDialog.show();
-}
-
-
-// ===============================================
 // Start Date Time + duration Hour Minute => 
 // End Date Time (readonly).
 // Here, dojo/date is used, as only local dates
@@ -1011,7 +987,7 @@ function SVG_drawCrewMember(item) {
   var crewText = SVG_drawText("crewmember", -50 * config.XGraphCompression, MARGIN_TOP_CM + HEIGHT_LINE_CM / 2, item.name);
 
   on(crewText, "click", function(evt) {
-    PopupCrewMemberDetail(item.pk);
+    SetUpCrewMemberDialog(item.pk);
   }); 
 
   var group = document.createElementNS(svgNS, "g");
@@ -1689,20 +1665,39 @@ var crewMemberModel = declare(Model, {
       }
     }),
   },
-  DrawSVG       : function() { 
+  DrawSVG : function() { 
     var self = this;
 
     SVG_drawCrewMember(self); 
   },
-  GetYCoord     : function() {
+  GetYCoord : function() {
     var self = this;
 
     return yCoordStore.getSync(self.fk_yc).y;
   },
-  GetHeight     : function() {
+  GetHeight : function() {
     var self = this;
 
     return yCoordStore.getSync(self.fk_yc).height;
+  },
+  ConvertModelToForm : function() {
+    var self = this;
+
+    registry.byId('CrewMemberForm').set('value', self);
+  },  
+  ConvertFormToModel : function() {
+    var self = this;
+    
+    if( !self.pk ) {
+      self.pk        = crewMemberStore.GetNextPKSequence();
+      self.lineCount = 1;
+    }
+
+    var formObject = domForm.toObject("CrewMemberForm");
+
+    self.name      = formObject.name;
+    self.birthdate = formObject.birthdate; 
+
   },
 });
 
@@ -1732,6 +1727,23 @@ var crewMemberStore = new TrackableMemory({
     // 3 - reset pk
     self.nextPk = 1;
   },
+  Toto : function() {
+    var self = this;
+
+    var pk = Number(registry.byId("CrewMemberPk").get("value"));
+
+    var item = pk ? self.getSync(pk): new crewMemberModel();
+
+    item.ConvertFormToModel();
+   
+    self.putSync(item);
+
+    registry.byId("CrewMemberForm").reset();
+    CrewMemberDialog.hide();
+
+    topic.publish("refreshGraph");
+  },
+
 
 });
 
@@ -2170,8 +2182,7 @@ var activityModel = declare(Model, {
 
     self.SetLineNb();
   },
-
-  SaveDetails : function(){
+  SaveDetails : function(fEdit){
     var self = this; // current trip.
 
     xDetail = self.x;
@@ -2180,8 +2191,8 @@ var activityModel = declare(Model, {
       var iLeg = 0;
       var iLay = 0;
       var name, width, type;
-console.log(items);
       for (var i = 0; i < items.length ; i++) {
+console.log(items[i]);
         width = Number(items[i].dhour * 60) + Number(items[i].dminute);
         type = items[i].type;
         if( type == "leg" ) {
@@ -2191,8 +2202,7 @@ console.log(items);
           if( items[i].legType == "D" ) {
             name += " (D)";
           }
-          name += " " + items[i-1].station + " -> " + items[i+1].station;
-
+          name += " " + items[i-1].station + " to " + items[i+1].station;
         }
         else {
           iLay += 1;
@@ -2339,7 +2349,8 @@ var activityStore = new TrackableMemory({
     self.putSync(item);
 
     if( type == "Trip" ) {
-      item.SaveDetails();
+      var fEdit = pk ? true : false; 
+      item.SaveDetails(fEdit);
     }
 
     item.CreateEvents();
@@ -3992,13 +4003,13 @@ registry.byId("SetCalendar").on("click", function() {
 
 
 //    
-//       _____            _       ______  _   _  _____            _____  
-//      / ____|    /\    | |     |  ____|| \ | ||  __ \    /\    |  __ \ 
-//     | |        /  \   | |     | |__   |  \| || |  | |  /  \   | |__) |
-//     | |       / /\ \  | |     |  __|  | . ` || |  | | / /\ \  |  _  / 
-//     | |____  / ____ \ | |____ | |____ | |\  || |__| |/ ____ \ | | \ \ 
-//      \_____|/_/    \_\|______||______||_| \_||_____//_/    \_\|_|  \_\
-//                                                                                
+//   _____            _       ______  _   _  _____            _____  
+//  / ____|    /\    | |     |  ____|| \ | ||  __ \    /\    |  __ \ 
+// | |        /  \   | |     | |__   |  \| || |  | |  /  \   | |__) |
+// | |       / /\ \  | |     |  __|  | . ` || |  | | / /\ \  |  _  / 
+// | |____  / ____ \ | |____ | |____ | |\  || |__| |/ ____ \ | | \ \ 
+//  \_____|/_/    \_\|______||______||_| \_||_____//_/    \_\|_|  \_\
+//                                                                            
 //                 
 registry.byId("SetStartPeriodsDialog").on("show", function() {
   var arrChecked = [];
@@ -4040,14 +4051,69 @@ registry.byId("SetStartPeriods").on("click", function() {
 
 //      
 //      
-//        _____  _____   ______ __          __ __  __  ______  __  __  ____   ______  _____  
-//       / ____||  __ \ |  ____|\ \        / /|  \/  ||  ____||  \/  ||  _ \ |  ____||  __ \ 
-//      | |     | |__) || |__    \ \  /\  / / | \  / || |__   | \  / || |_) || |__   | |__) |
-//      | |     |  _  / |  __|    \ \/  \/ /  | |\/| ||  __|  | |\/| ||  _ < |  __|  |  _  / 
-//      | |____ | | \ \ | |____    \  /\  /   | |  | || |____ | |  | || |_) || |____ | | \ \ 
-//       \_____||_|  \_\|______|    \/  \/    |_|  |_||______||_|  |_||____/ |______||_|  \_\
-//                                                                                                
-//      
+//   _____  _____   ______ __          __ __  __  ______  __  __  ____   ______  _____  
+//  / ____||  __ \ |  ____|\ \        / /|  \/  ||  ____||  \/  ||  _ \ |  ____||  __ \ 
+// | |     | |__) || |__    \ \  /\  / / | \  / || |__   | \  / || |_) || |__   | |__) |
+// | |     |  _  / |  __|    \ \/  \/ /  | |\/| ||  __|  | |\/| ||  _ < |  __|  |  _  / 
+// | |____ | | \ \ | |____    \  /\  /   | |  | || |____ | |  | || |_) || |____ | | \ \ 
+//  \_____||_|  \_\|______|    \/  \/    |_|  |_||______||_|  |_||____/ |______||_|  \_\
+//                                                                                           
+// 
+
+
+function SetUpCrewMemberDialog(pk_item) {
+  if( pk_item ) {
+    CrewMemberDialog.set("title", "Edit crewmember");
+
+    domStyle.set(registry.byId("CreateCrewMember").domNode,    "display", "none");
+    domStyle.set(registry.byId("DeleteCrewMember").domNode,    "display", "inline");
+    domStyle.set(registry.byId("SaveCrewMember").domNode,      "display", "inline");
+
+    domStyle.set("PkCrewMember", "display", "table-row");
+
+    var item = crewMemberStore.getSync(pk_item);
+
+    item.ConvertModelToForm() 
+  } 
+  else {
+    CrewMemberDialog.set("title", "Create a crewmember");
+
+    domStyle.set(registry.byId("CreateCrewMember").domNode,    "display", "inline");
+    domStyle.set(registry.byId("DeleteCrewMember").domNode,    "display", "none");
+    domStyle.set(registry.byId("SaveCrewMember").domNode,      "display", "none");
+    
+    domStyle.set("PkCrewMember", "display", "none");
+  }
+
+  CrewMemberDialog.show();
+}
+
+
+// connect menu creation training to training dialog
+registry.byId("MenuBusinessObjectCreateCrewMember").on("click", function() {
+  SetUpCrewMemberDialog(); 
+});
+
+
+registry.byId("DeleteCrewMember").on("click", function() {
+  crewMemberStore.removeSync(registry.byId("CrewMemberPk").get("value"));
+
+  CrewMemberDialog.hide();
+
+  topic.publish("refreshGraph");
+});
+
+
+registry.byId("SaveCrewMember").on("click", function() {
+  crewMemberStore.Toto();
+});
+
+registry.byId("CreateCrewMember").on("click", function() {
+  crewMemberStore.Toto();
+});
+
+
+/*
 registry.byId("CreateCrewMember").on("click", function() {
   if( !registry.byId("CreateCrewMemberForm").validate() ) {
     return;
@@ -4067,16 +4133,16 @@ registry.byId("CreateCrewMember").on("click", function() {
 
   CreateCrewMemberDialog.hide();
 });
-
+*/
 
 //
-//       _____        __     __     ____   ______  ______ 
-//      |  __ \    /\ \ \   / /    / __ \ |  ____||  ____|
-//      | |  | |  /  \ \ \_/ /    | |  | || |__   | |__   
-//      | |  | | / /\ \ \   /     | |  | ||  __|  |  __|  
-//      | |__| |/ ____ \ | |      | |__| || |     | |     
-//      |_____//_/    \_\|_|       \____/ |_|     |_|     
-//                                                        
+//  _____        __     __     ____   ______  ______ 
+// |  __ \    /\ \ \   / /    / __ \ |  ____||  ____|
+// | |  | |  /  \ \ \_/ /    | |  | || |__   | |__   
+// | |  | | / /\ \ \   /     | |  | ||  __|  |  __|  
+// | |__| |/ ____ \ | |      | |__| || |     | |     
+// |_____//_/    \_\|_|       \____/ |_|     |_|     
+//                                                   
 //
 registry.byId("CreateDayOff").on("click", function() {
   if( !registry.byId("CreateDayOffForm").validate() ) {
@@ -4210,13 +4276,13 @@ registry.byId("SaveVacation").on("click", function() {
 
 
 //     
-//       _______  _____             _____  _   _  _____  _____ 
-//      |__   __||  __ \     /\    |_   _|| \ | ||_   _|/ ____|
-//         | |   | |__) |   /  \     | |  |  \| |  | | | |  __ 
-//         | |   |  _  /   / /\ \    | |  | . ` |  | | | | |_ |
-//         | |   | | \ \  / ____ \  _| |_ | |\  | _| |_| |__| |
-//         |_|   |_|  \_\/_/    \_\|_____||_| \_||_____|\_____|
-//                                                             
+//  _______  _____             _____  _   _  _____  _____ 
+// |__   __||  __ \     /\    |_   _|| \ | ||_   _|/ ____|
+//    | |   | |__) |   /  \     | |  |  \| |  | | | |  __ 
+//    | |   |  _  /   / /\ \    | |  | . ` |  | | | | |_ |
+//    | |   | | \ \  / ____ \  _| |_ | |\  | _| |_| |__| |
+//    |_|   |_|  \_\/_/    \_\|_____||_| \_||_____|\_____|
+//                                                        
 //                                                           
 function TryEnableDuration() {
   if(   registry.byId("TrainingStartTime").get("value") != null 
@@ -5109,7 +5175,7 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
         <span>Business objects</span>
         <div data-dojo-type="dijit/DropDownMenu">
           <div id="MenuBusinessObjectShowConstants"    data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {ShowConstantsDialog.show();}">Show constants</div>
-          <div id="MenuBusinessObjectCreateCrewMember" data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateCrewMemberDialog.show();}">Create crewmember</div>
+          <div id="MenuBusinessObjectCreateCrewMember" data-dojo-type="dijit/MenuItem">Create crewmember</div>
           <div data-dojo-type="dijit/PopupMenuItem">
             <span>Create activity</span>
             <div id="MenuBusinessObjectCreateActivity" data-dojo-type="dijit/DropDownMenu">
@@ -5657,22 +5723,28 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
 
 
 
-    <div data-dojo-type="dijit/Dialog" data-dojo-id="CreateCrewMemberDialog" title="Create crew member" style="display: none;" data-dojo-props="onHide: function() {CreateCrewMemberForm.reset();}" >
-      <div data-dojo-type="dijit/form/Form" id="CreateCrewMemberForm" data-dojo-id="CreateCrewMemberForm" encType="multipart/form-data" action="" method="">
+    <div data-dojo-type="dijit/Dialog" id="CrewMemberDialog" data-dojo-id="CrewMemberDialog" title="Create crew member" style="display: none;" data-dojo-props="onHide: function() {CrewMemberForm.reset();}" >
+      <div data-dojo-type="dijit/form/Form" id="CrewMemberForm" data-dojo-id="CrewMemberForm" encType="multipart/form-data" action="" method="">
         <table class="dijitDialogPaneContentArea">
+          <tr id="PkCrewMember">
+            <td><label for="pk">Primary key</label></td>
+            <td><input data-dojo-type="dijit/form/TextBox" name="pk" id="CrewMemberPk" readonly="true" disabled="true"></td>
+          </tr>
           <tr>
             <td><label for="name">Name</label></td>
             <td><input data-dojo-type="dijit/form/TextBox" name="name" id="CrewMemberName" required="true"></td>
           </tr>
           <tr>
-            <td><label for="start">Birth date</label></td>
-            <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="day" id="CrewMemberBirthDate" required="true"  data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"   ></td>
+            <td><label for="birthdate">Birth date</label></td>
+            <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="birthdate" id="CrewMemberBirthDate" required="true"  data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"   ></td>
           </tr>
         </table>
 
 
         <div class="dijitDialogPaneActionBar">
           <button data-dojo-type="dijit/form/Button" type="button" id="CreateCrewMember">Create</button>
+          <button data-dojo-type="dijit/form/Button" type="button" id="DeleteCrewMember" class="delete">Delete</button>
+          <button data-dojo-type="dijit/form/Button" type="button" id="SaveCrewMember">Save</button>
         </div>
       </div>
     </div>
