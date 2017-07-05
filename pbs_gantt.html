@@ -719,13 +719,13 @@ function UpdateEndDateTime(prefixId) {
 } 
 
 //     
-//        _____ __      __ _____  
-//       / ____|\ \    / // ____| 
-//      | (___   \ \  / /| |  __  
-//       \___ \   \ \/ / | | |_ | 
-//       ____) |   \  /  | |__| | 
-//      |_____/     \/    \_____| 
-//                                
+//   _____ __      __ _____  
+//  / ____|\ \    / // ____| 
+// | (___   \ \  / /| |  __  
+//  \___ \   \ \/ / | | |_ | 
+//  ____) |   \  /  | |__| | 
+// |_____/     \/    \_____| 
+//                           
 //                            
 
 // ===============================================
@@ -1238,23 +1238,23 @@ function SVG_drawNote(item) {
   foreignObject.setAttributeNS(null, "height", height + "px");
 }
 
-//     
-//       __  __   ____   _____   ______  _                  _____  _______  ____   _____   ______ 
-//      |  \/  | / __ \ |  __ \ |  ____|| |        ___     / ____||__   __|/ __ \ |  __ \ |  ____|
-//      | \  / || |  | || |  | || |__   | |       ( _ )   | (___     | |  | |  | || |__) || |__   
-//      | |\/| || |  | || |  | ||  __|  | |       / _ \/\  \___ \    | |  | |  | ||  _  / |  __|  
-//      | |  | || |__| || |__| || |____ | |____  | (_>  <  ____) |   | |  | |__| || | \ \ | |____ 
-//      |_|  |_| \____/ |_____/ |______||______|  \___/\/ |_____/    |_|   \____/ |_|  \_\|______|
-//                                                                                                
-//                                                                                               
+// 
+//  __  __   ____   _____   ______  _                  _____  _______  ____   _____   ______ 
+// |  \/  | / __ \ |  __ \ |  ____|| |        ___     / ____||__   __|/ __ \ |  __ \ |  ____|
+// | \  / || |  | || |  | || |__   | |       ( _ )   | (___     | |  | |  | || |__) || |__   
+// | |\/| || |  | || |  | ||  __|  | |       / _ \/\  \___ \    | |  | |  | ||  _  / |  __|  
+// | |  | || |__| || |__| || |____ | |____  | (_>  <  ____) |   | |  | |__| || | \ \ | |____ 
+// |_|  |_| \____/ |_____/ |______||______|  \___/\/ |_____/    |_|   \____/ |_|  \_\|______|
+//                                                                                           
+//                                                                                          
 
 var TrackableMemory = declare([Memory, Trackable]); 
 
 //
-//     _          _                               
-//    /   _  ._ _|_ o  _      ._ _. _|_ o  _  ._  
-//    \_ (_) | | |  | (_| |_| | (_|  |_ | (_) | | 
-//                     _|                         
+//  _          _                               
+// /   _  ._ _|_ o  _      ._ _. _|_ o  _  ._  
+// \_ (_) | | |  | (_| |_| | (_|  |_ | (_) | | 
+//                  _|                         
 //
 //
 var configurationModel = declare(Model, {
@@ -1385,10 +1385,10 @@ configurationStore.addSync(config);
 
 
 //
-//    __                      
-//   (_ _|_  _. _|_ o  _  ._  
-//   __) |_ (_|  |_ | (_) | | 
-//                          
+//  __                      
+// (_ _|_  _. _|_ o  _  ._  
+// __) |_ (_|  |_ | (_) | | 
+//                        
 //
 var StationModel = declare(Model, {
   validateOnSet : false,
@@ -1429,10 +1429,10 @@ var stationStore = new Memory({
 
 
 //
-//      _                 
-//     /   _   _  ._ _|   
-//  \/ \_ (_) (_) | (_|   
-//  /                     
+//     _                 
+//    /   _   _  ._ _|   
+// \/ \_ (_) (_) | (_|   
+// /                     
 //
 //
 var yCoordModel = declare(Model, {
@@ -1535,10 +1535,10 @@ yCoordStore.on("delete", function(event) {
 
 
 //
-//     _                          
-//    /   _. |  _  ._   _|  _. ._ 
-//    \_ (_| | (/_ | | (_| (_| |  
-//                                 
+//  _                          
+// /   _. |  _  ._   _|  _. ._ 
+// \_ (_| | (/_ | | (_| (_| |  
+//                              
 //
 var calendarModel = declare(Model, {
   validateOnSet : false,
@@ -1638,11 +1638,12 @@ registry.byId("DayOffDatesSelect").setStore(calendarStoreAdapter);
 registry.byId("EventDatesSelect").set("labelAttr", "name");
 registry.byId("EventDatesSelect").setStore(calendarStoreAdapter);
 
+
 //
-//       _                                      
-//      /  ._ _       |\/|  _  ._ _  |_   _  ._ 
-//      \_ | (/_ \/\/ |  | (/_ | | | |_) (/_ |  
-//                                                  
+//  _                                      
+// /  ._ _       |\/|  _  ._ _  |_   _  ._ 
+// \_ | (/_ \/\/ |  | (/_ | | | |_) (/_ |  
+//                                             
 //
 var crewMemberModel = declare(Model, {
   validateOnSet : false,
@@ -1743,9 +1744,8 @@ var crewMemberStore = new TrackableMemory({
 
     topic.publish("refreshGraph");
   },
-
-
 });
+
 
 crewMemberStore.on("add", function(event) {
   // 1 - inc pk sequence.
@@ -1800,9 +1800,9 @@ registry.byId("VacationCrewMemberSelect").set("store", crewMemberStoreAdapter);
 
 //
 //
-//       /\   _ _|_ o    o _|_    
-//      /--\ (_  |_ | \/ |  |_ \/ 
-//                             /  
+//  /\   _ _|_ o    o _|_    
+// /--\ (_  |_ | \/ |  |_ \/ 
+//                        /  
 //
 //
 var activityModel = declare(Model, {
@@ -2209,19 +2209,30 @@ console.log(items[i]);
           name = items[i].lblType + " " + items[i].station + " (" + iLay + ")";
         }
 
-        var item = activityStore.addSync({
-          name      : name,
-          type      : type.toUpperCase(),
-          pk        : activityStore.GetNextPKSequence(),
-          fk_parent : self.pk,
-          fk_cm     : self.fk_cm,
-          x         : xDetail,
-          duration  : width,
-          station   : items[i].station,
-        });
+        var item = fEdit ? activityStore.RetrieveDetailActivity(self.pk, items[i].pk) : new activityModel();
+
+        if( !item.pk ) {
+console.log("new detail activity");        
+          item = new activityModel();
+            
+          item.pk        = activityStore.GetNextPKSequence();
+          item.fk_parent = self.pk;
+          item.fk_cm     = self.fk_cm;
+        }
+
+        item.name      = name;
+        item.type      = type.toUpperCase();
+        item.x         = xDetail;
+        item.duration  = width;
+        item.station   = items[i].station;
+
+        activityStore.putSync(item);
+console.log(item);        
         xDetail += width;
       }           
     });
+console.log(activityStore);
+
   },
 
   InitDayOff : function(fk_cm, day) {
@@ -2357,6 +2368,20 @@ var activityStore = new TrackableMemory({
 
     topic.publish("refreshGraph");
   },
+  RetrieveDetailActivity : function(pk_activity, pk_detail_activity) {
+    var self = this;
+
+    var filter           = new self.Filter();
+    var activityStoreFilter = filter.eq('pk', pk_detail_activity).eq('fk_parent', pk_activity);
+    var detail; 
+
+    self.filter(activityStoreFilter).fetch().then(function(items) {
+      if( items.length == 1 ) {
+        detail = items[0]; 
+      }
+    });
+    return detail;
+  },
 });
 
 activityStore.on("add", function(event) {
@@ -2403,10 +2428,10 @@ registry.byId("DistanceToActSelect").set("store", activityStoreAdapter);
 
 
 //     
-//         _                          
-//        | \ o  _ _|_  _. ._   _  _  
-//        |_/ | _>  |_ (_| | | (_ (/_ 
-//                                     
+//  _                          
+// | \ o  _ _|_  _. ._   _  _  
+// |_/ | _>  |_ (_| | | (_ (/_ 
+//                              
 //
 var distanceModel = declare(Model, {
   validateOnSet : false,
@@ -2567,8 +2592,6 @@ var distanceStore = new Memory({
 
     topic.publish("refreshGraph");
   },
-
-
 });
 
 
@@ -2589,10 +2612,10 @@ distanceStore.on("delete", function(event) {
 
 
 //
-//     _               
-//    |_     _  ._ _|_ 
-//    |_ \/ (/_ | | |_ 
-//                      
+//  _               
+// |_     _  ._ _|_ 
+// |_ \/ (/_ | | |_ 
+//                   
 //
 var eventModel = declare(Model, {
   validateOnSet : false,
@@ -2694,6 +2717,9 @@ var eventStore = new TrackableMemory({
     self.filter(eventStoreFilter).fetch().then(function(items) {
       if( items.length == 1 ) {
         event = items[0]; 
+      }
+      else if( items.length > 1 ) {
+        alert("There is duplicate event....");
       }
     });
     return event;
