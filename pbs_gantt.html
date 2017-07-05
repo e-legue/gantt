@@ -294,6 +294,7 @@ require([
   "dijit/MenuItem",
   "dijit/MenuBarItem",
   "dijit/DropDownMenu",
+  "dijit/RadioMenuItem",
   "dijit/CheckedMenuItem",
   "dijit/ColorPalette",
   "dijit/form/Form",
@@ -3801,6 +3802,8 @@ registry.byId("LoadSvg").on("click", function() {
 
   // Read in the file as a text.
   reader.readAsText(f);
+
+  registry.byId("MenuCurrentFile").set("label", f.name);
 
   s.hide();
   LoadSvgDialog.hide();
