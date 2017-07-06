@@ -190,6 +190,14 @@
       float: right;
     }
 
+    #zoom {
+      position : absolute;
+      z-index  : 300;
+      right    : 40px;
+      bottom   : 40px;
+      opacity  : 1;
+    }
+
   </style>
 
   <script>
@@ -1300,6 +1308,7 @@ var configurationModel = declare(Model, {
     MenuHighLightsDistance                        : { type : "boolean", default : false, },
     MenuHighLightsWindow                          : { type : "boolean", default : true, },
     MenuHighLightsNote                            : { type : "boolean", default : false, },
+    MenuResolution                                : { type : "boolean", default : true, },
     SHCalendarHours                               : { type : "boolean", default : true, },
     SHCalendarHourBars                            : { type : "boolean", default : true, },
     SHCalendarDayX                                : { type : "boolean", default : true, },
@@ -1311,21 +1320,12 @@ var configurationModel = declare(Model, {
     SHActivityDetailHours                         : { type : "boolean", default : true, },
     SHActivityDetailStations                      : { type : "boolean", default : true, },
   },
-  Apply         : function() {
+  Apply : function() {
     var self = this;
-
-    // bad idea. generate pb to compute end date.                         
-    //                         if( self.CalendarTimezone ) {
-      //                           // Set default time zone, based on user input.
-      //                            moment.tz.setDefault(timezoneStore.getSync(self.CalendarTimezone).name);
-      //                         }
 
     if( typeof(self.CalendarStart) != "undefined" ) {
       registry.byId("CalendarStart").set("value", self.CalendarStart);
-      //var start = moment(self.CalendarStart);
-      //if( self.CalendarTimezone ) {
         var start = moment.tz(self.CalendarStart, timezoneStore.getSync(self.CalendarTimezone).name);
-        //}
       Xorig = start.unix();
     }
     if( typeof(self.CalendarEnd) != "undefined" ) {
@@ -1340,10 +1340,11 @@ var configurationModel = declare(Model, {
         }
       });
     }  
+
+    // Set resolution.
     var id = "xgc" + self.XGraphCompression.toString().replace(".", "_");
-
     registry.byId(id).set("checked", true);
-
+    
     registry.byId("SHCalendarHours").set("checked", self.SHCalendarHours);
     registry.byId("SHCalendarDayX").set("checked", self.SHCalendarDayX);
     registry.byId("SHCalendarDayYYYYMMDD").set("checked", self.SHCalendarDayYYYYMMDD);
@@ -1417,15 +1418,17 @@ var stationStore = new Memory({
   idProperty      : "id",
   svgId           : "StationStore",
   svgItemNodeName : "station",
-  Reset           : function () {
+  Reset : function () {
     var self = this;
 
     // 1 - empty svg store.
     dojo.query(self.svgId).forEach(dojo.empty);
 
     // 2 - empty store.
-    self.forEach(function(object) {
-      self.removeSync(object);
+    self.fetch().then(function(items) {
+      for( var i = items.length - 1; i >= 0; i-- ) {
+        self.removeSync(items[i].pk);
+      }           
     });
 
     // 3 - reset pk
@@ -1497,15 +1500,17 @@ var yCoordStore = new TrackableMemory({
       yCoordStore.nextY = nextY;
     });    
   },
-  Reset           : function () {
+  Reset : function () {
     var self = this;
 
     // 1 - empty svg store.
     dojo.query(self.svgId).forEach(dojo.empty);
 
     // 2 - empty store.
-    self.forEach(function(object) {
-      self.removeSync(object);
+    self.fetch().then(function(items) {
+      for( var i = items.length - 1; i >= 0; i-- ) {
+        self.removeSync(items[i].pk);
+      }           
     });
 
     // 3 - reset pk
@@ -1593,21 +1598,23 @@ var calendarStore = new TrackableMemory({
 
     return self.nextPk;
   },
-  Reset           : function () {
+  Reset : function () {
     var self = this;
 
     // 1 - empty svg store.
     dojo.query(self.svgId).forEach(dojo.empty);
 
     // 2 - empty store.
-    self.forEach(function(object) {
-      self.removeSync(object);
+    self.fetch().then(function(items) {
+      for( var i = items.length - 1; i >= 0; i-- ) {
+        self.removeSync(items[i].pk);
+      }           
     });
 
     // 3 - reset pk
     self.nextPk = 1;
   },
-  GetPkFromX      : function(x) {
+  GetPkFromX : function(x) {
     var self = this;
 
     var pk = -1;
@@ -1720,15 +1727,17 @@ var crewMemberStore = new TrackableMemory({
 
     return self.nextPk;
   },
-  Reset           : function () {
+  Reset : function () {
     var self = this;
 
     // 1 - empty svg store.
     dojo.query(self.svgId).forEach(dojo.empty);
 
     // 2 - empty store.
-    self.forEach(function(object) {
-      self.removeSync(object);
+    self.fetch().then(function(items) {
+      for( var i = items.length - 1; i >= 0; i-- ) {
+        self.removeSync(items[i].pk);
+      }           
     });
 
     // 3 - reset pk
@@ -1940,7 +1949,6 @@ var activityModel = declare(Model, {
         pk : eventStore.GetNextPKSequence(),
         x  : -6,
         long_label : "Rest after activity end",
-//        label : "End of rest after activity",
         fk_act : self.pk,
       });
     }
@@ -2193,12 +2201,16 @@ var activityModel = declare(Model, {
 
     xDetail = self.x;
 
+    var arrPkDetail = [];
+
+    activityStore.filter({fk_parent: self.pk}).forEach(function(item) {
+      arrPkDetail.push(item.pk);
+    });
     tripDetailStore.sort('order').fetch().then(function(items) {
       var iLeg = 0;
       var iLay = 0;
       var name, width, type;
       for (var i = 0; i < items.length ; i++) {
-console.log(items[i]);
         width = Number(items[i].dhour * 60) + Number(items[i].dminute);
         type = items[i].type;
         if( type == "leg" ) {
@@ -2208,11 +2220,16 @@ console.log(items[i]);
           if( items[i].legType == "D" ) {
             name += " (D)";
           }
-          name += " " + items[i-1].station + " to " + items[i+1].station;
+          name += " " + items[i - 1].station + " to " + items[i + 1].station;
         }
         else {
-          iLay += 1;
-          name = items[i].lblType + " " + items[i].station + " (" + iLay + ")";
+          if( type == "lay" ) {
+            iLay += 1;
+            name = items[i].lblType + " " + items[i - 1].station + " (" + iLay + ")";
+          }
+          else {
+            name = items[i].lblType + " " + items[i].station;
+          }
         }
 
         var item = fEdit ? activityStore.RetrieveDetailActivity(self.pk, items[i].pk) : new activityModel();
@@ -2223,7 +2240,6 @@ console.log(items[i]);
           item = new activityModel();
         }
         if( !item.pk ) {
-console.log("new detail activity");        
           item = new activityModel();
             
           item.pk        = activityStore.GetNextPKSequence();
@@ -2238,14 +2254,22 @@ console.log("new detail activity");
         item.station   = items[i].station;
 
         activityStore.putSync(item);
-console.log(item);        
+
+        // find pk detail in original list and remove it.
+        var index = arrPkDetail.indexOf(item.pk);
+        if( index >= 0 ) {
+          arrPkDetail.splice(index, 1);
+        }
+
         xDetail += width;
       }           
     });
-console.log(activityStore);
 
+    // delete details no more relevant.
+    for(var i = 0; i < arrPkDetail.length; i++) {
+      activityStore.removeSync(arrPkDetail[i]);
+    }
   },
-
   InitDayOff : function(fk_cm, day) {
   // this form is not working in edition, only creation.
     var self = this;
@@ -2347,8 +2371,10 @@ var activityStore = new TrackableMemory({
     dojo.query(self.svgId).forEach(dojo.empty);
 
     // 2 - empty store.
-    self.forEach(function(object) {
-      self.removeSync(object);
+    self.fetch().then(function(items) {
+      for( var i = items.length - 1; i >= 0; i-- ) {
+        self.removeSync(items[i].pk);
+      }           
     });
 
     // 3 - reset pk
@@ -2580,8 +2606,10 @@ var distanceStore = new Memory({
     dojo.query(self.svgId).forEach(dojo.empty);
 
     // 2 - empty store.
-    self.forEach(function(object) {
-      self.removeSync(object);
+    self.fetch().then(function(items) {
+      for( var i = items.length - 1; i >= 0; i-- ) {
+        self.removeSync(items[i].pk);
+      }           
     });
 
     // 3 - reset pk
@@ -2708,8 +2736,10 @@ var eventStore = new TrackableMemory({
     dojo.query(self.svgId).forEach(dojo.empty);
 
     // 2 - empty store.
-    self.forEach(function(object) {
-      self.removeSync(object);
+    self.fetch().then(function(items) {
+      for( var i = items.length - 1; i >= 0; i-- ) {
+        self.removeSync(items[i].pk);
+      }           
     });
 
     // 3 - reset pk
@@ -2829,6 +2859,7 @@ var eventStore = new TrackableMemory({
   },
 });
 
+
 eventStore.on("add", function(event) {
   // 1 - increment primary key sequence.
   eventStore.nextPk = Math.max(event.target.pk + 1, eventStore.nextPk); 
@@ -2938,15 +2969,17 @@ var noteStore = new TrackableMemory({
 
     return self.nextPk;
   },
-  Reset           : function () {
+  Reset : function () {
     var self = this;
 
     // 1 - empty svg store.
     dojo.query(self.svgId).forEach(dojo.empty);
 
     // 2 - empty store.
-    self.forEach(function(object) {
-      self.removeSync(object);
+    self.fetch().then(function(items) {
+      for( var i = items.length - 1; i >= 0; i-- ) {
+        self.removeSync(items[i].pk);
+      }           
     });
 
     // 3 - reset pk
@@ -2987,50 +3020,6 @@ noteStore.on("delete", function(event) {
 });
 
 
-/* 
-* Determine if the new activity is overlapping with other activities
-* related to a specific crewmember. If there is a collision, then
-* the new activity will be assigned a new line. 
-* @param crewMemberPk crew member primary key. if 0, that's opentime.
-* @param x            new activity starting datetime.
-* @param width        new activity length.
-* @param pk           
-* @return The line number where the new activity will be drawn.
-*/
-function GetActivityLineNumber(crewMemberPk, x , width, pk) {
-  var lineNb = 1;
-
-  activityStore.filter({fk_cm: crewMemberPk}).forEach(function(object) {
-    if( object.pk != pk && typeof(object.fk_parent) == "undefined" ) {
-      var A = x;
-      var B = x + width;
-
-      var C = object.x;
-      var D = object.x + object.width;
-
-      if( !(( B <= C ) || ( A >= D ))) {    
-        lineNb = Math.max(lineNb, object.lineNb + 1);
-      }
-    }
-  });
-
-  if ( crewMemberPk ) { // a true crewMember.
-    var cm = crewMemberStore.getSync(crewMemberPk);
-    if( cm.lineCount < lineNb ) {
-      cm.lineCount = lineNb;
-      crewMemberStore.putSync(cm);
-    }
-  }
-  else { // opentime
-    if( OpenTimeLineCount < lineNb ) {    
-      OpenTimeLineCount = lineNb;          
-    }  
-  }
-
-  return lineNb;
-}
-
-
 //
 //   ___                              
 //    | ._ o ._     _|  _ _|_  _. o | 
@@ -3058,6 +3047,7 @@ var TripDetailModel = declare(Model, {
     deleteButton   : "numeric",
   },
 });
+
 
 var tripDetailStore = new TrackableMemory({
   Model           : TripDetailModel,
@@ -3215,7 +3205,6 @@ function AdjustCrewmemberBarScaleX(x) {
 
 topic.subscribe("refreshGraph", function() {
   yCoordStore.StretchSVGHeight();
-
 
   dojo.query("#calendar").forEach(dojo.empty);
   dojo.query("#calendar_bar").forEach(dojo.empty);
@@ -3457,10 +3446,6 @@ function LoadStationStore(parentNode, mode) {
     for(var j = 0; j < regionList.length; j++) {
       regions.push(regionList[j].textContent);
     }
-
-    //console.log("station code:   " + obj.getElementsByTagName(convertionSvgXml("code", mode))[0].textContent ); 
-    //console.log("station name:   " + obj.getElementsByTagName(convertionSvgXml("name", mode))[0].textContent );          
-    //console.log("station offset: " + offset );          
 
     stationStore.putSync({
       id: id,
@@ -3748,6 +3733,9 @@ registry.byId("LoadStation").on("click", function() {
   stationStore.Reset(); 
   noteStore.Reset(); 
   yCoordStore.Reset();
+  console.log(calendarStore);
+  console.log(activityStore);
+  console.log(crewMemberStore);
 
   var reader = new FileReader();
 
@@ -3757,15 +3745,24 @@ registry.byId("LoadStation").on("click", function() {
       xmlDom = xmlparser.parse(e.target.result);
 
       LoadStationStore(xmlDom, MODE_XML);
+      
+      topic.publish("refreshGraph");
     };
   })(f);
 
   // Read in the file as a text.
   reader.readAsText(f);
 
+  config.MenuCalendar                = false;
+  config.MenuCalendarSetStartEnd     = false;
+  config.MenuBusinessObject          = true;
+  config.MenuGraphOption             = true;
+  config.MenuHighLights              = true;
+  config.MenuResolution              = true;
+  config.MenuFileSaveSVGFile         = true;
+  config.MenuFileExportToPI          = true;
+  config.MenuCalendarSetStartPeriods = true;
 
-  config.MenuCalendar = false;
-  config.MenuCalendarSetStartEnd = false;
 
   configurationStore.putSync(config);
 
@@ -4042,6 +4039,7 @@ registry.byId("SetCalendar").on("click", function() {
   config.MenuBusinessObject          = false;
   config.MenuGraphOption             = false;
   config.MenuHighLights              = false;
+  config.MenuResolution              = false;        
   config.MenuFileSaveSVGFile         = false;
   config.MenuFileExportToPI          = false;
 
@@ -4223,13 +4221,13 @@ registry.byId("CreateDayOff").on("click", function() {
 
 
 //     
-//       _       ______       __      __ ______ 
-//      | |     |  ____|    /\\ \    / /|  ____|
-//      | |     | |__      /  \\ \  / / | |__   
-//      | |     |  __|    / /\ \\ \/ /  |  __|  
-//      | |____ | |____  / ____ \\  /   | |____ 
-//      |______||______|/_/    \_\\/    |______|
-//                                             
+//  _       ______       __      __ ______ 
+// | |     |  ____|    /\\ \    / /|  ____|
+// | |     | |__      /  \\ \  / / | |__   
+// | |     |  __|    / /\ \\ \/ /  |  __|  
+// | |____ | |____  / ____ \\  /   | |____ 
+// |______||______|/_/    \_\\/    |______|
+//                                        
 //
 registry.byId("VacationStartDate").on("change", function() {
   var nextDay = date.add(this.get("value"), "day", 1);
@@ -4305,7 +4303,7 @@ registry.byId("DuplicateVacation").on("click", function() {
   var copy = new activityModel(source);
 
   copy.pk = activityStore.GetNextPKSequence();
-  copy.lineNb = GetActivityLineNumber(copy.fk_cm, copy.x, copy.width);
+  copy.SetLineNb();
   copy.fk_yc = undefined;
 
   activityStore.addSync(copy);
@@ -4327,12 +4325,12 @@ registry.byId("SaveVacation").on("click", function() {
 
 
 //     
-//  _______  _____             _____  _   _  _____  _____ 
-// |__   __||  __ \     /\    |_   _|| \ | ||_   _|/ ____|
-//    | |   | |__) |   /  \     | |  |  \| |  | | | |  __ 
-//    | |   |  _  /   / /\ \    | |  | . ` |  | | | | |_ |
-//    | |   | | \ \  / ____ \  _| |_ | |\  | _| |_| |__| |
-//    |_|   |_|  \_\/_/    \_\|_____||_| \_||_____|\_____|
+//  _______  _____             _____  _   _  _____  _   _   _____ 
+// |__   __||  __ \     /\    |_   _|| \ | ||_   _|| \ | | / ____|
+//    | |   | |__) |   /  \     | |  |  \| |  | |  |  \| || |  __ 
+//    | |   |  _  /   / /\ \    | |  | . ` |  | |  | . ` || | |_ |
+//    | |   | | \ \  / ____ \  _| |_ | |\  | _| |_ | |\  || |__| |
+//    |_|   |_|  \_\/_/    \_\|_____||_| \_||_____||_| \_| \_____|
 //                                                        
 //                                                           
 function TryEnableDuration() {
@@ -4449,7 +4447,7 @@ registry.byId("DuplicateTraining").on("click", function() {
   var copy = new activityModel(source);
 
   copy.pk = activityStore.GetNextPKSequence();
-  copy.lineNb = GetActivityLineNumber(copy.fk_cm, copy.x, copy.width);
+  copy.SetLineNb();
   copy.fk_yc = undefined;
 
   activityStore.addSync(copy);
@@ -4471,13 +4469,13 @@ registry.byId("SaveTraining").on("click", function() {
 
      
 //
-//       ______ __      __ ______  _   _  _______ 
-//      |  ____|\ \    / /|  ____|| \ | ||__   __|
-//      | |__    \ \  / / | |__   |  \| |   | |   
-//      |  __|    \ \/ /  |  __|  | . ` |   | |   
-//      | |____    \  /   | |____ | |\  |   | |   
-//      |______|    \/    |______||_| \_|   |_|   
-//                                                
+//  ______ __      __ ______  _   _  _______ 
+// |  ____|\ \    / /|  ____|| \ | ||__   __|
+// | |__    \ \  / / | |__   |  \| |   | |   
+// |  __|    \ \/ /  |  __|  | . ` |   | |   
+// | |____    \  /   | |____ | |\  |   | |   
+// |______|    \/    |______||_| \_|   |_|   
+//                                           
 //    
 function SetUpEventDialog(pk_item) {
   if( pk_item ) {
@@ -4566,13 +4564,13 @@ registry.byId("EventInvertSelectionDates").on("click", function() {
 
 
 //                                         
-//       _____  _____   _____  _______         _   _   _____  ______ 
-//      |  __ \|_   _| / ____||__   __| /\    | \ | | / ____||  ____|
-//      | |  | | | |  | (___     | |   /  \   |  \| || |     | |__   
-//      | |  | | | |   \___ \    | |  / /\ \  | . ` || |     |  __|  
-//      | |__| |_| |_  ____) |   | | / ____ \ | |\  || |____ | |____ 
-//      |_____/|_____||_____/    |_|/_/    \_\|_| \_| \_____||______|
-//                                   
+//  _____  _____   _____  _______         _   _   _____  ______ 
+// |  __ \|_   _| / ____||__   __| /\    | \ | | / ____||  ____|
+// | |  | | | |  | (___     | |   /  \   |  \| || |     | |__   
+// | |  | | | |   \___ \    | |  / /\ \  | . ` || |     |  __|  
+// | |__| |_| |_  ____) |   | | / ____ \ | |\  || |____ | |____ 
+// |_____/|_____||_____/    |_|/_/    \_\|_| \_| \_____||______|
+//                              
 //
 
 
@@ -4706,13 +4704,13 @@ registry.byId("CreateDistance").on("click", function() {
 */
 
 //     
-//       _______  _____   _____  _____  
-//      |__   __||  __ \ |_   _||  __ \ 
-//         | |   | |__) |  | |  | |__) |
-//         | |   |  _  /   | |  |  ___/ 
-//         | |   | | \ \  _| |_ | |     
-//         |_|   |_|  \_\|_____||_|  
-//     
+//  _______  _____   _____  _____  
+// |__   __||  __ \ |_   _||  __ \ 
+//    | |   | |__) |  | |  | |__) |
+//    | |   |  _  /   | |  |  ___/ 
+//    | |   | | \ \  _| |_ | |     
+//    |_|   |_|  \_\|_____||_|  
+// 
 //
 function SetUpTripDialog(item) {
   grid.refresh();
@@ -4859,7 +4857,7 @@ registry.byId("DuplicateTrip").on("click", function() {
   var copy = new activityModel(source);
 
   copy.pk = activityStore.GetNextPKSequence();
-  copy.lineNb = GetActivityLineNumber(copy.fk_cm, copy.x, copy.width);
+  copy.SetLineNb();
   copy.fk_yc = undefined;
 
   activityStore.addSync(copy);
@@ -4891,13 +4889,13 @@ registry.byId("SaveTrip").on("click", function() {
 
 
 //     
-//       _   _   ____  _______  ______ 
-//      | \ | | / __ \|__   __||  ____|
-//      |  \| || |  | |  | |   | |__   
-//      | . ` || |  | |  | |   |  __|  
-//      | |\  || |__| |  | |   | |____ 
-//      |_| \_| \____/   |_|   |______|
-//                                    
+//  _   _   ____  _______  ______ 
+// | \ | | / __ \|__   __||  ____|
+// |  \| || |  | |  | |   | |__   
+// | . ` || |  | |  | |   |  __|  
+// | |\  || |__| |  | |   | |____ 
+// |_| \_| \____/   |_|   |______|
+//                               
 //     
 registry.byId("NoteDialog").on("hide", function() {
   registry.byId("NoteForm").reset();
@@ -4966,13 +4964,13 @@ function SetUpNoteDialog(pkNote) {
 
 
 //     
-//      __   __  _____  _    _______ 
-//      \ \ / / / ____|| |  |__   __|
-//       \ V / | (___  | |     | |   
-//        > <   \___ \ | |     | |   
-//       / . \  ____) || |____ | |   
-//      /_/ \_\|_____/ |______||_|   
-//                                
+// __   __  _____  _    _______ 
+// \ \ / / / ____|| |  |__   __|
+//  \ V / | (___  | |     | |   
+//   > <   \___ \ | |     | |   
+//  / . \  ____) || |____ | |   
+// /_/ \_\|_____/ |______||_|   
+//                           
 //     
 function ProcessXslt(id, strXml, strXslt) {
   var domParser = new DOMParser();
@@ -5165,6 +5163,13 @@ function getEventPoint(evt) {
   return p;
 }
 
+
+var fadeArgs = {
+  node: "zoom",
+  duration: 5000,
+};
+
+
 on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
   if( !evt.ctrlKey && !evt.altKey )
   return;
@@ -5182,13 +5187,14 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
   // Compute new scale matrix in current mouse position
   var k = svg.dom.createSVGMatrix().translate(p.x, p.y).scale(1 + delta).translate(-p.x, -p.y);
 
+  var matrix = svg.domViewport.getCTM().multiply(k);
 
-  // Compute new scale matrix in current mouse position
-  // var k =svg.dom.createSVGMatrix().scale(1 + delta);
-
-  svg.SetCTM(svg.domViewport.getCTM().multiply(k));
+  svg.SetCTM(matrix);
 
   svg.SetSizeAttributes();
+
+  dom.byId("zoom").innerHTML = (matrix.a).toFixed(3);
+  dojo.fadeOut(fadeArgs).play();
 });
 
 
@@ -5201,6 +5207,7 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
   <div id="loader">
     <div id="loaderInner" style="direction:ltr;">Loading libraries ...</div> 
   </div>
+  <div id="zoom"></div> <!-- placeholder to display zoom ratio -->
   <div id="basicStandby" data-dojo-type="dojox/widget/Standby" data-dojo-props="target:'content', zIndex:1000"></div>
   <div id="content" style="display:none;">
     <div data-dojo-type="dijit/MenuBar" id="navMenu" style="margin-bottom: 8px;">
