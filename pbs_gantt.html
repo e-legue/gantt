@@ -1090,7 +1090,7 @@ function SVG_drawActivity(activity) {
   }
 
 
-  activityStore.filter({fk_parent: activity.pk}).fetch().then(function(objects) {
+  activityStore.filter({fk_parent: activity.pk}).sort('x').fetch().then(function(objects) {
     if( objects.length < 0 ) { 
       return; 
     }
@@ -1999,7 +1999,7 @@ var activityModel = declare(Model, {
         var detail = new TripDetailModel();
 
         detail.pk    = item.pk;
-        detail.order = item.pk; 
+        detail.order = item.x; 
         detail.type  = item.type.substring(0,3).toLowerCase();
         detail.dhour = parseInt(item.duration / 60);
         detail.dminute = item.duration % 60;
@@ -2216,7 +2216,12 @@ console.log(items[i]);
         }
 
         var item = fEdit ? activityStore.RetrieveDetailActivity(self.pk, items[i].pk) : new activityModel();
-
+        console.log(item);
+        if( !item) { 
+          // it is possible that RetrieveDetailActivity return an undefined object, when a new detail is added
+          // in edit mode.
+          item = new activityModel();
+        }
         if( !item.pk ) {
 console.log("new detail activity");        
           item = new activityModel();
