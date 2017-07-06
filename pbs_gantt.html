@@ -1340,8 +1340,9 @@ var configurationModel = declare(Model, {
         }
       });
     }  
+    var id = "xgc" + self.XGraphCompression.toString().replace(".", "_");
 
-//     registry.byId("XGraphCompression").set("value", self.XGraphCompression);
+    registry.byId(id).set("checked", true);
 
     registry.byId("SHCalendarHours").set("checked", self.SHCalendarHours);
     registry.byId("SHCalendarDayX").set("checked", self.SHCalendarDayX);
@@ -3658,15 +3659,25 @@ registry.byId("SHCalendarHourBars").on("change", function(isChecked) {
   }
 }, true);
 
-/*
-registry.byId("XGraphCompression").on("change", function(value) {
+registry.byId("xgc0_25").on("change", function(value) { updateXGraphCompression(0.25); });
+registry.byId("xgc0_5" ).on("change", function(value) { updateXGraphCompression(0.5); });
+registry.byId("xgc1"   ).on("change", function(value) { updateXGraphCompression(1); });
+registry.byId("xgc2"   ).on("change", function(value) { updateXGraphCompression(2); });
+registry.byId("xgc4"   ).on("change", function(value) { updateXGraphCompression(4); });
+registry.byId("xgc5"   ).on("change", function(value) { updateXGraphCompression(5); });
+registry.byId("xgc6"   ).on("change", function(value) { updateXGraphCompression(6); });
+registry.byId("xgc8"   ).on("change", function(value) { updateXGraphCompression(8); });
+registry.byId("xgc10"  ).on("change", function(value) { updateXGraphCompression(10); });
+  
+
+function updateXGraphCompression(value) {
   config.XGraphCompression = value;
 
   configurationStore.putSync(config);          
 
   topic.publish("refreshGraph");
-}, true);
-*/
+}
+
 
 // -----------------------------------------------
 // Show/Hide activity dialog
@@ -5224,6 +5235,15 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
           </div>
         </div>
       </div>
+      <div id="MenuHighLights" data-dojo-type="dijit/PopupMenuBarItem">
+        <span>Highlights</span>
+        <div data-dojo-type="dijit/DropDownMenu">
+          <div id="MenuHighLightsEvent"    data-dojo-type="dijit/MenuItem">Event(s)</div>
+          <div id="MenuHighLightsDistance" data-dojo-type="dijit/MenuItem">Distance</div>
+          <div id="MenuHighLightsWindow"   data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {alert('not yet available');}">Window</div>
+          <div id="MenuHighLightsNote"     data-dojo-type="dijit/MenuItem">Note</div>
+        </div>
+      </div>
       <div id="MenuGraphOption" data-dojo-type="dijit/PopupMenuBarItem">
         <span>Graph options</span>
         <div data-dojo-type="dijit/DropDownMenu">
@@ -5234,24 +5254,15 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
       <div id="MenuResolution" data-dojo-type="dijit/PopupMenuBarItem">
         <span>Resolution</span>
         <div data-dojo-type="dijit/DropDownMenu">
-          <div id="g1r1" data-dojo-id="g1r1" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'g1'">0.25</div>
-          <div id="g1r2" data-dojo-id="g1r2" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'g1'">0.5</div>
-          <div id="g1r3" data-dojo-id="g1r3" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'g1', checked:true">1</div>
-          <div id="g1r4" data-dojo-id="g1r4" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'g1'">2</div>
-          <div id="g1r5" data-dojo-id="g1r5" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'g1'">4</div>
-          <div id="g1r6" data-dojo-id="g1r6" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'g1'">5</div>
-          <div id="g1r7" data-dojo-id="g1r7" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'g1'">6</div>
-          <div id="g1r8" data-dojo-id="g1r8" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'g1'">8</div>
-          <div id="g1r9" data-dojo-id="g1r9" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'g1'">10</div>
-        </div>
-      </div>
-      <div id="MenuHighLights" data-dojo-type="dijit/PopupMenuBarItem">
-        <span>Highlights</span>
-        <div data-dojo-type="dijit/DropDownMenu">
-          <div id="MenuHighLightsEvent"    data-dojo-type="dijit/MenuItem">Event(s)</div>
-          <div id="MenuHighLightsDistance" data-dojo-type="dijit/MenuItem">Distance</div>
-          <div id="MenuHighLightsWindow"   data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {alert('not yet available');}">Window</div>
-          <div id="MenuHighLightsNote"     data-dojo-type="dijit/MenuItem">Note</div>
+          <div id="xgc0_25" data-dojo-id="xgcr1" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'xgc'">0.25</div>
+          <div id="xgc0_5" data-dojo-id="xgcr2" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'xgc'">0.5</div>
+          <div id="xgc1" data-dojo-id="xgcr3" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'xgc', checked:true">1</div>
+          <div id="xgc2" data-dojo-id="xgcr4" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'xgc'">2</div>
+          <div id="xgc4" data-dojo-id="xgcr5" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'xgc'">4</div>
+          <div id="xgc5" data-dojo-id="xgcr6" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'xgc'">5</div>
+          <div id="xgc6" data-dojo-id="xgcr7" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'xgc'">6</div>
+          <div id="xgc8" data-dojo-id="xgcr8" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'xgc'">8</div>
+          <div id="xgc10" data-dojo-id="xgcr9" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'xgc'">10</div>
         </div>
       </div>
       <div id="MenuCurrentFile" data-dojo-type="dijit/MenuBarItem" data-dojo-props="disabled:true">No file</div>
