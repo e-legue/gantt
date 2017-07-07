@@ -1794,13 +1794,17 @@ crewMemberStore.on("update", function(event) {
 
 crewMemberStore.on("delete", function(event) {
   // Remove 
-  activityStore.filter({fk_cm: event.target.pk}).forEach(function(item) {
-    activityStore.removeSync(item.pk);
+  activityStore.filter({fk_cm: event.target.pk}).fetch().then( function(items) {
+    for( var i = items.length - 1; i >= 0; i--) {
+      activityStore.removeSync(items[i].pk);
+    }
   });
 
   // Remove coords that reference this distance.
-  yCoordStore.filter({fk_cm: event.target.pk}).forEach(function(item) {
-    yCoordStore.removeSync(item.pk);
+  yCoordStore.filter({fk_cm: event.target.pk}).fetch().then( function(items) {
+    for( var i = items.length - 1; i >= 0; i--) {
+      yCoordStore.removeSync(items[i].pk);
+    }
   });
 });
 
@@ -1911,7 +1915,7 @@ var activityModel = declare(Model, {
       });
     }
     activityStore.filter({fk_parent: self.pk}).fetch().then(function(objects) {
-      for(i = 1; i < objects.length; i++) {
+      for(i = 0; i < objects.length; i++) {
         var event = eventStore.RetrieveActivityEvent(-10, self.pk,  objects[i].pk);
         if( !event ) {  
           event = new eventModel();
@@ -2233,7 +2237,6 @@ var activityModel = declare(Model, {
         }
 
         var item = fEdit ? activityStore.RetrieveDetailActivity(self.pk, items[i].pk) : new activityModel();
-        console.log(item);
         if( !item) { 
           // it is possible that RetrieveDetailActivity return an undefined object, when a new detail is added
           // in edit mode.
@@ -2266,7 +2269,7 @@ var activityModel = declare(Model, {
     });
 
     // delete details no more relevant.
-    for(var i = 0; i < arrPkDetail.length; i++) {
+    for(var i = arrPkDetail.length - 1; i >= 0; i--) {
       activityStore.removeSync(arrPkDetail[i]);
     }
   },
@@ -2437,17 +2440,45 @@ activityStore.on("update", function(event) {
 
 
 activityStore.on("delete", function(event) {
-  // Remove distance that reference this activity.
-  distanceStore.filter({fk_actFrom: event.target.pk}).forEach(function(item) {
-    distanceStore.removeSync(item.pk);
-  });
-  distanceStore.filter({fk_actTo: event.target.pk}).forEach(function(item) {
-    distanceStore.removeSync(item.pk);
+  activityStore.filter({lineNb: event.target.lineNb}).fetch().then( function(items) {
+    if( items.length == 0 ) {
+      var filter = new activityStore.Filter();
+      var activityStoreFilter = filter.eq('fk_cm', event.target.fk_cm).gt('lineNb', event.target.lineNb);
+
+      activityStore.filter(activityStoreFilter).forEach( function(item) {
+        item.lineNb -= 1;
+      });
+      var cm = crewMemberStore.getSync(event.target.fk_cm);
+ 
+      if( cm.lineCount > 1 ) {
+        cm.lineCount -= 1;
+        crewMemberStore.putSync(cm);
+      }
+    }
   });
 
+  // Remove distance that reference this activity.
+  distanceStore.filter({fk_actFrom: event.target.pk}).fetch().then( function(items) {
+    for( var i = items.length -1; i >= 0; i-- ) {
+      distanceStore.removeSync(items[i].pk);
+    }
+  });
+  distanceStore.filter({fk_actTo: event.target.pk}).fetch().then( function(items) {
+    for( var i = items.length -1; i >= 0; i-- ) {
+      distanceStore.removeSync(items[i].pk);
+    }
+  });
+  eventStore.filter({fk_act: event.target.pk}).fetch().then( function(items) {
+    for( var i = items.length -1; i >= 0; i-- ) {
+      eventStore.removeSync(items[i].pk);
+    }
+  }); 
+
   // Remove details (legs, layovers and stations) in case of trip.
-  activityStore.filter({fk_parent: event.target.pk}).forEach(function(item) {
-    activityStore.removeSync(item.pk);
+  activityStore.filter({fk_parent: event.target.pk}).fetch().then( function(items) {
+    for( var i = items.length -1; i >= 0; i-- ) {
+      activityStore.removeSync(items[i].pk);
+    }
   });
 
   yCoordStore.ComputeYAndHeigth();
@@ -2889,13 +2920,11 @@ eventStore.on("update", function(event) {
 
 
 eventStore.on("delete", function(event) {
+  // If there is no more event on the same yCoordStore, then it can be deleted.
   eventStore.filter({fk_yc: event.target.fk_yc}).fetch().then( function(items) {
-    for (var i = 0 ; i < items.length ; i++) {
-    }
     if( items.length == 0 ) {
       yCoordStore.removeSync(event.target.fk_yc);
     }
-
   });
 });
 
@@ -3733,9 +3762,6 @@ registry.byId("LoadStation").on("click", function() {
   stationStore.Reset(); 
   noteStore.Reset(); 
   yCoordStore.Reset();
-  console.log(calendarStore);
-  console.log(activityStore);
-  console.log(crewMemberStore);
 
   var reader = new FileReader();
 
@@ -4661,47 +4687,6 @@ registry.byId("SaveDistance").on("click", function() {
   distanceStore.Toto();
 });
 
-/*
-registry.byId("CreateDistance").on("click", function() {
-  var distance = new distanceModel();
-  var yFrom = 0;
-  var yTo   = 0;
-
-  if( registry.byId("DistanceFromActivity").selected ) {
-    distance.fk_actFrom = registry.byId("DistanceFromActSelect").value;
-    distance.fk_evtFrom = registry.byId("DistanceFromActEventSelect").value;
-    yFrom = activityStore.getSync(registry.byId("DistanceFromActSelect").value).GetYCoord();
-  }
-  else {
-    distance.fk_evtFrom = registry.byId("DistanceFromEventSelect").value;
-  }
-  if( registry.byId("DistanceToActivity").selected ) {
-    distance.fk_actTo = registry.byId("DistanceToActSelect").value;
-    distance.fk_evtTo = registry.byId("DistanceToActEventSelect").value;
-    yTo = activityStore.getSync(registry.byId("DistanceToActSelect").value).GetYCoord();
-  }
-  else {
-    distance.fk_evtTo = registry.byId("DistanceToEventSelect").value;
-  }
-
-  // Add the new entry in the y coord store.
-  var yCoord = yCoordStore.addSync({
-    pk     : yCoordStore.GetNextPKSequence(),
-    y      : Math.max(yFrom, yTo) - 1,
-    height : HEIGHT_LINE_HL,
-  });
-
-  distance.pk    = distanceStore.GetNextPKSequence();
-  distance.fk_yc = yCoord.pk;
-
-  registry.byId("DistanceForm").reset();
-  
-  DistanceDialog.hide();
-  distanceStore.addSync(distance);
-
-  topic.publish("refreshGraph");
-});  
-*/
 
 //     
 //  _______  _____   _____  _____  
