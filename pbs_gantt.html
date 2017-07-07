@@ -2316,10 +2316,20 @@ var activityModel = declare(Model, {
   SetLineNb: function() {
     var self = this;
 
-    var lineNb = typeof(self.lineNb) == "undefined" ? 1 : self.lineNb;
+    var fIsNew = self.lineNb ? false : true;
+console.log("fIsNew: " + fIsNew);    
 
-    activityStore.filter({fk_cm: self.fk_cm}).forEach(function(object) {
-      if( object.pk != self.pk && typeof(object.fk_parent) == "undefined" ) {
+//    var lineNb = typeof(self.lineNb) == "undefined" ? 1 : self.lineNb;
+    var lineNb = fIsNew ? 1 : self.lineNb;
+/*
+    if( !fIsNew ) { 
+      var filter              = new self.Filter();
+      var activityStoreFilter = filter.eq('fk_cm', self.fk_cm).eq('lineNb', lineNb);
+    }
+*/    
+
+    activityStore.filter({fk_cm: self.fk_cm}).sort('lineNb').forEach(function(object) {
+      if( object.pk != self.pk && !object.fk_parent ) {
         var A = self.x;
         if( self.midnightOffset ) {
           A += Number(config.midnightOffset);
@@ -2332,8 +2342,10 @@ var activityModel = declare(Model, {
         }
         var D = C + object.duration;
 
-        if( !(( B <= C ) || ( A >= D ))) {    
-          lineNb = Math.max(lineNb, object.lineNb + 1);
+        if( !(( B <= C ) || ( A >= D ))) { // detect an intersection.   
+          if( fIsNew || self.lineNb == object.lineNb ) { 
+            lineNb = object.lineNb + 1;
+          }
         }
       }
     });
@@ -2383,7 +2395,7 @@ var activityStore = new TrackableMemory({
     // 3 - reset pk
     self.nextPk = 1;
   },
-  Toto: function(type) {
+  Toto : function(type) {
     var self = this;
 
     if( !registry.byId(type + "Form").validate() ) {
