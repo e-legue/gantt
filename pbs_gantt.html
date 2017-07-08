@@ -259,6 +259,7 @@ require([
   "dojo/dom-construct",
   "dojo/dom-geometry",
   "dojo/dom-form",
+  "dojo/dom-class",
   "dojo/json",
   "dojo/parser",
   "dojo/request/script",
@@ -345,6 +346,7 @@ function(
   domConstruct,
   domGeom,
   domForm,
+  domClass,
   json,
   parser, 
   script,
@@ -950,9 +952,11 @@ function GetFontSize() {
 // to the position. This way, each drawing into the g node is strictly the 
 // same for each day, except labels.
 function SVG_drawCalendarDate(item) {
+console.log(item);
   var G       = document.createElementNS(svgNS, "g");
   G.setAttributeNS(null, "transform", "translate(" + CompressX(item.x) + ",0)");
   G.setAttributeNS(null, "id", item.get("ident"));
+  G.setAttributeNS(null, "class", item.get("dayweek"));
   svg.domCalendar.appendChild(G);
 
   G.appendChild(SVG_drawText("day_label relative", 720, -70, "Day " + item.get("relative")));
@@ -1368,6 +1372,13 @@ var configurationModel = declare(Model, {
     SHCalendarDayX                                : { type : "boolean", default : true, },
     SHCalendarDayYYYYMMDD                         : { type : "boolean", default : true, },
     SHCalendarDayBars                             : { type : "boolean", default : true, },
+    SHCalendarMon                                 : { type : "boolean", default : false, },
+    SHCalendarTue                                 : { type : "boolean", default : false, },
+    SHCalendarWed                                 : { type : "boolean", default : false, },
+    SHCalendarThu                                 : { type : "boolean", default : false, },
+    SHCalendarFri                                 : { type : "boolean", default : false, },
+    SHCalendarSat                                 : { type : "boolean", default : true, },
+    SHCalendarSun                                 : { type : "boolean", default : true, },
     XGraphCompression                             : { type : "numeric", default : 1, },
     SHActivityHours                               : { type : "boolean", default : true, },
     SHActivityDetails                             : { type : "boolean", default : true, },
@@ -1405,6 +1416,13 @@ var configurationModel = declare(Model, {
     registry.byId("SHCalendarDayYYYYMMDD").set("checked", self.SHCalendarDayYYYYMMDD);
     registry.byId("SHCalendarDayBars").set("checked", self.SHCalendarDayBars);
     registry.byId("SHCalendarHourBars").set("checked", self.SHCalendarHourBars);
+    registry.byId("SHCalendarMon").set("checked", self.SHCalendarMon);
+    registry.byId("SHCalendarTue").set("checked", self.SHCalendarTue);
+    registry.byId("SHCalendarWed").set("checked", self.SHCalendarWed);
+    registry.byId("SHCalendarThu").set("checked", self.SHCalendarThu);
+    registry.byId("SHCalendarFri").set("checked", self.SHCalendarFri);
+    registry.byId("SHCalendarSat").set("checked", self.SHCalendarSat);
+    registry.byId("SHCalendarSun").set("checked", self.SHCalendarSun);
 
     registry.byId("SHActivityHours").set("checked", self.SHActivityHours);
     registry.byId("SHActivityDetails").set("checked", self.SHActivityDetails);
@@ -1614,6 +1632,7 @@ var calendarModel = declare(Model, {
     x             : "numeric",
     width         : "numeric",
     name          : "string",
+    dayweek       : "string",
     relative      : "numeric",
     startperiod   : { type : "boolean", default : false },
     type          : new ComputedProperty({
@@ -3352,6 +3371,35 @@ topic.subscribe("refreshGraph", function() {
     registry.byId("SHCalendarHourBars").set("checked", config.SHCalendarHourBars);
   }
 
+  if( !config.SHCalendarMon ) {
+    registry.byId("SHCalendarMon").set("checked", !config.SHCalendarMon);
+    registry.byId("SHCalendarMon").set("checked", config.SHCalendarMon);
+  }
+  if( !config.SHCalendarTue ) {
+    registry.byId("SHCalendarTue").set("checked", !config.SHCalendarTue);
+    registry.byId("SHCalendarTue").set("checked", config.SHCalendarTue);
+  }
+  if( !config.SHCalendarWed ) {
+    registry.byId("SHCalendarWed").set("checked", !config.SHCalendarWed);
+    registry.byId("SHCalendarWed").set("checked", config.SHCalendarWed);
+  }
+  if( !config.SHCalendarThu ) {
+    registry.byId("SHCalendarThu").set("checked", !config.SHCalendarThu);
+    registry.byId("SHCalendarThu").set("checked", config.SHCalendarThu);
+  }
+  if( !config.SHCalendarFri ) {
+    registry.byId("SHCalendarFri").set("checked", !config.SHCalendarFri);
+    registry.byId("SHCalendarFri").set("checked", config.SHCalendarFri);
+  }
+  if( !config.SHCalendarSat ) {
+    registry.byId("SHCalendarSat").set("checked", !config.SHCalendarSat);
+    registry.byId("SHCalendarSat").set("checked", config.SHCalendarSat);
+  }
+  if( !config.SHCalendarSun ) {
+    registry.byId("SHCalendarSun").set("checked", !config.SHCalendarSun);
+    registry.byId("SHCalendarSun").set("checked", config.SHCalendarSun);
+  }
+
   if( !config.SHActivityHours ) {
     registry.byId("SHActivityHours").set("checked", !config.SHActivityHours);
     registry.byId("SHActivityHours").set("checked", config.SHActivityHours);
@@ -3705,44 +3753,66 @@ grid.startup();
 // EVENTS on dijit
 // ===============================================
 
-registry.byId("SHCalendarHours").on("change", function(isChecked) {
-  var divs = svg.dom.getElementsByClassName("hour_label");
-
-  for (var i = 0; i < divs.length; i++) {
-    divs[i].setAttribute("display", isChecked ? "block" : "none");
+function updateDisplay(isChecked, nodes) {
+  for(var i = 0; i < nodes.length; i++) {
+    nodes[i].setAttribute("display", isChecked ? "block" : "none");
   }
+}
+
+registry.byId("SHCalendarHours").on("change", function(isChecked) {
+  updateDisplay(isChecked, svg.dom.getElementsByClassName("hour_label"));
 }, true);
 
 registry.byId("SHCalendarDayX").on("change", function(isChecked) {
-  var divs = svg.dom.getElementsByClassName("relative");
-
-  for (var i = 0; i < divs.length; i++) {
-    divs[i].setAttribute("display", isChecked ? "block" : "none");
-  }
+  updateDisplay(isChecked, svg.dom.getElementsByClassName("relative"));
 }, true);
 
 registry.byId("SHCalendarDayYYYYMMDD").on("change", function(isChecked) {
-  var divs = svg.dom.getElementsByClassName("yyyymmdd");
-
-  for (var i = 0; i < divs.length; i++) {
-    divs[i].setAttribute("display", isChecked ? "block" : "none");
-  }
+  updateDisplay(isChecked, svg.dom.getElementsByClassName("yyyymmdd"));
 }, true);
 
 registry.byId("SHCalendarDayBars").on("change", function(isChecked) {
-  var divs = svg.dom.getElementsByClassName("day_bar");
-
-  for (var i = 0; i < divs.length; i++) {
-    divs[i].setAttribute("display", isChecked ? "block" : "none");
-  }
+  updateDisplay(isChecked, svg.dom.getElementsByClassName("day_bar"));
 }, true);
 
 registry.byId("SHCalendarHourBars").on("change", function(isChecked) {
-  var divs = svg.dom.getElementsByClassName("hour_bar");
+  updateDisplay(isChecked, svg.dom.getElementsByClassName("hour_bar"));
+}, true);
 
-  for (var i = 0; i < divs.length; i++) {
-    divs[i].setAttribute("display", isChecked ? "block" : "none");
+
+function updateWeekend(isChecked, nodes) {
+console.log("updateWeekend: " + nodes.length);
+console.log(nodes);
+  for(var i = 0; i < nodes.length; i++) {
+    if( isChecked ) {
+      domClass.add(nodes[i], "weekend");
+    } 
+    else {
+      domClass.remove(nodes[i], "weekend");
+    }
   }
+}
+
+registry.byId("SHCalendarMon").on("change", function(isChecked) {
+  updateWeekend(isChecked, svg.dom.getElementsByClassName("Mon"));
+}, true);
+registry.byId("SHCalendarTue").on("change", function(isChecked) {
+  updateWeekend(isChecked, svg.dom.getElementsByClassName("Tue"));
+}, true);
+registry.byId("SHCalendarWed").on("change", function(isChecked) {
+  updateWeekend(isChecked, svg.dom.getElementsByClassName("Wed"));
+}, true);
+registry.byId("SHCalendarThu").on("change", function(isChecked) {
+  updateWeekend(isChecked, svg.dom.getElementsByClassName("Thu"));
+}, true);
+registry.byId("SHCalendarFri").on("change", function(isChecked) {
+  updateWeekend(isChecked, svg.dom.getElementsByClassName("Fri"));
+}, true);
+registry.byId("SHCalendarSat").on("change", function(isChecked) {
+  updateWeekend(isChecked, svg.dom.getElementsByClassName("Sat"));
+}, true);
+registry.byId("SHCalendarSun").on("change", function(isChecked) {
+  updateWeekend(isChecked, svg.dom.getElementsByClassName("Sun"));
 }, true);
 
 registry.byId("xgc0_25").on("change", function(value) { updateXGraphCompression(0.25); });
@@ -4106,6 +4176,7 @@ registry.byId("SetCalendar").on("click", function() {
 
     calendarStore.addSync({
       name     : start.format().substring(0, 10),
+      dayweek  : start.format("ddd"),
       relative : i,
       pk       : calendarStore.GetNextPKSequence(),
       x        : x,
@@ -5490,6 +5561,9 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
   fill         : none;
 }
 
+.weekend {
+  background-image : url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAABZJREFUeNpi2r9//38gYGAEESAAEGAAasgJOgzOKCoAAAAASUVORK5CYII=);
+}
         </style>
 
         <g id="viewport" transform="matrix(1, 0, 0, 1, 0, 0)">
@@ -5670,6 +5744,41 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
           <tr>
             <td><label for="SHCalendarDayBars">Show calendar day bars</label></td>
             <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarDayBars" id="SHCalendarDayBars" data-dojo-id="SHCalendarDayBars"></td>
+          </tr>
+          <tr>
+            <td><label>Week end days</label></td>
+            <td>
+              <table>
+                <tr>
+                  <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarMon" id="SHCalendarMon" data-dojo-id="SHCalendarMon"></td>
+                  <td><label for="SHCalendarMon">Monday</label></td>
+                </tr>
+                <tr>
+                  <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarTue" id="SHCalendarTue" data-dojo-id="SHCalendarTue"></td>
+                  <td><label for="SHCalendarTue">Tuesday</label></td>
+                </tr>
+                <tr>
+                  <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarWed" id="SHCalendarWed" data-dojo-id="SHCalendarWed"></td>
+                  <td><label for="SHCalendarWed">Wednesday</label></td>
+                </tr>
+                <tr>
+                  <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarThu" id="SHCalendarThu" data-dojo-id="SHCalendarThu"></td>
+                  <td><label for="SHCalendarThu">Thursday</label></td>
+                </tr>
+                <tr>
+                  <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarFri" id="SHCalendarFri" data-dojo-id="SHCalendarFri"></td>
+                  <td><label for="SHCalendarFri">Friday</label></td>
+                </tr>
+                <tr>
+                  <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarSat" id="SHCalendarSat" data-dojo-id="SHCalendarSat"></td>
+                  <td><label for="SHCalendarSat">Saturday</label></td>
+                </tr>
+                <tr>
+                  <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHCalendarSun" id="SHCalendarSun" data-dojo-id="SHCalendarSun"></td>
+                  <td><label for="SHCalendarSun">Sunday</label></td>
+                </tr>
+              </table>
+            </td>
           </tr>
         </table>
 
