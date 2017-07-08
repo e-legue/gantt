@@ -1026,6 +1026,39 @@ function SVG_drawCrewMember(item) {
 }
 
 
+function makeCurlyBrace(x1,y1,x2,y2,w,q) {
+  //Calculate unit vector
+  var dx = x1-x2;
+  var dy = y1-y2;
+  var len = Math.sqrt(dx*dx + dy*dy);
+  dx = dx / len;
+  dy = dy / len;
+
+  //Calculate Control Points of path,
+  var qx1 = x1 + q*w*dy;
+  var qy1 = y1 - q*w*dx;
+  var qx2 = (x1 - .25*len*dx) + (1-q)*w*dy;
+  var qy2 = (y1 - .25*len*dy) - (1-q)*w*dx;
+  var tx1 = (x1 -  .5*len*dx) + w*dy;
+  var ty1 = (y1 -  .5*len*dy) - w*dx;
+  var qx3 = x2 + q*w*dy;
+  var qy3 = y2 - q*w*dx;
+  var qx4 = (x1 - .75*len*dx) + (1-q)*w*dy;
+  var qy4 = (y1 - .75*len*dy) - (1-q)*w*dx;
+
+  path = document.createElementNS(svgNS, "path");
+
+  path.setAttributeNS(null, "d", "M " +  x1 + " " +  y1 +
+         " Q " + qx1 + " " + qy1 + " " + qx2 + " " + qy2 + 
+         " T " + tx1 + " " + ty1 +
+         " M " +  x2 + " " +  y2 +
+         " Q " + qx3 + " " + qy3 + " " + qx4 + " " + qy4 + 
+         " T " + tx1 + " " + ty1 );
+
+  return path;
+}
+
+
 // Draw an activity. As the others, the drawing is embedded into a g node 
 // with a translation on y, and belongs to crewmember or opentime line.
 // Therefore no y translation is necessary, a x is used to draw the activity on
@@ -1106,13 +1139,20 @@ function SVG_drawActivity(activity) {
     var endDetailActivity = moment(activity.get("lbtStart"));
 
     var Gdetails = document.createElementNS(svgNS, "g");
-    Gdetails.setAttributeNS(null, "transform", "translate(0," + 7 * unitY +")");
+    Gdetails.setAttributeNS(null, "transform", "translate(0," + 6 * unitY +")");
     Gdetails.setAttributeNS(null, "class", "details");
 
     G.appendChild(Gdetails);
 
+    var xCurlyStart = 0;
+    var xCurlyEnd   = 0;
+    var indexCurly  = 1;
+
+
     for(i = 0; i < objects.length; i++) {
       var Rect = document.createElementNS(svgNS,"rect");
+      var x    = CompressX(objects[i].x -activity.x);
+       
       Rect.setAttributeNS(null, "class", objects[i].get("type"));
       Rect.setAttributeNS(null, "x", CompressX(objects[i].x - activity.x));
       Rect.setAttributeNS(null, "y", unitY);
@@ -1120,6 +1160,12 @@ function SVG_drawActivity(activity) {
       Rect.setAttributeNS(null, "ry", 1);
       Rect.setAttributeNS(null, "width", CompressX(objects[i].duration));
       Rect.setAttributeNS(null, "height", 4 * unitY);
+
+      if( objects[i].type == "LAY" ) {
+        Gdetails.appendChild(makeCurlyBrace(xCurlyStart, 5 * unitY, x, 5 * unitY, 10, .5));
+        indexCurly += 1;
+        xCurlyStart = CompressX(objects[i+1].x - activity.x);
+      }
 
       Gdetails.appendChild(Rect);
 
@@ -1139,6 +1185,7 @@ function SVG_drawActivity(activity) {
       }
 
     }
+    Gdetails.appendChild(makeCurlyBrace(xCurlyStart, 5 * unitY, CompressX(activity.duration), 5 * unitY, 10, .5));
   });
 }
 
@@ -2317,34 +2364,30 @@ var activityModel = declare(Model, {
     var self = this;
 
     var fIsNew = self.lineNb ? false : true;
-console.log("fIsNew: " + fIsNew);    
 
-//    var lineNb = typeof(self.lineNb) == "undefined" ? 1 : self.lineNb;
     var lineNb = fIsNew ? 1 : self.lineNb;
-/*
-    if( !fIsNew ) { 
-      var filter              = new self.Filter();
-      var activityStoreFilter = filter.eq('fk_cm', self.fk_cm).eq('lineNb', lineNb);
-    }
-*/    
 
-    activityStore.filter({fk_cm: self.fk_cm}).sort('lineNb').forEach(function(object) {
-      if( object.pk != self.pk && !object.fk_parent ) {
-        var A = self.x;
-        if( self.midnightOffset ) {
-          A += Number(config.midnightOffset);
-        }
-        var B = A + self.duration;
+    activityStore.filter({fk_cm: self.fk_cm}).sort('lineNb').fetch().then( function(items) {
+      for(var i = 0; i < items.length; i++) {
+        if( items[i].pk != self.pk && !items[i].fk_parent ) {
+          if( !fIsNew && items[i].lineNb > lineNb ) {
+            break; 
+          }
 
-        var C = object.x;
-        if( object.midnightOffset ) {
-          C += Number(config.midnightOffset);
-        }
-        var D = C + object.duration;
+          var A = self.x;
+          if( self.midnightOffset ) {
+            A += Number(config.midnightOffset);
+          }
+          var B = A + self.duration;
 
-        if( !(( B <= C ) || ( A >= D ))) { // detect an intersection.   
-          if( fIsNew || self.lineNb == object.lineNb ) { 
-            lineNb = object.lineNb + 1;
+          var C = items[i].x;
+          if( items[i].midnightOffset ) {
+            C += Number(config.midnightOffset);
+          }
+          var D = C + items[i].duration;
+
+          if( !(( B <= C ) || ( A >= D ))) { // detect an intersection.   
+            lineNb = items[i].lineNb + 1;
           }
         }
       }
