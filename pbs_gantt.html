@@ -1025,37 +1025,45 @@ function SVG_drawCrewMember(item) {
   svg.minX = Math.min(svg.minX, -50 - crewText.getComputedTextLength());
 }
 
-
-function makeCurlyBrace(x1,y1,x2,y2,w,q) {
+/*
+ * original code: http://bl.ocks.org/alexhornbake/6005176
+ *
+ */
+function SVG_drawDuty(x1, x2, iDuty) {
   //Calculate unit vector
-  var dx = x1-x2;
-  var dy = y1-y2;
-  var len = Math.sqrt(dx*dx + dy*dy);
-  dx = dx / len;
-  dy = dy / len;
+  var len = x1-x2;
+  var w = -10;
+  var q = .5;
+  var unitY = HEIGHT_LINE_CM / 14;
+  var y1 = 5 * unitY;
 
   //Calculate Control Points of path,
-  var qx1 = x1 + q*w*dy;
-  var qy1 = y1 - q*w*dx;
-  var qx2 = (x1 - .25*len*dx) + (1-q)*w*dy;
-  var qy2 = (y1 - .25*len*dy) - (1-q)*w*dx;
-  var tx1 = (x1 -  .5*len*dx) + w*dy;
-  var ty1 = (y1 -  .5*len*dy) - w*dx;
-  var qx3 = x2 + q*w*dy;
-  var qy3 = y2 - q*w*dx;
-  var qx4 = (x1 - .75*len*dx) + (1-q)*w*dy;
-  var qy4 = (y1 - .75*len*dy) - (1-q)*w*dx;
+  var qy1 = y1 - q*w;
+  var qx2 = (x1 - .25*len);
+  var qy2 = y1 - (1-q)*w;
+  var tx1 = (x1 - .5*len);
+  var ty1 = y1 - w;
+  var qy3 = y1 - q*w;
+  var qx4 = x1 - .75*len;
+  var qy4 = y1 - (1-q)*w;
 
-  path = document.createElementNS(svgNS, "path");
+  var group = document.createElementNS(svgNS, "g");
+  group.setAttributeNS(null,"class", "DUTY");
 
-  path.setAttributeNS(null, "d", "M " +  x1 + " " +  y1 +
-         " Q " + qx1 + " " + qy1 + " " + qx2 + " " + qy2 + 
-         " T " + tx1 + " " + ty1 +
-         " M " +  x2 + " " +  y2 +
-         " Q " + qx3 + " " + qy3 + " " + qx4 + " " + qy4 + 
-         " T " + tx1 + " " + ty1 );
+  var path = document.createElementNS(svgNS, "path");
 
-  return path;
+  path.setAttributeNS(null,"class", "brace");
+  path.setAttributeNS(null, "d", "M " +  CompressX(x1) + " " +  y1 +
+         " Q " + CompressX(x1) + " " + qy1 + " " + CompressX(qx2) + " " + qy2 + 
+         " T " + CompressX(tx1) + " " + ty1 +
+         " M " + CompressX(x2) + " " +  y1 +
+         " Q " + CompressX(x2) + " " + qy3 + " " + CompressX(qx4) + " " + qy4 + 
+         " T " + CompressX(tx1) + " " + ty1 );
+
+  group.appendChild(path);
+  group.appendChild(SVG_drawText("lbl_duty", tx1, 7 * unitY, "duty " + iDuty));
+
+  return group;
 }
 
 
@@ -1144,17 +1152,16 @@ function SVG_drawActivity(activity) {
 
     G.appendChild(Gdetails);
 
-    var xCurlyStart = 0;
-    var xCurlyEnd   = 0;
-    var indexCurly  = 1;
+    var xDutyStart = 0;
+    var iDuty      = 1;
 
 
     for(i = 0; i < objects.length; i++) {
       var Rect = document.createElementNS(svgNS,"rect");
-      var x    = CompressX(objects[i].x -activity.x);
+      var x    = objects[i].x -activity.x;
        
       Rect.setAttributeNS(null, "class", objects[i].get("type"));
-      Rect.setAttributeNS(null, "x", CompressX(objects[i].x - activity.x));
+      Rect.setAttributeNS(null, "x", CompressX(x));
       Rect.setAttributeNS(null, "y", unitY);
       Rect.setAttributeNS(null, "rx", 1);
       Rect.setAttributeNS(null, "ry", 1);
@@ -1162,9 +1169,9 @@ function SVG_drawActivity(activity) {
       Rect.setAttributeNS(null, "height", 4 * unitY);
 
       if( objects[i].type == "LAY" ) {
-        Gdetails.appendChild(makeCurlyBrace(xCurlyStart, 5 * unitY, x, 5 * unitY, 10, .5));
-        indexCurly += 1;
-        xCurlyStart = CompressX(objects[i+1].x - activity.x);
+        Gdetails.appendChild(SVG_drawDuty(xDutyStart, x, iDuty));
+        iDuty += 1;
+        xDutyStart = objects[i+1].x - activity.x;
       }
 
       Gdetails.appendChild(Rect);
@@ -1185,7 +1192,7 @@ function SVG_drawActivity(activity) {
       }
 
     }
-    Gdetails.appendChild(makeCurlyBrace(xCurlyStart, 5 * unitY, CompressX(activity.duration), 5 * unitY, 10, .5));
+    Gdetails.appendChild(SVG_drawDuty(xDutyStart, activity.duration, iDuty));
   });
 }
 
@@ -1366,6 +1373,7 @@ var configurationModel = declare(Model, {
     SHActivityDetails                             : { type : "boolean", default : true, },
     SHActivityDetailHours                         : { type : "boolean", default : true, },
     SHActivityDetailStations                      : { type : "boolean", default : true, },
+    SHActivityDuties                              : { type : "boolean", default : true, },
   },
   Apply : function() {
     var self = this;
@@ -1402,6 +1410,7 @@ var configurationModel = declare(Model, {
     registry.byId("SHActivityDetails").set("checked", self.SHActivityDetails);
     registry.byId("SHActivityDetailHours").set("checked", self.SHActivityDetailHours);
     registry.byId("SHActivityDetailStations").set("checked", self.SHActivityDetailStations);
+    registry.byId("SHActivityDuties").set("checked", self.SHActivityDuties);
   },
 });
 
@@ -3359,7 +3368,10 @@ topic.subscribe("refreshGraph", function() {
     registry.byId("SHActivityDetailStations").set("checked", !config.SHActivityDetailStations);
     registry.byId("SHActivityDetailStations").set("checked", config.SHActivityDetailStations);
   }
-
+  if( !config.SHActivityDuties ) {
+    registry.byId("SHActivityDuties").set("checked", !config.SHActivityDuties);
+    registry.byId("SHActivityDuties").set("checked", config.SHActivityDuties);
+  }
   svg.SetSizeAttributes();
 });
 
@@ -3782,6 +3794,14 @@ registry.byId("SHActivityDetailHours").on("change", function(isChecked) {
 
 registry.byId("SHActivityDetailStations").on("change", function(isChecked) {
   var divs = svg.dom.getElementsByClassName("dtl_station");
+
+  for (var i = 0; i < divs.length; i++) {
+    divs[i].setAttribute("display", isChecked ? "block" : "none");
+  }
+}, true);
+
+registry.byId("SHActivityDuties").on("change", function(isChecked) {
+  var divs = svg.dom.getElementsByClassName("DUTY");
 
   for (var i = 0; i < divs.length; i++) {
     divs[i].setAttribute("display", isChecked ? "block" : "none");
@@ -5399,7 +5419,7 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
   text-anchor : end; 
 }
 
-.dtl_station {
+.dtl_station, .lbl_duty {
   font-size   : 11px;
   fill        : black;
   text-anchor : middle; 
@@ -5463,6 +5483,13 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
   fill         : purple;
   fill-opacity : 0.6;
 }
+
+.brace {
+  stroke       : black;
+  stroke-width : 1px;
+  fill         : none;
+}
+
         </style>
 
         <g id="viewport" transform="matrix(1, 0, 0, 1, 0, 0)">
@@ -5607,6 +5634,10 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
           <tr>
             <td><label for="SHActivityDetailStations">Show activity detail stations</label></td>
             <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHActivityDetailStations" id="SHActivityDetailStations" data-dojo-id="SHActivityDetailStations"></td>
+          </tr>
+          <tr>
+            <td><label for="SHActivityDuties">Show activity duties</label></td>
+            <td><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="SHActivityDuties" id="SHActivityDuties" data-dojo-id="SHActivityDuties"></td>
           </tr>
         </table>
 
