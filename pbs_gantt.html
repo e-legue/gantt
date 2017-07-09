@@ -11,7 +11,6 @@
   <link rel="stylesheet" href="http://codemirror.net/addon/fold/foldgutter.css"/>
 
   <style type="text/css">
-
     .thinButton .dijitButtonNode {
       padding : 0px !important;
     }
@@ -981,6 +980,9 @@ console.log(item);
   Gbar.setAttributeNS(null, "class", item.get("startperiod") ? "start_period" : item.get("type"));
   Gbar.setAttributeNS(null, "id", item.get("barident"));
   svg.domCalendarBar.appendChild(Gbar);
+
+
+  Gbar.appendChild(SVG_drawRect(item.get("dayweek"), 0, 0, item.width, 1));
 
   Gbar.appendChild(SVG_drawRect("day_bar", 0, 0, item.width, 1));
   Gbar.appendChild(SVG_drawRect("line", 0, 0, 1, 1));
@@ -3781,14 +3783,12 @@ registry.byId("SHCalendarHourBars").on("change", function(isChecked) {
 
 
 function updateWeekend(isChecked, nodes) {
-console.log("updateWeekend: " + nodes.length);
-console.log(nodes);
   for(var i = 0; i < nodes.length; i++) {
     if( isChecked ) {
-      domClass.add(nodes[i], "weekend");
+      nodes[i].classList.add("weekend");
     } 
     else {
-      domClass.remove(nodes[i], "weekend");
+      nodes[i].classList.remove("weekend");
     }
   }
 }
@@ -3839,43 +3839,23 @@ function updateXGraphCompression(value) {
 // Show/Hide activity dialog
 // -----------------------------------------------
 registry.byId("SHActivityHours").on("change", function(isChecked) {
-  var divs = svg.dom.getElementsByClassName("act_hour");
-
-  for (var i = 0; i < divs.length; i++) {
-    divs[i].setAttribute("display", isChecked ? "block" : "none");
-  }
+  updateDisplay(isChecked, svg.dom.getElementsByClassName("act_hour"));
 }, true);
 
 registry.byId("SHActivityDetails").on("change", function(isChecked) {
-  var divs = svg.dom.getElementsByClassName("details");
-
-  for (var i = 0; i < divs.length; i++) {
-    divs[i].setAttribute("display", isChecked ? "block" : "none");
-  }
+  updateDisplay(isChecked, svg.dom.getElementsByClassName("details"));
 }, true);
 
 registry.byId("SHActivityDetailHours").on("change", function(isChecked) {
-  var divs = svg.dom.getElementsByClassName("dtl_hour");
-
-  for (var i = 0; i < divs.length; i++) {
-    divs[i].setAttribute("display", isChecked ? "block" : "none");
-  }
+  updateDisplay(isChecked, svg.dom.getElementsByClassName("dtl_hour"));
 }, true);
 
 registry.byId("SHActivityDetailStations").on("change", function(isChecked) {
-  var divs = svg.dom.getElementsByClassName("dtl_station");
-
-  for (var i = 0; i < divs.length; i++) {
-    divs[i].setAttribute("display", isChecked ? "block" : "none");
-  }
+  updateDisplay(isChecked, svg.dom.getElementsByClassName("dtl_station"));
 }, true);
 
 registry.byId("SHActivityDuties").on("change", function(isChecked) {
-  var divs = svg.dom.getElementsByClassName("DUTY");
-
-  for (var i = 0; i < divs.length; i++) {
-    divs[i].setAttribute("display", isChecked ? "block" : "none");
-  }
+  updateDisplay(isChecked, svg.dom.getElementsByClassName("DUTY"));
 }, true);
 
 // -----------------------------------------------
@@ -5561,8 +5541,15 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
   fill         : none;
 }
 
-.weekend {
-  background-image : url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAABZJREFUeNpi2r9//38gYGAEESAAEGAAasgJOgzOKCoAAAAASUVORK5CYII=);
+#calendar_bar > .weekend {
+/*
+background : url( data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAEklEQVQYlWNgYGD4zzAKBh8AAJYTAQA4FYKbAAAAAElFTkSuQmCC) repeat;
+*/
+}
+
+
+#calendar > .weekend {
+  font-weight: bold;
 }
         </style>
 
