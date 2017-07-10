@@ -1159,7 +1159,7 @@ function SVG_drawActivity(activity) {
 
 
   activityStore.filter({fk_parent: activity.pk}).sort('x').fetch().then(function(objects) {
-    if( objects.length < 0 ) { 
+    if( objects.length == 0 ) { 
       return; 
     }
 
