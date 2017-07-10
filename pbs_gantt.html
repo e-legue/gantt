@@ -853,49 +853,45 @@ function SVG_drawEvent(item) {
 }
 
 
-// Draw a distance in calendar.
-function SVG_drawDistance(item) {
-  var G       = document.createElementNS(svgNS, "g");
-  G.setAttributeNS(null, "id", item.get("ident"));
-  svg.domCalendar.appendChild(G);
-
-  var xFrom = item.GetEventFrom().GetX();
-  var xTo = item.GetEventTo().GetX();
-
-  if( xTo < xFrom ) {
-    var tmp =  xFrom;
-    xFrom = xTo;
-    xTo   = xFrom;
-  }
-  var y = item.GetYCoord();
-  var yHorizontalLine = y + HEIGHT_LINE_HL / 2;
-
-  var dur = xTo - xFrom;
+// Convert a duration (in minutes) into a hour-minutes string.
+// The minutes are on 2 digits.
+function GetFormatedDuration(dur) {
   var min = dur % 60;
 
   var label = Math.floor(dur / 60) + "h";
   label += min > 9 ? min : "0" + min;
 
+  return label;
+}
+
+
+// Draw a dimesion line, with the duration. If the width is not
+// large enough to insert the duration, the dimension line is
+// extended.
+function SVG_drawDimensionLine(G, pk, xFrom, xTo, y) {
+  var duration        = xTo - xFrom;
+  var yHorizontalLine = y + HEIGHT_LINE_HL / 2;
+
   // draw measure  <-------  dst -------->
-  var lblText = SVG_drawText("distance_label", (xFrom + xTo) / 2 , yHorizontalLine - 3, label);
+  var lblText = SVG_drawText("distance_label", (xFrom + xTo) / 2 , yHorizontalLine - 3, GetFormatedDuration(duration));
 
   on(lblText, "click", function(evt) {
-    SetUpDistanceDialog(item.pk);
+    SetUpDistanceDialog(pk);
   });
   G.appendChild(lblText);
 
   var lblTextLength = lblText.getComputedTextLength();
-  var extra = 0;
-  var inc = HEIGHT_LINE_CM / 20;
-  var xinc = inc * config.XGraphCompression; 
+  var xExtension = 0;
+  var inc   = HEIGHT_LINE_CM / 20;
+  var xinc  = inc * config.XGraphCompression; 
 
-  if( lblTextLength + 2 * inc > CompressX(dur) ){
-    extra = (lblTextLength + 2 * inc)  * config.XGraphCompression;
+  if( lblTextLength + 2 * inc > CompressX(duration) ){
+    xExtension = (lblTextLength + 2 * inc) * config.XGraphCompression;
   }
 
-  G.appendChild(SVG_drawLine("distance", xFrom, yHorizontalLine, xTo + extra, yHorizontalLine));
+  G.appendChild(SVG_drawLine("distance", xFrom, yHorizontalLine, xTo + xExtension, yHorizontalLine));
 
-  if( extra ) {
+  if( xExtension ) {
     xinc = xinc * -1;
     lblText.setAttributeNS(null,"x", CompressX(xTo - 2 * xinc));
     lblText.setAttributeNS(null,"style", "text-anchor: start");
@@ -908,27 +904,45 @@ function SVG_drawDistance(item) {
   // draw second arrow.
   G.appendChild(SVG_drawLine("distance", xTo, yHorizontalLine, xTo - xinc, yHorizontalLine + inc));
   G.appendChild(SVG_drawLine("distance", xTo, yHorizontalLine, xTo - xinc, yHorizontalLine - inc));
+}
+
+// Draw an extension line, used to link activity with dimension line.
+function SVG_drawExtensionLine(G, x, y, origin) {
+  if( typeof(origin) != 'undefined' ){
+    var yHorizontalLine = y + HEIGHT_LINE_HL / 2;
+    var inc             = HEIGHT_LINE_CM / 20;
+
+    var cm        = origin.GetCrewMember();
+    var ycm       = cm ? cm.GetYCoord() : yCoordStore.nextY;
+    var LineCount = cm ? cm.lineCount : OpenTimeLineCount;
+    var Y         = MARGIN_TOP_CM + HEIGHT_LINE_CM * LineCount + MARGIN_BOTTOM_CM; 
+    G.appendChild(SVG_drawLine("extension", x, ycm < y ? ycm - Y : ycm + Y, x, ycm < y ? yHorizontalLine + inc : yHorizontalLine - inc));
+  }
+}
 
 
+// Draw a distance in calendar.
+function SVG_drawDistance(item) {
+  var G = document.createElementNS(svgNS, "g");
+  G.setAttributeNS(null, "id", item.get("ident"));
+  svg.domCalendar.appendChild(G);
 
-  var activityFrom = item.GetActFrom();
-  if( typeof(activityFrom) != 'undefined' ){
-    var cmFrom = activityFrom.GetCrewMember();
-    var y1 = cmFrom ? cmFrom.GetYCoord() : yCoordStore.nextY;
-    var fromLineCount = cmFrom ? cmFrom.lineCount : OpenTimeLineCount;
-    var Y1 = MARGIN_TOP_CM + HEIGHT_LINE_CM * fromLineCount + MARGIN_BOTTOM_CM; 
-    G.appendChild(SVG_drawLine("distance", xFrom, y1 < y ? y1 - Y1 : y1 + Y1, xFrom, y1 < y ? yHorizontalLine + inc : yHorizontalLine - inc));
+  var xFrom = item.GetEventFrom().GetX();
+  var xTo   = item.GetEventTo().GetX();
+
+  if( xTo < xFrom ) {
+    var tmp = xFrom;
+
+    xFrom = xTo;
+    xTo   = xFrom;
   }
 
+  var y = item.GetYCoord();
 
-  var activityTo   = item.GetActTo();
-  if( typeof(activityTo) != 'undefined' ){
-    var cmTo   = activityTo.GetCrewMember();
-    var y2 = cmTo ? cmTo.GetYCoord() : yCoordStore.nextY; 
-    var toLineCount = cmTo ? cmTo.lineCount : OpenTimeLineCount;
-    var Y2 = MARGIN_TOP_CM + HEIGHT_LINE_CM * toLineCount + MARGIN_BOTTOM_CM; 
-    G.appendChild(SVG_drawLine("distance", xTo, y2 < y ? y2 - Y2 : y2 + Y2, xTo, y2 < y ? yHorizontalLine + inc : yHorizontalLine - inc));
-  }
+  SVG_drawDimensionLine(G, item.pk, xFrom, xTo, y);
+
+  SVG_drawExtensionLine(G, xFrom, y, item.GetActFrom());
+  SVG_drawExtensionLine(G, xTo  , y, item.GetActTo  ());
 }
 
 
@@ -936,15 +950,17 @@ function GetIncHour() {
   if( config.XGraphCompression < 1 ) return 60;
   if( config.XGraphCompression <= 2 ) return 120;
   if( config.XGraphCompression <= 4 ) return 240;
-  if( config.XGraphCompression <= 8 ) return 360;
+  if( config.XGraphCompression <= 6 ) return 360;
   return 720;
 }
+
 
 function GetFontSize() {
   if( config.XGraphCompression <  5 ) return "40px";
   if( config.XGraphCompression < 10 ) return "30px";
   return "20px";
 }     
+
 
 // Draw a calendar date. The drawing belongs to id calendar in the SVG.
 // Each "date" is embedded in a g node, with a translation on X, according
@@ -1905,13 +1921,13 @@ var activityModel = declare(Model, {
     fk_cm              : "numeric", // foreign key to CrewMember.
     fk_parent          : "numeric", // foreign key to parent activity.
     name               : "string",
-    fullName          : "string",
+    fullName           : "string",
     x                  : "numeric",
     duration           : "numeric",
-    midnightOffset    : "boolean",
+    midnightOffset     : "boolean",
     transportationTime : "boolean",
-    restBefore        : "numeric",
-    restAfter         : "numeric",
+    restBefore         : "numeric",
+    restAfter          : "numeric",
     type               : "string",
     lbtStart           : "string",
     lbtEnd             : "string",
@@ -2287,26 +2303,29 @@ var activityModel = declare(Model, {
     tripDetailStore.sort('order').fetch().then(function(items) {
       var iLeg = 0;
       var iLay = 0;
-      var name, width, type;
+      var name, fullname, width, type;
       for (var i = 0; i < items.length ; i++) {
         width = Number(items[i].dhour * 60) + Number(items[i].dminute);
         type = items[i].type;
         if( type == "leg" ) {
           type += items[i].legType;
           iLeg += 1;
-          name = items[i].lblType + " " + iLeg;
+          name = items[i].lblType + iLeg;
+          fullname = items[i].lblType + " " + iLeg;
           if( items[i].legType == "D" ) {
-            name += " (D)";
+            fullname += " (D)";
           }
-          name += " " + items[i - 1].station + " to " + items[i + 1].station;
+          fullname += " " + items[i - 1].station + " to " + items[i + 1].station;
         }
         else {
           if( type == "lay" ) {
             iLay += 1;
-            name = items[i].lblType + " " + items[i - 1].station + " (" + iLay + ")";
+            name = items[i].lblType + iLay;
+            fullname = items[i].lblType + " " + items[i - 1].station + " (" + iLay + ")";
           }
           else {
-            name = items[i].lblType + " " + items[i].station;
+            name = "n/a";
+            fullname = items[i].lblType + " " + items[i].station;
           }
         }
 
@@ -2325,6 +2344,7 @@ var activityModel = declare(Model, {
         }
 
         item.name      = name;
+        item.fullname  = fullname;
         item.type      = type.toUpperCase();
         item.x         = xDetail;
         item.duration  = width;
@@ -2666,7 +2686,7 @@ var distanceModel = declare(Model, {
     // Add the new entry in the y coord store.
     var yCoord = yCoordStore.addSync({
       pk     : yCoordStore.GetNextPKSequence(),
-      y      : Math.max(yFrom, yTo) - 1,
+      y      : Math.min(yFrom, yTo) - 1,
       height : HEIGHT_LINE_HL,
     });
 
@@ -5473,7 +5493,12 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
 }
 
 .distance {
-  stroke       : black;
+  stroke       : gray;
+  stroke-width : 1px;
+}
+
+.extension {
+  stroke       : gray;
   stroke-width : 1px;
 }
 
