@@ -5304,6 +5304,7 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
 
   svg.SetSizeAttributes();
 
+  domStyle.set("zoom", {opacity: 1});        
   dom.byId("zoom").innerHTML = (matrix.a).toFixed(3);
   dojo.fadeOut(fadeArgs).play();
 });
@@ -5542,10 +5543,11 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
 }
 
 #calendar_bar > .weekend {
-  fill-opacity : 0.3; 
 /*
-background : url( data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAEklEQVQYlWNgYGD4zzAKBh8AAJYTAQA4FYKbAAAAAElFTkSuQmCC) repeat;
+  fill-opacity : 0.3;
 */
+  fill : black;
+  background : url( data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAEklEQVQYlWNgYGD4zzAKBh8AAJYTAQA4FYKbAAAAAElFTkSuQmCC) repeat;
 }
 
 
