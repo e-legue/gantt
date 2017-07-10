@@ -981,10 +981,7 @@ console.log(item);
   Gbar.setAttributeNS(null, "id", item.get("barident"));
   svg.domCalendarBar.appendChild(Gbar);
 
-
-  Gbar.appendChild(SVG_drawRect(item.get("dayweek"), 0, 0, item.width, 1));
-
-  Gbar.appendChild(SVG_drawRect("day_bar", 0, 0, item.width, 1));
+  Gbar.appendChild(SVG_drawRect("day_bar " + item.get("dayweek"), 0, 0, item.width, 1));
   Gbar.appendChild(SVG_drawRect("line", 0, 0, 1, 1));
   Gbar.appendChild(SVG_drawRect("line", item.width, 0, 1, 1));
 
@@ -5397,7 +5394,7 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
       <svg id="graph" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" height="300" width="1000">
         <style>
 .day_bar {
-  fill-opacity : 0.2;
+  fill-opacity : 0.1;
 }
 
 .line {
@@ -5425,11 +5422,9 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
 .day_label {
   text-anchor : middle; 
   font-size   : 40px;
-  fill        : gray;
 }
 
 .hour_label {
-  fill : gray;
 }
 
 .distance_label {
@@ -5542,18 +5537,16 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
   fill         : none;
 }
 
-#calendar_bar > .weekend {
-/*
-  fill-opacity : 0.3;
-*/
-  fill : black;
-  background : url( data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAEklEQVQYlWNgYGD4zzAKBh8AAJYTAQA4FYKbAAAAAElFTkSuQmCC) repeat;
+#calendar_bar >  g > .weekend {
+  fill : red;
 }
 
+#calendar {
+  fill : gray;
+}
 
 #calendar > .weekend {
-  fill        : black !important; 
-  font-weight : bold;
+  fill : black; 
 }
         </style>
 
