@@ -3373,31 +3373,31 @@ topic.subscribe("refreshGraph", function() {
     registry.byId("SHCalendarHourBars").set("checked", config.SHCalendarHourBars);
   }
 
-  if( !config.SHCalendarMon ) {
+  if( config.SHCalendarMon ) {
     registry.byId("SHCalendarMon").set("checked", !config.SHCalendarMon);
     registry.byId("SHCalendarMon").set("checked", config.SHCalendarMon);
   }
-  if( !config.SHCalendarTue ) {
+  if( config.SHCalendarTue ) {
     registry.byId("SHCalendarTue").set("checked", !config.SHCalendarTue);
     registry.byId("SHCalendarTue").set("checked", config.SHCalendarTue);
   }
-  if( !config.SHCalendarWed ) {
+  if( config.SHCalendarWed ) {
     registry.byId("SHCalendarWed").set("checked", !config.SHCalendarWed);
     registry.byId("SHCalendarWed").set("checked", config.SHCalendarWed);
   }
-  if( !config.SHCalendarThu ) {
+  if( config.SHCalendarThu ) {
     registry.byId("SHCalendarThu").set("checked", !config.SHCalendarThu);
     registry.byId("SHCalendarThu").set("checked", config.SHCalendarThu);
   }
-  if( !config.SHCalendarFri ) {
+  if( config.SHCalendarFri ) {
     registry.byId("SHCalendarFri").set("checked", !config.SHCalendarFri);
     registry.byId("SHCalendarFri").set("checked", config.SHCalendarFri);
   }
-  if( !config.SHCalendarSat ) {
+  if( config.SHCalendarSat ) {
     registry.byId("SHCalendarSat").set("checked", !config.SHCalendarSat);
     registry.byId("SHCalendarSat").set("checked", config.SHCalendarSat);
   }
-  if( !config.SHCalendarSun ) {
+  if( config.SHCalendarSun ) {
     registry.byId("SHCalendarSun").set("checked", !config.SHCalendarSun);
     registry.byId("SHCalendarSun").set("checked", config.SHCalendarSun);
   }
@@ -5542,6 +5542,7 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
 }
 
 #calendar_bar > .weekend {
+  fill-opacity : 0.3; 
 /*
 background : url( data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAEklEQVQYlWNgYGD4zzAKBh8AAJYTAQA4FYKbAAAAAElFTkSuQmCC) repeat;
 */
@@ -5549,7 +5550,8 @@ background : url( data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACN
 
 
 #calendar > .weekend {
-  font-weight: bold;
+  fill        : black !important; 
+  font-weight : bold;
 }
         </style>
 
