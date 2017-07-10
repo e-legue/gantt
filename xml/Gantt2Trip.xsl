@@ -50,12 +50,12 @@ extension-element-prefixes="xs fn">
     </xsl:element>
     <xsl:element name="duration">
       <xsl:call-template name="convertInHoursMinutes">
-        <xsl:with-param name="valueInMinutes" select="width" />
+        <xsl:with-param name="valueInMinutes" select="duration" />
       </xsl:call-template>
     </xsl:element>
     <xsl:element name="credit">
       <xsl:call-template name="convertInHoursMinutes">
-        <xsl:with-param name="valueInMinutes" select="width" />
+        <xsl:with-param name="valueInMinutes" select="duration" />
       </xsl:call-template>
     </xsl:element>
     <xsl:element name="rstart-utc">
@@ -67,7 +67,7 @@ extension-element-prefixes="xs fn">
     <xsl:element name="rend-utc">
       <xsl:call-template name="relativeUTC">
         <xsl:with-param name="ref"    select="$ref" />
-        <xsl:with-param name="length" select="x + width" />
+        <xsl:with-param name="length" select="x + duration" />
       </xsl:call-template>
     </xsl:element>
     <!-- ================== -->
@@ -101,7 +101,7 @@ extension-element-prefixes="xs fn">
         </xsl:element>
         <xsl:element name="tafb">
           <xsl:call-template name="convertInHoursMinutes">
-            <xsl:with-param name="valueInMinutes" select="width" />
+            <xsl:with-param name="valueInMinutes" select="duration" />
           </xsl:call-template>
         </xsl:element>
         <xsl:element name="tafb-in-period">
@@ -141,12 +141,12 @@ extension-element-prefixes="xs fn">
         </xsl:element>
         <xsl:element name="pre-rest">
           <xsl:call-template name="convertInHoursMinutes">
-            <xsl:with-param name="valueInMinutes" select="resta" />
+            <xsl:with-param name="valueInMinutes" select="restBefore" />
           </xsl:call-template>
         </xsl:element>
         <xsl:element name="post-rest">
           <xsl:call-template name="convertInHoursMinutes">
-            <xsl:with-param name="valueInMinutes" select="restb" />
+            <xsl:with-param name="valueInMinutes" select="restAfter" />
           </xsl:call-template>
         </xsl:element>
 
@@ -167,7 +167,7 @@ extension-element-prefixes="xs fn">
                   </xsl:element>
                   <xsl:element name="duration">
                     <xsl:call-template name="convertInHoursMinutes">
-                      <xsl:with-param name="valueInMinutes" select="width" />
+                      <xsl:with-param name="valueInMinutes" select="duration" />
                     </xsl:call-template>
                   </xsl:element>
                   <xsl:element name="rstart-utc">
