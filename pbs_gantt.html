@@ -967,7 +967,6 @@ function GetFontSize() {
 // to the position. This way, each drawing into the g node is strictly the 
 // same for each day, except labels.
 function SVG_drawCalendarDate(item) {
-console.log(item);
   var G       = document.createElementNS(svgNS, "g");
   G.setAttributeNS(null, "transform", "translate(" + CompressX(item.x) + ",0)");
   G.setAttributeNS(null, "id", item.get("ident"));
@@ -1984,6 +1983,7 @@ var activityModel = declare(Model, {
         x  : -1,
         long_label : "Rest before activity start",
         fk_act : self.pk,
+        order: 1,
       });
     }
     if( self.transportationTime && !eventStore.RetrieveActivityEvent(-2, self.pk) ) {
@@ -1992,6 +1992,7 @@ var activityModel = declare(Model, {
         x  : -2,
         long_label : "Transportation time before activity start",
         fk_act : self.pk,
+        order: 2,
       });
     }
 
@@ -2002,9 +2003,13 @@ var activityModel = declare(Model, {
         long_label : "Activity start",
         fk_act : self.pk,
         start : 1,
+        order: 3,
       });
     }
-    activityStore.filter({fk_parent: self.pk}).fetch().then(function(objects) {
+ 
+    var iOrder = 100; 
+
+    activityStore.filter({fk_parent: self.pk}).sort('x').fetch().then(function(objects) {
       for(i = 0; i < objects.length; i++) {
         var event = eventStore.RetrieveActivityEvent(-10, self.pk,  objects[i].pk);
         if( !event ) {  
@@ -2014,12 +2019,14 @@ var activityModel = declare(Model, {
           event.x             = -10;
           event.fk_act        = self.pk;
           event.fk_act_detail = objects[i].pk;
+          event.order         = iOrder++;
         }
-        event.long_label    = objects[i].name + " start";
+        event.long_label    = objects[i].fullname + " start";
 
         eventStore.putSync(event);  
       }
     });
+
            
     if( !eventStore.RetrieveActivityEvent(-4, self.pk) ) {
       eventStore.addSync({
@@ -2027,7 +2034,7 @@ var activityModel = declare(Model, {
         x  : -4,
         long_label : "Activity end",
         fk_act : self.pk,
-        start : 0,
+        order: 100001,
       });
     }
     if( self.transportationTime && !eventStore.RetrieveActivityEvent(-5, self.pk) ) {
@@ -2036,6 +2043,7 @@ var activityModel = declare(Model, {
         x  : -5,
         long_label : "Transportation time after activity end",
         fk_act : self.pk,
+        order: 100002,
       });
     }
     if( self.restAfter > 0 && !eventStore.RetrieveActivityEvent(-6, self.pk) ) {
@@ -2044,6 +2052,7 @@ var activityModel = declare(Model, {
         x  : -6,
         long_label : "Rest after activity end",
         fk_act : self.pk,
+        order: 100003,
       });
     }
   },          
@@ -2315,13 +2324,13 @@ var activityModel = declare(Model, {
           if( items[i].legType == "D" ) {
             fullname += " (D)";
           }
-          fullname += " " + items[i - 1].station + " to " + items[i + 1].station;
+          fullname += " from " + items[i - 1].station + " to " + items[i + 1].station;
         }
         else {
           if( type == "lay" ) {
             iLay += 1;
             name = items[i].lblType + iLay;
-            fullname = items[i].lblType + " " + items[i - 1].station + " (" + iLay + ")";
+            fullname = items[i].lblType + " " + iLay + " at " + items[i - 1].station;
           }
           else {
             name = "n/a";
@@ -2799,6 +2808,7 @@ var eventModel = declare(Model, {
     fk_act        : "numeric", // 0 means no activity.
     fk_act_detail : "numeric", // 0 means no activity detail.
     fk_yc         : "numeric",
+    order         : "numeric",
     ident         : new ComputedProperty({
       dependsOn : ["pk"],
       getValue  : function(pk) {
@@ -3032,7 +3042,7 @@ eventStore.on("delete", function(event) {
 
 
 var eventStoreAdapter = new DstoreAdapter(eventStore.filter({fk_act: undefined}));
-var eventActivityStoreAdapter = new DstoreAdapter(eventStore.filter({fk_yc: undefined}));
+var eventActivityStoreAdapter = new DstoreAdapter(eventStore.filter({fk_yc: undefined}).sort('order'));
 
 registry.byId("DistanceFromActEventSelect").set("labelAttr", "long_label");
 registry.byId("DistanceFromActEventSelect").set("store", eventActivityStoreAdapter);
