@@ -1100,7 +1100,6 @@ function SVG_drawActivity(activity) {
   var yLine = MARGIN_TOP_CM + HEIGHT_LINE_CM * ( activity.lineNb - 1 );
 
   var midnightOffset = activity.midnightOffset ? Number(config.midnightOffset) : 0;       
-console.log("activity.x : " +  activity.x);  
   G.setAttributeNS(null, "transform", "translate(" + CompressX(activity.x + midnightOffset) + "," + yLine +")");
   G.setAttributeNS(null, "id", activity.get("ident"));
 
@@ -1412,8 +1411,6 @@ var configurationModel = declare(Model, {
       registry.byId("CalendarStart").set("value", self.CalendarStart);
         var start = moment.tz(self.CalendarStart, timezoneStore.getSync(self.CalendarTimezone).name);
       Xorig = start.unix();
-console.log("Xorig set: " + Xorig); 
-console.log(start);        
     }
     if( typeof(self.CalendarEnd) != "undefined" ) {
       registry.byId("CalendarEnd").set("value", self.CalendarEnd);
@@ -2026,8 +2023,8 @@ var activityModel = declare(Model, {
           event.x             = -10;
           event.fk_act        = self.pk;
           event.fk_act_detail = objects[i].pk;
-          event.order         = iOrder++;
         }
+        event.order         = iOrder++;
         event.long_label    = objects[i].fullname + " start";
 
         eventStore.putSync(event);  
@@ -2308,7 +2305,6 @@ var activityModel = declare(Model, {
   },
   SaveDetails : function(fEdit){
     var self = this; // current trip.
-
     xDetail = self.x;
 
     var arrPkDetail = [];
@@ -2365,7 +2361,6 @@ var activityModel = declare(Model, {
         item.x         = xDetail;
         item.duration  = width;
         item.station   = items[i].station;
-
         activityStore.putSync(item);
 
         // find pk detail in original list and remove it.
@@ -4167,10 +4162,6 @@ registry.byId("SetCalendar").on("click", function() {
   var range = end.diff(start, "days");
 
   Xorig = start.unix();
-
-console.log("Xorig set: " + Xorig); 
-console.log(start);        
-
 
   calendarStore.fetch().then(function(days) {
     for (var i = days.length - 1; i >= 0; i--) {
