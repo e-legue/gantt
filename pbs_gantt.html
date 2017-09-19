@@ -403,6 +403,7 @@ function(
 
 var TRIP     = "TRP";
 var TRAINING = "TRN";
+var RESERVE  = "RSV";
 var LEAVE    = "LVE";
 var DAY_OFF  = "DO";
 
@@ -639,6 +640,21 @@ registry.byId("TrainingRestBeforeM").set("store", zeroTo59Store);
 registry.byId("TrainingRestAfterM").set("store", zeroTo59Store);
 registry.byId("TrainingDurationMinute").set("store", zeroTo59Store);
 
+registry.byId("ReserveRestBeforeH").set("store", zeroTo99Store);
+registry.byId("ReserveRestAfterH").set("store", zeroTo99Store);
+registry.byId("ReserveDurationHour").set("store", zeroTo99Store);
+
+registry.byId("ReserveRestBeforeH").set("regExp", '[0-9]+');
+registry.byId("ReserveRestAfterH").set("regExp", '[0-9]+');
+registry.byId("ReserveDurationHour").set("regExp", '[0-9]+');
+
+registry.byId("ReserveRestBeforeM").set("store", zeroTo59Store);
+registry.byId("ReserveRestAfterM").set("store", zeroTo59Store);
+registry.byId("ReserveDurationMinute").set("store", zeroTo59Store);
+
+
+
+
 registry.byId("TripRestBeforeH").set("store", zeroTo99Store);
 registry.byId("TripRestAfterH").set("store", zeroTo99Store);
 
@@ -696,6 +712,9 @@ function PopupActivityDetail(activityId) {
   }
   else if( object.type == TRAINING ) {
     SetUpTrainingDialog(object);
+  }
+  else if( object.type == RESERVE ) {
+    SetUpReserveDialog(object);
   }
   else if( object.type == LEAVE ) {
     SetUpVacationDialog(object);
@@ -1151,15 +1170,17 @@ function SVG_drawActivity(activity) {
   var transportationTime = 0;
   if( activity.transportationTime ) {
     transportationTime = Number(config.transportationTime);
-    // before.
-    G.appendChild(SVG_drawRect("TP", transportationTime * -1, 3 * unitY, transportationTime, 4 * unitY));
-    startActivity.subtract(transportationTime, "m");
-    G.appendChild(SVG_drawText("act_hour start_hour", transportationTime * -1, 3 * unitY + hourSize, startActivity.format("HH:mm")));
+    if( transportationTime > 0 ) {
+      // before.
+      G.appendChild(SVG_drawRect("TP", transportationTime * -1, 3 * unitY, transportationTime, 4 * unitY));
+      startActivity.subtract(transportationTime, "m");
+      G.appendChild(SVG_drawText("act_hour start_hour", transportationTime * -1, 3 * unitY + hourSize, startActivity.format("HH:mm")));
 
-    // after.
-    G.appendChild(SVG_drawRect("TP", activity.duration, 7 * unitY, transportationTime, 4 * unitY));
-    endActivity.add(transportationTime, "m");
-    G.appendChild(SVG_drawText("act_hour end_hour", activity.duration + transportationTime , 11 * unitY - endMargin, endActivity.format("HH:mm")));
+      // after.
+      G.appendChild(SVG_drawRect("TP", activity.duration, 7 * unitY, transportationTime, 4 * unitY));
+      endActivity.add(transportationTime, "m");
+      G.appendChild(SVG_drawText("act_hour end_hour", activity.duration + transportationTime , 11 * unitY - endMargin, endActivity.format("HH:mm")));
+    }
   }
 
   // rest before
@@ -1392,7 +1413,8 @@ var configurationModel = declare(Model, {
     MenuBusinessObjectCreateActivityVacation      : { type : "boolean", default : false, },
     MenuBusinessObjectCreateActivityTrip          : { type : "boolean", default : false, },
     MenuBusinessObjectCreateActivityTraining      : { type : "boolean", default : false, },
-    MenuBusinessObjectCreateActivityStandBy       : { type : "boolean", default : true, },
+    MenuBusinessObjectCreateActivityReserve       : { type : "boolean", default : false, },
+    MenuBusinessObjectCreateActivityTaskGroup     : { type : "boolean", default : true, },
     MenuGraphOption                               : { type : "boolean", default : true, },
     MenuGraphOptionCalendar                       : { type : "boolean", default : false, },
     MenuGraphOptionActivity                       : { type : "boolean", default : false, },
@@ -1925,6 +1947,7 @@ registry.byId("DayOffCrewMemberSelect").set("store", crewMemberStoreAdapter);
 registry.byId("TrainingCrewMemberSelect").set("store", crewMemberStoreAdapter);
 registry.byId("TripCrewMemberSelect").set("store", crewMemberStoreAdapter);
 registry.byId("VacationCrewMemberSelect").set("store", crewMemberStoreAdapter);
+registry.byId("ReserveCrewMemberSelect").set("store", crewMemberStoreAdapter);
 
 
 //
@@ -2082,7 +2105,25 @@ var activityModel = declare(Model, {
     var self = this;
     var copy = Object.create(self);
 
-    if( copy.type == TRAINING ) {
+    if( copy.type == RESERVE ) {
+      var start =  moment(copy.lbtStart);
+
+      copy.set({
+        start_date: start.toDate(),
+        start_time: start.toDate(),
+        rest_before_hour: parseInt(copy.restBefore / 60),
+        rest_before_minute: copy.restBefore % 60,
+        rest_after_hour: parseInt(copy.restAfter / 60),
+        rest_after_minute: copy.restAfter % 60,
+        duration_hour: parseInt(copy.duration / 60),
+        duration_minute: copy.duration % 60,
+      });
+      if( copy.transportationTime ){
+        copy.transportationTime = "true";
+      }
+      registry.byId('ReserveForm').set('value', copy);
+    }
+    else if( copy.type == TRAINING ) {
       var start =  moment(copy.lbtStart);
 
       copy.set({
@@ -2156,6 +2197,9 @@ var activityModel = declare(Model, {
     if( type == "Training" ){
       self.ConvertTrainingFormToModel();
     }
+    else if( type == "Reserve"){
+      self.ConvertReserveFormToModel();
+    }
     else if( type == "Trip"){
       self.ConvertTripFormToModel();
     }
@@ -2200,6 +2244,47 @@ var activityModel = declare(Model, {
     self.utcStart = startDateTimeTraining.utc().format("YYYY-MM-DD HH:mm");
     self.utcEnd   = endDateTimeTraining.utc().format("YYYY-MM-DD HH:mm");
     self.x        = getPositionX(startDateTimeTraining);
+
+    var fullName = fk_cm ? crewMemberStore.getSync(fk_cm).name : "Open time";
+    fullName += " -- " + self.lbtStart + " -- " + self.name;
+
+    self.fullName = fullName;
+    self.SetLineNb();
+  },
+
+  ConvertReserveFormToModel : function() {
+    var self = this;
+
+    if( typeof(self.pk) == 'undefined' ) {
+      self.type = RESERVE;
+      self.pk = activityStore.GetNextPKSequence();
+    }
+
+    var formObject = domForm.toObject("ReserveForm");
+
+    self.name = formObject.name;         
+
+    var fk_cm = Number(formObject.fk_cm);
+
+    self.fk_cm = fk_cm;
+    self.midnightOffset = false;
+    self.transportationTime = formObject.transportationTime == "true";
+
+    var duration = Number(formObject.duration_hour) * 60 + Number(formObject.duration_minute);
+
+    self.duration   = duration;
+    self.restBefore = Number(formObject.rest_before_hour) * 60 + Number(formObject.rest_before_minute);
+    self.restAfter  = Number(formObject.rest_after_hour) * 60 + Number(formObject.rest_after_minute);
+
+    var startDateTimeReserve  = moment.tz(formObject.start_date + formObject.start_time, timezoneStore.getSync(config.CalendarTimezone).name);
+    var endDateTimeReserve    = startDateTimeReserve.clone().add(self.duration, 'm');
+
+
+    self.lbtStart = startDateTimeReserve.format("YYYY-MM-DD HH:mm");
+    self.lbtEnd   = endDateTimeReserve.format("YYYY-MM-DD HH:mm");
+    self.utcStart = startDateTimeReserve.utc().format("YYYY-MM-DD HH:mm");
+    self.utcEnd   = endDateTimeReserve.utc().format("YYYY-MM-DD HH:mm");
+    self.x        = getPositionX(startDateTimeReserve);
 
     var fullName = fk_cm ? crewMemberStore.getSync(fk_cm).name : "Open time";
     fullName += " -- " + self.lbtStart + " -- " + self.name;
@@ -4144,6 +4229,8 @@ registry.byId("CalendarStart").on("change", function() {
 
   registry.byId("TrainingStartDate").constraints.min = this.get("value");
   registry.byId("TrainingStartDate").dropDownDefaultValue = this.get("value");
+  registry.byId("ReserveStartDate").constraints.min = this.get("value");
+  registry.byId("ReserveStartDate").dropDownDefaultValue = this.get("value");
   registry.byId("TripStartDate").constraints.min = this.get("value");
   registry.byId("TripStartDate").dropDownDefaultValue = this.get("value");
   registry.byId("VacationStartDate").constraints.min = this.get("value");
@@ -4156,6 +4243,7 @@ registry.byId("CalendarEnd").on("change", function() {
   registry.byId("CalendarStart").constraints.max = maxDate;
 
   registry.byId("TrainingStartDate").constraints.max = maxDate;
+  registry.byId("ReserveStartDate").constraints.max = maxDate;
   registry.byId("TripStartDate").constraints.max = maxDate;
   registry.byId("VacationStartDate").constraints.max = maxDate;
   registry.byId("VacationEndDate").constraints.max = this.get("value");
@@ -4336,7 +4424,7 @@ function SetUpCrewMemberDialog(pk_item) {
 }
 
 
-// connect menu creation training to training dialog
+// connect menu creation crew member to crewmember dialog
 registry.byId("MenuBusinessObjectCreateCrewMember").on("click", function() {
   SetUpCrewMemberDialog(); 
 });
@@ -4530,37 +4618,39 @@ registry.byId("SaveVacation").on("click", function() {
 //    | |   | | \ \  / ____ \  _| |_ | |\  | _| |_ | |\  || |__| |
 //    |_|   |_|  \_\/_/    \_\|_____||_| \_||_____||_| \_| \_____|
 //                                                        
-//                                                           
-function TryEnableDuration() {
-  if(   registry.byId("TrainingStartTime").get("value") != null 
-  && registry.byId("TrainingStartDate").get("value") != null ) {
-    registry.byId("TrainingDurationHour").set("disabled", false);
-    registry.byId("TrainingDurationMinute").set("disabled" , false);
-    registry.byId("TrainingDurationHour").set("readOnly", false);
-    registry.byId("TrainingDurationMinute").set("readOnly", false);
+//       
 
-    UpdateEndDateTime("Training");
+// type can be "Training" or "Reserve".
+function TryEnableDuration(type) {
+  if(   registry.byId(type + "StartTime").get("value") != null 
+     && registry.byId(type + "StartDate").get("value") != null ) {
+    registry.byId(type + "DurationHour").set("disabled", false);
+    registry.byId(type + "DurationMinute").set("disabled" , false);
+    registry.byId(type + "DurationHour").set("readOnly", false);
+    registry.byId(type + "DurationMinute").set("readOnly", false);
+
+    UpdateEndDateTime(type);
   }
 }
 
 
 registry.byId("TrainingStartDate").on("click,mousedown", function() {
-  TryEnableDuration();          
+  TryEnableDuration("Training");          
 });
 
 
 registry.byId("TrainingStartDate").on("change", function(value) {
-  TryEnableDuration();          
+  TryEnableDuration("Training");          
 });
 
 
 registry.byId("TrainingStartTime").on("click,mousedown", function() {
-  TryEnableDuration();          
+  TryEnableDuration("Training");          
 });
 
 
 registry.byId("TrainingStartTime").on("change", function(value) {
-  TryEnableDuration();          
+  TryEnableDuration("Training");          
 });
 
 
@@ -4663,6 +4753,138 @@ registry.byId("CreateTraining").on("click", function() {
 
 registry.byId("SaveTraining").on("click", function() {
   activityStore.Toto("Training");
+});
+
+
+//                                                        
+//  _____   ______   _____  ______  _____ __      __ ______ 
+// |  __ \ |  ____| / ____||  ____||  __ \\ \    / /|  ____|
+// | |__) || |__   | (___  | |__   | |__) |\ \  / / | |__   
+// |  _  / |  __|   \___ \ |  __|  |  _  /  \ \/ /  |  __|  
+// | | \ \ | |____  ____) || |____ | | \ \   \  /   | |____ 
+// |_|  \_\|______||_____/ |______||_|  \_\   \/    |______|
+//                                                         
+//                                                           
+
+registry.byId("ReserveStartDate").on("click,mousedown", function() {
+  TryEnableDuration("Reserve");          
+});
+
+
+registry.byId("ReserveStartDate").on("change", function(value) {
+  TryEnableDuration("Reserve");          
+});
+
+
+registry.byId("ReserveStartTime").on("click,mousedown", function() {
+  TryEnableDuration("Reserve");          
+});
+
+
+registry.byId("ReserveStartTime").on("change", function(value) {
+  TryEnableDuration("Reserve");          
+});
+
+
+registry.byId("ReserveDurationHour").on("click", function() {
+  UpdateEndDateTime("Reserve");
+});
+
+
+registry.byId("ReserveDurationHour").on("change", function(value) {
+  UpdateEndDateTime("Reserve");
+});
+
+
+registry.byId("ReserveDurationMinute").on("click", function() {
+  UpdateEndDateTime("Reserve");
+});
+
+
+registry.byId("ReserveDurationMinute").on("change", function(value) {
+  UpdateEndDateTime("Reserve");
+});
+
+
+function SetUpReserveDialog(item) {
+  if( item ) {
+    ReserveDialog.set("title", "Edit reserve");
+
+    domStyle.set(registry.byId("CreateReserve").domNode,    "display", "none");
+    domStyle.set(registry.byId("DeleteReserve").domNode,    "display", "inline");
+    domStyle.set(registry.byId("DuplicateReserve").domNode, "display", "inline");
+    domStyle.set(registry.byId("SaveReserve").domNode,      "display", "inline");
+
+    domStyle.set("PkReserve", "display", "table-row");
+
+    item.ConvertModelToForm() 
+  } 
+  else {
+    ReserveDialog.set("title", "Create a reserve");
+
+    domStyle.set(registry.byId("CreateReserve").domNode,    "display", "inline");
+    domStyle.set(registry.byId("DuplicateReserve").domNode, "display", "none");
+    domStyle.set(registry.byId("DeleteReserve").domNode,    "display", "none");
+    domStyle.set(registry.byId("SaveReserve").domNode,      "display", "none");
+
+    registry.byId("ReserveDurationHour").set("value", 0);
+    registry.byId("ReserveDurationHour").set("readonly", true);
+    registry.byId("ReserveDurationHour").set("disabled", true);
+    registry.byId("ReserveDurationMinute").set("value", 0);
+    registry.byId("ReserveDurationMinute").set("readonly", true);
+    registry.byId("ReserveDurationMinute").set("disabled", true);
+
+
+    domStyle.set("PkReserve", "display", "none");
+
+    // reset filteringselect Minute of rest before and after. Those two are not set to zero.
+    registry.byId("ReserveRestBeforeM").set("value", 0);
+    registry.byId("ReserveRestAfterM").set("value", 0);
+  }
+
+  ReserveDialog.show();
+}
+
+
+// connect menu creation reserve to reserve dialog
+registry.byId("MenuBusinessObjectCreateActivityReserve").on("click", function() {
+  SetUpReserveDialog(); 
+});
+
+
+registry.byId("DeleteReserve").on("click", function() {
+  activityStore.removeSync(registry.byId("ReservePk").get("value"));
+
+  ReserveDialog.hide();
+
+  topic.publish("refreshGraph");
+});
+
+
+registry.byId("DuplicateReserve").on("click", function() {
+  var source = activityStore.getSync(registry.byId("ReservePk").get("value"));
+
+  var copy = new activityModel(source);
+
+  copy.pk = activityStore.GetNextPKSequence();
+  copy.SetLineNb();
+  copy.fk_yc = undefined;
+
+  activityStore.addSync(copy);
+
+  ReserveDialog.hide();
+
+  topic.publish("refreshGraph");
+});
+
+
+registry.byId("CreateReserve").on("click", function() {
+  activityStore.Toto("Reserve");
+});
+
+
+registry.byId("SaveReserve").on("click", function() {
+  activityStore.Toto("Reserve");
 });
 
      
@@ -5084,7 +5306,7 @@ registry.byId("SaveNote").on("click", function() {
 });
 
 
-// connect menu creation training to training dialog
+// connect menu creation note to note dialog
 registry.byId("MenuHighLightsNote").on("click", function() {
   SetUpNoteDialog(); 
 });
@@ -5398,9 +5620,10 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
               <div id="MenuBusinessObjectCreateActivityDayOff"   data-dojo-type="dijit/MenuItem" data-dojo-props="onClick:function() {CreateDayOffDialog.show();}">Day off</div>
               <div id="MenuBusinessObjectCreateActivityVacation" data-dojo-type="dijit/MenuItem">Vacation</div>
               <div data-dojo-type="dijit/MenuSeparator"></div>
-              <div id="MenuBusinessObjectCreateActivityTraining" data-dojo-type="dijit/MenuItem">Training</div>
-              <div id="MenuBusinessObjectCreateActivityTrip"     data-dojo-type="dijit/MenuItem">Trip</div>
-              <div id="MenuBusinessObjectCreateActivityStandBy"  data-dojo-type="dijit/MenuItem">StandBy</div>
+              <div id="MenuBusinessObjectCreateActivityTraining"  data-dojo-type="dijit/MenuItem">Training</div>
+              <div id="MenuBusinessObjectCreateActivityTrip"      data-dojo-type="dijit/MenuItem">Trip</div>
+              <div id="MenuBusinessObjectCreateActivityReserve"   data-dojo-type="dijit/MenuItem">Reserve</div>
+              <div id="MenuBusinessObjectCreateActivityTaskGroup" data-dojo-type="dijit/MenuItem">TaskGroup</div>
             </div>
           </div>
         </div>
@@ -5550,7 +5773,7 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
   fill-opacity : 0.6;
 }
 
-.SBY {
+.RSV {
   fill         : cyan;
   fill-opacity : 0.8;
 }
@@ -5727,6 +5950,71 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
           <button data-dojo-type="dijit/form/Button" type="button" id="DeleteTraining" class="delete">Delete</button>
           <button data-dojo-type="dijit/form/Button" type="button" id="DuplicateTraining">Duplicate</button>
           <button data-dojo-type="dijit/form/Button" type="button" id="SaveTraining">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- this is a copy of training, for reserve. -->
+    <div data-dojo-type="dijit/Dialog" id="ReserveDialog" data-dojo-id="ReserveDialog" title="Create reserve" style="display: none;" data-dojo-props="onHide: function() {ReserveForm.reset();}" >
+      <div data-dojo-type="dijit/form/Form" id="ReserveForm" data-dojo-id="ReserveForm" encType="multipart/form-data" action="" method="">
+        <table class="dijitDialogPaneContentArea">
+          <tr id="PkReserve">
+            <td><label for="pk">Primary key</label></td>
+            <td><input data-dojo-type="dijit/form/TextBox" name="pk" id="ReservePk" readonly="true" disabled="true"></td>
+          </tr>
+          <tr>
+            <td><label for="name">Name</label></td>
+            <td><input data-dojo-type="dijit/form/TextBox" name="name" id="ReserveName" required="true"></td>
+          </tr>
+          <tr>
+            <td><label for="fk_cm">Crew member</label></td>
+            <td><select data-dojo-type="dijit/form/FilteringSelect" name="fk_cm" id="ReserveCrewMemberSelect" required="false"/></td>
+          </tr>
+          <tr>
+            <td><label for="transportationTime">Transportation time apply</label></td>
+            <td><input data-dojo-type="dijit/form/CheckBox" name="transportationTime" id="ReserveTransportationTime" value="true" required="true"></td>
+          </tr>
+          <tr>
+            <td><label for="restbefore">Rest before</label></td>
+            <td>
+              <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="rest_before_hour" id="ReserveRestBeforeH" value="0" data-dojo-props="" required="true">h&nbsp;
+              <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="rest_before_minute" id="ReserveRestBeforeM" value="0" data-dojo-props="" required="true">m
+            </td>
+          </tr>
+          <tr>
+            <td><label for="start">Start date time</label></td>
+            <td class="datetime">
+              <input id="ReserveStartDate" name="start_date" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"/>
+              <input id="ReserveStartTime" name="start_time" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'hh:mm'"/></td>
+          </tr>
+          <tr>
+            <td><label for="duration">Duration</label></td>
+            <td>
+              <input id="ReserveDurationHour"   class="durationHour" data-dojo-type="dijit/form/ComboBox" name="duration_hour" data-dojo-props="placeHolder:'0'" required="true" readonly="true"/>h&nbsp;
+              <input id="ReserveDurationMinute" class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="duration_minute" data-dojo-props="placeHolder:'0'" required="true" readonly="true"/>m
+            </td>
+          </tr>
+          <tr>
+            <td><label for="end">End date time</label></td>
+            <td class="datetime">
+              <input id="ReserveEndDate" name="end_date" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'" readonly="true" disabled="true"/>
+              <input id="ReserveEndTime" name="end_time" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'hh:mm'" readonly="true" disabled="true"/>
+            </td>
+          </tr>
+          <tr>
+            <td><label for="restafter">Rest after</label></td>
+            <td>
+              <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="rest_after_hour" id="ReserveRestAfterH" value="0" data-dojo-props="" required="true">h&nbsp;
+              <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="rest_after_minute" id="ReserveRestAfterM" value="0" data-dojo-props="" required="true">m
+            </td>
+          </tr>
+        </table>
+
+        <div class="dijitDialogPaneActionBar">
+          <button data-dojo-type="dijit/form/Button" type="button" id="CreateReserve">Create</button>
+          <button data-dojo-type="dijit/form/Button" type="button" id="DeleteReserve" class="delete">Delete</button>
+          <button data-dojo-type="dijit/form/Button" type="button" id="DuplicateReserve">Duplicate</button>
+          <button data-dojo-type="dijit/form/Button" type="button" id="SaveReserve">Save</button>
         </div>
       </div>
     </div>

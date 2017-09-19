@@ -39,7 +39,7 @@ extension-element-prefixes="date">
           <xsl:element name="end-date-lbt"><xsl:value-of select="substring(lbtEnd,1,10)"/></xsl:element>
         </xsl:element>
       </xsl:when>
-      <xsl:when test="type='TRN'">
+      <xsl:when test="type='TRN' or type='RSV'">
         <xsl:element name="task">
           <xsl:element name="activity-type">
             <xsl:attribute name="ref"><xsl:value-of select="type"/></xsl:attribute>
