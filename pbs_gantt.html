@@ -9,13 +9,13 @@
 6 - See what can be done with Remi's tool (python).
 7 - Do not display transportation time if null.
 8 - Provide a widget about duration, instead of 2 selects (hours and minutes).
+9 - Generate a station file with the right date about dst, regarding the dataset.
 -->
 
 <head>
   <meta charset="UTF-8"/> 
   
   <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.12.2/dijit/themes/claro/claro.css"/>
-  <!-- <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.12.2/dijit/tests/css/dijitTests.css"/> -->
   <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.12.2/dojox/form/resources/CheckedMultiSelect.css"/>
   <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.12.2/dojox/form/resources/UploaderFileList.css"/>
   <link rel="stylesheet" href="http://cdn.rawgit.com/SitePen/dgrid/v1.1.0/css/dgrid.css"/>
@@ -988,9 +988,9 @@ function SVG_drawCalendarDate(item) {
   G.setAttributeNS(null, "class", item.get("dayweek"));
   svg.domCalendar.appendChild(G);
 
-  G.appendChild(SVG_drawText("day_label relative", 720, -70, "Day " + item.get("relative")));
+  G.appendChild(SVG_drawText(item.get("startperiod") ? "day_label relative day_start_period" : "day_label relative", 720, -70, "Day " + item.get("relative")));
 
-  var day_label = SVG_drawText("day_label yyyymmdd", 720, -20, item.get("name"));
+  var day_label = SVG_drawText(item.get("startperiod") ? "day_label yyyymmdd day_start_period" : "day_label yyyymmdd", 720, -20, item.get("name"));
   day_label.setAttributeNS(null, "style", "font-size: " + GetFontSize());
   G.appendChild(day_label);
 
@@ -1007,11 +1007,16 @@ function SVG_drawCalendarDate(item) {
   // a specific group.
   var Gbar     = document.createElementNS(svgNS, "g");
   Gbar.setAttributeNS(null, "transform", "translate(" + CompressX(item.x) + ",0)");
-  Gbar.setAttributeNS(null, "class", item.get("startperiod") ? "start_period" : item.get("type"));
+  Gbar.setAttributeNS(null, "class", item.get("type"));
   Gbar.setAttributeNS(null, "id", item.get("barident"));
   svg.domCalendarBar.appendChild(Gbar);
 
-  Gbar.appendChild(SVG_drawRect("day_bar " + item.get("dayweek"), 0, 0, item.width, 1));
+  var classValues = "day_bar " + item.get("dayweek");
+  if( item.get("startperiod") ) {
+    classValues += " start_period";
+  }
+  Gbar.appendChild(SVG_drawRect(classValues, 0, 0, item.width, 1));
+
   Gbar.appendChild(SVG_drawRect("line", 0, 0, 1, 1));
   Gbar.appendChild(SVG_drawRect("line", item.width, 0, 1, 1));
 
@@ -5446,8 +5451,12 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
   fill-opacity : 0.5;
 }
 
+.day_start_period {
+  fill : green;
+}
+
 .start_period {
-  fill         : green;
+  fill         : green !important;
   fill-opacity : 0.4;
 }
 
@@ -5595,7 +5604,8 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
 }
 
 #calendar > .weekend {
-  fill : black; 
+  fill : black;
+  font-weight: bold;
 }
         </style>
 
