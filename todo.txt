@@ -2,7 +2,11 @@
 
 wget https://raw.githubusercontent.com/dojo/dijit/master/_TimePicker.js
 
+https://download.dojotoolkit.org/release-1.7.8/dojo-release-1.7.8/dijit/tests/form/test_Button.html
+tests/css/dijitTests.cssfor + icon.
 
-
-
+ascii font
 http://patorjk.com/software/taag/#p=display&h=1&f=Big&t=MODEL%20%26%20STORE%0A%0A
+
+writing widget.
+https://www.ibm.com/developerworks/websphere/techjournal/1209_weller/1209_weller.html

@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" /> 
+  
+  <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.12.2/dijit/themes/claro/claro.css" />
+  <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.12.2/dojox/form/resources/CheckedMultiSelect.css" />
+  <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.12.2/dojox/form/resources/UploaderFileList.css" />
+  <link rel="stylesheet" href="http://cdn.rawgit.com/SitePen/dgrid/v1.1.0/css/dgrid.css" />
+  <link rel="stylesheet" href="http://cdn.rawgit.com/SitePen/dgrid/v1.1.0/css/skins/claro.css" />
+  <link rel="stylesheet" href="http://codemirror.net/lib/codemirror.css"/>
+  <link rel="stylesheet" href="http://codemirror.net/addon/fold/foldgutter.css" />
+
+
+  <script>
+var dojoConfig = {
+  async: true, 
+  debug: true,
+  packages: [{
+    name: "dstore",
+    location: "https://cdn.rawgit.com/SitePen/dstore/v1.1.1"
+  }, {
+    name: "dmodel",
+    location: "https://cdn.rawgit.com/SitePen/dmodel/master"
+  }, {
+    name: "dgrid",
+    location: "https://cdn.rawgit.com/SitePen/dgrid/v1.1.0"
+  }, {
+    name: "moment",
+    location: "https://cdn.rawgit.com/moment/moment/2.17.1",
+    main: "moment"
+  }, {
+    name: "moment-timezone",
+    location: "https://cdn.rawgit.com/moment/moment-timezone/0.5.10",
+    main: "timezone"
+  }, {
+    name: "codemirror",
+    location: "http://codemirror.net/",
+  }, {
+    name: "vkbeautify",
+    location: "https://cdn.rawgit.com/vkiryukhin/vkBeautify/0a238953",
+  }, {
+    name: "jszip",
+    location: "https://cdn.rawgit.com/Stuk/jszip/v3.1.3/dist/",
+  }, {
+    name: "filesaver",
+    location: "https://cdn.rawgit.com/eligrey/FileSaver.js/1.3.3",
+  }
+  ]
+};
+  </script>
+
+  <script src="http://ajax.googleapis.com/ajax/libs/dojo/1.12.2/dojo/dojo.js"></script>
+
+
+  <script>
+require([
+  "dojo/text!dijit/form/templates/DropDownBox.html", // added
+  "dojo/_base/declare",
+  "dojo/_base/lang",
+  "dojo/window",
+  "dojo/sniff",
+  "dojo/on",
+  "dojo/topic",
+  "dojo/touch",
+  "dojo/keys",
+  "dojo/dom",
+  "dojo/dom-class", // added
+  "dojo/dom-style",
+  "dojo/dom-construct",
+  "dojo/dom-geometry",
+  "dojo/dom-form",
+  "dojo/json",
+  "dojo/parser",
+  "dojo/request/script",
+  "dojo/date",
+  "dojo/date/stamp", // added.
+  "dojo/Stateful", 
+  "dojo/query", 
+  "dojo/data/ObjectStore", 
+  "dojo/store/Memory", 
+  "dojo/store/Observable",
+  "dijit/_Widget",
+  "dijit/_TimePicker",
+  "dijit/_HasDropDown", // added
+  "dijit/form/_ListMouseMixin", // added
+  "dijit/form/_DateTimeTextBox",
+  "dijit/registry",
+  "dijit/Dialog",
+  "dijit/form/Button",
+  "dijit/form/Select",
+  "dijit/form/FilteringSelect",
+  "dijit/form/ComboBox",
+  "dijit/form/RangeBoundTextBox", // added
+  "dojox/xml/parser", 
+  "dojox/widget/Standby",
+  "dojox/form/CheckedMultiSelect",
+  "dstore/Memory",
+  "dstore/Trackable",
+  "dstore/legacy/DstoreAdapter",
+  "dmodel/Model",
+  "dmodel/ComputedProperty",
+  "dgrid/OnDemandGrid", 
+  "dgrid/Selection", 
+  "dgrid/Keyboard", 
+  "dgrid/Editor", 
+  "dgrid/extensions/CompoundColumns",
+  "moment/moment",
+  "moment-timezone/builds/moment-timezone-with-data",
+  "codemirror/lib/codemirror",
+  "jszip/jszip",
+  "filesaver/FileSaver",
+  
+  "dojo/domReady!",
+
+  "dijit/MenuBar",
+  "dijit/PopupMenuBarItem",
+  "dijit/Menu",
+  "dijit/MenuItem",
+  "dijit/MenuBarItem",
+  "dijit/DropDownMenu",
+  "dijit/CheckedMenuItem",
+  "dijit/ColorPalette",
+  "dijit/form/Form",
+  "dijit/form/CheckBox",
+  "dijit/form/TextBox",
+  "dijit/form/DateTextBox",
+  "dijit/form/TimeTextBox",
+  "dijit/form/DropDownButton",
+  "dijit/form/RadioButton",
+  "dijit/layout/TabContainer", 
+  "dijit/layout/ContentPane", 
+  "dijit/Editor",
+  "dijit/ColorPalette",
+  "dijit/TooltipDialog",
+  "dojox/layout/TableContainer",
+  "dojox/form/Uploader",
+  "dojox/form/uploader/FileList",
+  "codemirror/mode/xml/xml",
+  "codemirror/addon/fold/xml-fold",
+  "codemirror/addon/edit/matchtags",
+  "codemirror/addon/fold/foldgutter",
+  "codemirror/addon/fold/brace-fold",
+  "vkbeautify/vkbeautify",
+], function(
+  // dojo section
+  template,
+  declare,
+  lang,
+  win,
+  has,
+  on, 
+  topic,
+  touch,
+  keys,
+  dom,
+  domClass, 
+  domStyle,
+  domConstruct,
+  domGeom,
+  domForm,
+  json,
+  parser, 
+  script,
+  date,
+  stamp,
+  Stateful,
+  query,
+  ObjectStore, 
+  LegacyMemory,
+  LegacyObservable,
+  // dijit section
+  _WidgetBase,
+  _TimePicker,
+  _HasDropDown,
+  _ListMouseMixin,
+  _DateTimeTextBox,
+  registry, 
+  Dialog,
+  Button,
+  Select,
+  FilteringSelect,
+  ComboBox,
+  RangeBoundTextBox,
+  // dojox section
+  xmlparser,
+  Standby,
+  CheckedMultiSelect,
+  // dstore section
+  Memory,
+  Trackable,
+  DstoreAdapter,
+  // dmodel section
+  Model,
+  ComputedProperty,
+  // dgrid section
+  OnDemandGrid, 
+  Selection, 
+  Keyboard, 
+  Editor, 
+  CompoundColumns,
+  // moment section
+  moment,
+  timezone,
+  // codemirror section 
+  CodeMirror,
+  JSZip,
+  FileSaver
+//  ganttSVG
+  ) {
+
+
+
+
+
+
+
+
+// ==============================================================================================================
+
+
+	declare("_DurationPicker", [_WidgetBase, _ListMouseMixin], {
+		// summary:
+		//		A time picker dropdown, used by dijit/form/TimeTextBox.
+		//		This widget is not available as a standalone widget due to lack of accessibility support.
+
+		// baseClass: [protected] String
+		//		The root className to use for the various states of this widget
+		baseClass: "dijitTimePicker",
+
+		// pickerMin: String
+		//		ISO-8601 string representing the time of the first
+		//		visible element in the time picker.
+		//		Set in local time, without a time zone.
+		//// pickerMin: "T00:00:00",
+		pickerMin: 0,
+
+		// pickerMax: String
+		//		ISO-8601 string representing the last (possible) time
+		//		added to the time picker.
+		//		Set in local time, without a time zone.
+		pickerMax: 100*60,
+
+		// clickableIncrement: String
+		//		ISO-8601 string representing the interval between choices in the time picker.
+		//		Set in local time, without a time zone.
+		//		Example: `T00:15:00` creates 15 minute increments
+		//		Must divide dijit/_DurationPicker.visibleIncrement evenly
+		clickableIncrement: 15,
+
+		// visibleIncrement: String
+		//		ISO-8601 string representing the interval between "major" choices in the time picker.
+		//		Each theme will highlight the major choices with a larger font / different color / etc.
+		//		Set in local time, without a time zone.
+		//		Example: `T01:00:00` creates text in every 1 hour increment
+		visibleIncrement: 60,
+
+		// value: String
+		//		Time to display.
+		//		Defaults to current time.
+		//		Can be a Date object or an ISO-8601 string.
+		//		If you specify the GMT time zone (`-01:00`),
+		//		the time will be converted to the local time in the local time zone.
+		//		Otherwise, the time is considered to be in the local time zone.
+		//		If you specify the date and isDate is true, the date is used.
+		//		Example: if your local time zone is `GMT -05:00`,
+		//		`T10:00:00` becomes `T10:00:00-05:00` (considered to be local time),
+		//		`T10:00:00-01:00` becomes `T06:00:00-05:00` (4 hour difference),
+		//		`T10:00:00Z` becomes `T05:00:00-05:00` (5 hour difference between Zulu and local time)
+		//		`yyyy-mm-ddThh:mm:ss` is the format to set the date and time
+		//		Example: `2007-06-01T09:00:00`
+		value: new Number(0),
+
+		_visibleIncrement: 2,
+		_clickableIncrement: 1,
+		_totalIncrements: 10,
+
+		// constraints: TimePicker.__Constraints
+		//		Specifies valid range of times (start time, end time), and also used by TimeTextBox to pass other
+		//		options to the TimePicker: pickerMin, pickerMax, clickableIncrement, and visibleIncrement.
+		constraints: {},
+
+		/*=====
+		 serialize: function(val, options){
+			 // summary:
+			 //		User overridable function used to convert the attr('value') result to a String
+			 // val: Date
+			 //		The current value
+			 // options: Object?
+			 // tags:
+			 //		protected
+		 },
+		 =====*/
+		serialize: stamp.toISOString,
+
+		/*=====
+		 // filterString: string
+		 //		The string to filter by
+		 filterString: "",
+		 =====*/
+
+		buildRendering: function(){
+			this.inherited(arguments);
+			this.containerNode = this.domNode;	// expected by _ListBase
+			this.timeMenu = this.domNode;	// for back-compat
+		},
+
+		setValue: function(/*Date*/ value){
+			// summary:
+			//		Deprecated.  Used set('value') instead.
+			// tags:
+			//		deprecated
+			kernel.deprecated("dijit._DurationPicker:setValue() is deprecated.  Use set('value', ...) instead.", "", "2.0");
+			this.set('value', value);
+		},
+
+		_setValueAttr: function(/*Date*/ value){
+			// summary:
+			//		Hook so set('value', ...) works.
+			// description:
+			//		Set the value of the TimePicker.
+			//		Redraws the TimePicker around the new date.
+			// tags:
+			//		protected
+			this._set("value", value);
+			this._showText();
+		},
+
+		_setFilterStringAttr: function(val){
+			// summary:
+			//		Called by TimeTextBox to filter the values shown in my list
+			this._set("filterString", val);
+			this._showText();
+		},
+/*
+		isDisabledDate: function(){
+			// summary:
+			//		May be overridden to disable certain dates in the TimePicker e.g. `isDisabledDate=locale.isWeekend`
+			// dateObject: Date
+			// locale: String?
+			// type:
+			//		extension
+			return false; // Boolean
+		},
+*/
+		_getFilteredNodes: function(/*number*/ start, /*number*/ maxNum, /*Boolean*/ before, /*DOMNode*/ lastNode){
+			// summary:
+			//		Returns a DocumentFragment of nodes with the filter applied.  At most maxNum nodes
+			//		will be returned - but fewer may be returned as well.  If the
+			//		before parameter is set to true, then it will return the elements
+			//		before the given index
+			// tags:
+			//		private
+
+			var nodes = this.ownerDocument.createDocumentFragment();
+
+			for(var i = 0 ; i < this._maxIncrement; i++){
+				var n = this._createOption(i);
+				if(n){
+					nodes.appendChild(n);
+				}
+			}
+
+			return nodes;
+		},
+
+		_showText: function(){
+			// summary:
+			//		Displays the relevant choices in the drop down list
+			// tags:
+			//		private
+			var fromIso = stamp.fromISOString;
+			this.domNode.innerHTML = "";
+			// get the value of the increments to find out how many divs to create
+			var
+				clickableIncrementSeconds = this.clickableIncrement,
+				visibleIncrementSeconds = this.visibleIncrement,
+				// round reference date to previous visible increment
+				time = this.value || this.currentFocus; // ).getTime();
+
+			this._refDate = this.pickerMin;
+			////this._refDate.setFullYear(1970, 0, 1); // match parse defaults
+
+			// assume clickable increment is the smallest unit
+			this._clickableIncrement = 1;
+			// divide the visible range by the clickable increment to get the number of divs to create
+			// example: 10:00:00/00:15:00 -> display 40 divs
+			// divide the visible increments by the clickable increments to get how often to display the time inline
+			// example: 01:00:00/00:15:00 -> display the time every 4 divs
+			this._visibleIncrement = visibleIncrementSeconds / clickableIncrementSeconds;
+
+			// get the number of increments (i.e. number of entries in the picker)
+			var endDate = this.pickerMax;
+			// endDate.setFullYear(1970, 0, 1);
+			var visibleRange = endDate - this._refDate;
+			this._maxIncrement = Math.ceil((visibleRange + 1) / clickableIncrementSeconds);
+
+			var nodes = this._getFilteredNodes();
+
+			// never show empty due to a bad filter
+			if(!nodes.firstChild && this.filterString){
+				this.filterString = '';
+				this._showText();
+			}else{
+				this.domNode.appendChild(nodes);
+			}
+		},
+
+		constructor: function(/*===== params, srcNodeRef =====*/){
+			// summary:
+			//		Create the widget.
+			// params: Object|null
+			//		Hash of initialization parameters for widget, including scalar values (like title, duration etc.)
+			//		and functions, typically callbacks like onClick.
+			//		The hash can contain any of the widget's properties, excluding read-only properties.
+			// srcNodeRef: DOMNode|String?
+			//		If a srcNodeRef (DOM node) is specified, replace srcNodeRef with my generated DOM tree
+
+			this.constraints = {};
+		},
+
+		postMixInProperties: function(){
+			this.inherited(arguments);
+			this._setConstraintsAttr(this.constraints); // this needs to happen now (and later) due to codependency on _set*Attr calls
+		},
+
+		// For historical reasons TimeTextBox sends all the options for the _DurationPicker inside of a constraints{} object
+		_setConstraintsAttr: function(/* Object */ constraints){
+			// brings in increments, etc.
+			for (var key in { clickableIncrement: 1, visibleIncrement: 1, pickerMin: 1, pickerMax: 1 }) {
+				if (key in constraints) {
+					this[key] = constraints[key];
+				}
+			}
+
+			// locale needs the lang in the constraints as locale
+			if(!constraints.locale){
+				constraints.locale = this.lang;
+			}
+		},
+                __pad2: function(number) {
+                  return (number < 10 ? '0' : '') + number;
+                },
+
+
+
+		_createOption: function(/*Number*/ index){
+			// summary:
+			//		Creates a clickable time option, or returns null if the specified index doesn't match the filter
+			// tags:
+			//		private
+			var date = new Number(this._refDate);
+			var incrementDate = this.clickableIncrement;
+			date += incrementDate * index;
+			var dateString = parseInt(date / 60) + "h" + this.__pad2(date % 60);
+
+			var div = this.ownerDocument.createElement("div");
+			div.className = this.baseClass + "Item";
+			div.date = date;
+			div.idx = index;
+			domConstruct.create('div', {
+				"class": this.baseClass + "ItemInner",
+				innerHTML: dateString
+			}, div);
+
+			var marker = index % this._visibleIncrement < 1 && index % this._visibleIncrement > -1,
+				tick = !marker && !(index % this._clickableIncrement);
+			if(marker){
+				div.className += " " + this.baseClass + "Marker";
+			}else if(tick){
+				div.className += " " + this.baseClass + "Tick";
+			}
+
+			if(this.isDisabledDate(date)){
+				// set disabled
+				div.className += " " + this.baseClass + "ItemDisabled";
+			}
+			if(this.value && this.value == date){
+				div.selected = true;
+				div.className += " " + this.baseClass + "ItemSelected";
+				this._selectedDiv = div;
+				if(marker){
+					div.className += " " + this.baseClass + "MarkerSelected";
+				}else if(tick){
+					div.className += " " + this.baseClass + "TickSelected";
+				}
+
+				// Initially highlight the current value.   User can change highlight by up/down arrow keys
+				// or mouse movement.
+				this._highlightOption(div, true);
+			}
+			return div;
+		},
+
+		onOpen: function(){
+			this.inherited(arguments);
+
+			// Since _ListBase::_setSelectedAttr() calls scrollIntoView(), shouldn't call it until list is visible.
+			this.set("selected", this._selectedDiv);
+		},
+
+		_onOptionSelected: function(/*Object*/ tgt, /*Boolean*/ change){
+			// summary:
+			//		Called when user clicks or keys to an option in the drop down list
+			// tgt: Object
+			//		tgt.target specifies the node that was clicked
+			// change: Boolean
+			//		If true, fire "change" event, otherwise just fire "input" event.
+			// tags:
+			//		private
+			var tdate = tgt.target.date || tgt.target.parentNode.date;
+			if(!tdate || this.isDisabledDate(tdate)){
+				return;
+			}
+			this._set('value', tdate);
+			this.emit("input");
+			if(change) {
+				this._highlighted_option = null;
+				this.set('value', tdate);
+				this.onChange(tdate);
+			}
+		},
+
+		onChange: function(/*Date*/ /*===== time =====*/){
+			// summary:
+			//		Notification that a time was selected.  It may be the same as the previous value.
+			// tags:
+			//		public
+		},
+
+		_highlightOption: function(/*node*/ node, /*Boolean*/ highlight){
+			// summary:
+			//		Turns on/off highlight effect on a node based on mouse out/over event
+			// tags:
+			//		private
+			if(!node){
+				return;
+			}
+			if(highlight){
+				if(this._highlighted_option){
+					this._highlightOption(this._highlighted_option, false);
+				}
+				this._highlighted_option = node;
+			}else if(this._highlighted_option !== node){
+				return;
+			}else{
+				this._highlighted_option = null;
+			}
+			domClass.toggle(node, this.baseClass + "ItemHover", highlight);
+			if(domClass.contains(node, this.baseClass + "Marker")){
+				domClass.toggle(node, this.baseClass + "MarkerHover", highlight);
+			}else{
+				domClass.toggle(node, this.baseClass + "TickHover", highlight);
+			}
+		},
+
+		handleKey: function(/*Event*/ e){
+			// summary:
+			//		Called from `dijit/form/_DateTimeTextBox` to pass a keypress event
+			//		from the `dijit/form/TimeTextBox` to be handled in this widget
+			// tags:
+			//		protected
+			if(e.keyCode == keys.DOWN_ARROW){
+				this.selectNextNode();
+				this._onOptionSelected({target: this._highlighted_option}, false);
+				e.stopPropagation();
+				e.preventDefault();
+				return false;
+			}else if(e.keyCode == keys.UP_ARROW){
+				this.selectPreviousNode();
+				this._onOptionSelected({target: this._highlighted_option}, false);
+				e.stopPropagation();
+				e.preventDefault();
+				return false;
+			}else if(e.keyCode == keys.ENTER || e.keyCode === keys.TAB){
+				// mouse hover followed by TAB is NO selection
+				if(!this._keyboardSelected && e.keyCode === keys.TAB){
+					return true;	// true means don't call stopEvent()
+				}
+
+				// Accept the currently-highlighted option as the value
+				if(this._highlighted_option){
+					this._onOptionSelected({target: this._highlighted_option}, true);
+				}
+
+				// Call stopEvent() for ENTER key so that form doesn't submit,
+				// but not for TAB, so that TAB does switch focus
+				return e.keyCode === keys.TAB;
+			}
+			return undefined;
+		},
+
+		// Implement abstract methods for _ListBase
+		onHover: function(/*DomNode*/ node){
+			this._highlightOption(node, true);
+		},
+
+		onUnhover: function(/*DomNode*/ node){
+			this._highlightOption(node, false);
+		},
+
+		onSelect: function(/*DomNode*/ node){
+			this._highlightOption(node, true);
+		},
+
+		onDeselect: function(/*DomNode*/ node){
+			this._highlightOption(node, false);
+		},
+
+		onClick: function(/*DomNode*/ node){
+			this._onOptionSelected({target: node}, true);
+		}
+	});
+
+	/*=====
+	 TimePicker.__Constraints = declare(locale.__FormatOptions, {
+		 // clickableIncrement: String
+		 //		See `dijit/_DurationPicker.clickableIncrement`
+		 clickableIncrement: "T00:15:00"
+	 });
+	 =====*/
+
+// ==============================================================================================================
+
+	var _DurationTextBox = declare("_DurationTextBox", [RangeBoundTextBox, _HasDropDown], {
+		// summary:
+		//		Base class for validating, serializable, range-bound date or time text box.
+
+		templateString: template,
+
+		// hasDownArrow: [const] Boolean
+		//		Set this textbox to display a down arrow button, to open the drop down list.
+		hasDownArrow: true,
+
+		// Set classes like dijitDownArrowButtonHover depending on mouse action over button node
+		cssStateNodes: {
+			"_buttonNode": "dijitDownArrowButton"
+		},
+
+		/*=====
+		// constraints: _DateTimeTextBox.__Constraints
+		//		Despite the name, this parameter specifies both constraints on the input
+		//		(including starting/ending dates/times allowed) as well as
+		//		formatting options like whether the date is displayed in long (ex: December 25, 2005)
+		//		or short (ex: 12/25/2005) format.  See `dijit/form/_DateTimeTextBox.__Constraints` for details.
+		constraints: {},
+		======*/
+
+		// The constraints without the min/max properties. Used by the compare() method
+		_unboundedConstraints: {},
+
+		// Override ValidationTextBox.pattern.... we use a reg-ex generating function rather
+		// than a straight regexp to deal with locale  (plus formatting options too?)
+                pattern: "\d+|\d+h\d{2}",
+
+		// datePackage: String
+		//		JavaScript namespace to find calendar routines.	 If unspecified, uses Gregorian calendar routines
+		//		at dojo/date and dojo/date/locale.
+		datePackage: "",
+		//		TODO: for 2.0, replace datePackage with dateModule and dateLocalModule attributes specifying MIDs,
+		//		or alternately just get rid of this completely and tell user to use module ID remapping
+		//		via require
+
+		postMixInProperties: function(){
+			this.inherited(arguments);
+			this._set("type", "text"); // in case type="date"|"time" was specified which messes up parse/format
+		},
+
+		// Override _FormWidget.compare() to work for dates/times
+		compare: function(/*Date*/ val1, /*Date*/ val2){
+			var isInvalid1 = this._isInvalidDate(val1);
+			var isInvalid2 = this._isInvalidDate(val2);
+			if (isInvalid1 || isInvalid2){
+				return (isInvalid1 && isInvalid2) ? 0 : (!isInvalid1 ? 1 : -1);
+			}
+			// Format and parse the values before comparing them to make sure that only the parts of the
+			// date that will make the "round trip" get compared.
+			var fval1 = this.format(val1, this._unboundedConstraints),
+				fval2 = this.format(val2, this._unboundedConstraints),
+				pval1 = this.parse(fval1, this._unboundedConstraints),
+				pval2 = this.parse(fval2, this._unboundedConstraints);
+
+			return fval1 == fval2 ? 0 : date.compare(pval1, pval2, this._selector);
+		},
+
+		// flag to _HasDropDown to make drop down Calendar width == <input> width
+		autoWidth: true,
+
+		format: function(/*Date*/ value, /*locale.__FormatOptions*/ constraints){
+			// summary:
+			//		Formats the value as a Date, according to specified locale (second argument)
+			// tags:
+			//		protected
+			return value;
+		},
+
+		"parse": function(/*String*/ value, /*locale.__FormatOptions*/ constraints){
+			// summary:
+			//		Parses as string as a Date, according to constraints
+			// tags:
+			//		protected
+
+			return value; // this.dateLocaleModule.parse(value, constraints) || (this._isEmpty(value) ? null : undefined);	 // Date
+		},
+
+		// Overrides ValidationTextBox.serialize() to serialize a date in canonical ISO format.
+		serialize: function(/*anything*/ val, /*Object?*/ options){
+			if(val.toGregorian){
+				val = val.toGregorian();
+			}
+			return stamp.toISOString(val, options);
+		},
+
+		// dropDownDefaultValue: Date
+		//		The default value to focus in the popupClass widget when the textbox value is empty.
+		dropDownDefaultValue : new Number(),
+
+		// value: Date
+		//		The value of this widget as a JavaScript Date object.  Use get("value") / set("value", val) to manipulate.
+		//		When passed to the parser in markup, must be specified according to `dojo/date/stamp.fromISOString()`
+		value: new Number(),	// value.toString()="NaN"
+
+		_blankValue: null,	// used by filter() when the textbox is blank
+
+		// popupClass: [protected extension] String
+		//		Name of the popup widget class used to select a date/time.
+		//		Subclasses should specify this.
+		popupClass: "", // default is no popup = text only
+
+
+		// _selector: [protected extension] String
+		//		Specifies constraints.selector passed to dojo.date functions, should be either
+		//		"date" or "time".
+		//		Subclass must specify this.
+		_selector: "",
+
+		constructor: function(params /*===== , srcNodeRef =====*/){
+			// summary:
+			//		Create the widget.
+			// params: Object|null
+			//		Hash of initialization parameters for widget, including scalar values (like title, duration etc.)
+			//		and functions, typically callbacks like onClick.
+			//		The hash can contain any of the widget's properties, excluding read-only properties.
+			// srcNodeRef: DOMNode|String?
+			//		If a srcNodeRef (DOM node) is specified, replace srcNodeRef with my generated DOM tree
+
+			params = params || {};
+			this.dateModule = params.datePackage ? lang.getObject(params.datePackage, false) : date;
+			this.dateClassObj = this.dateModule.Date || Date;
+			if(!(this.dateClassObj instanceof Date)){
+				this.value = new this.dateClassObj(this.value);
+			}
+//			this.dateLocaleModule = params.datePackage ? lang.getObject(params.datePackage+".locale", false) : locale;
+			this._set('pattern', this.pattern);
+			this._invalidDate = this.constructor.prototype.value.toString();
+		},
+
+		buildRendering: function(){
+			this.inherited(arguments);
+
+			if(!this.hasDownArrow){
+				this._buttonNode.style.display = "none";
+			}
+
+			// If hasDownArrow is false, we basically just want to treat the whole widget as the
+			// button.
+			if(!this.hasDownArrow){
+				this._buttonNode = this.domNode;
+				this.baseClass += " dijitComboBoxOpenOnClick";
+			}
+		},
+
+		_setConstraintsAttr: function(/*Object*/ constraints){
+			constraints.selector = this._selector;
+			constraints.fullYear = true; // see #5465 - always format with 4-digit years
+			var fromISO = stamp.fromISOString;
+			if(typeof constraints.min == "string"){
+				constraints.min = fromISO(constraints.min);
+				if(!(this.dateClassObj instanceof Date)){
+					constraints.min = new this.dateClassObj(constraints.min);
+				}
+			}
+			if(typeof constraints.max == "string"){
+				constraints.max = fromISO(constraints.max);
+				if(!(this.dateClassObj instanceof Date)){
+					constraints.max = new this.dateClassObj(constraints.max);
+				}
+			}
+			this.inherited(arguments);
+			this._unboundedConstraints = lang.mixin({}, this.constraints, {min: null, max: null});
+		},
+
+		_isInvalidDate: function(/*Date*/ value){
+			// summary:
+			//		Runs various tests on the value, checking for invalid conditions
+			// tags:
+			//		private
+			return !value || isNaN(value) || typeof value != "object" || value.toString() == this._invalidDate;
+		},
+
+		_setValueAttr: function(/*Date|String*/ value, /*Boolean?*/ priorityChange, /*String?*/ formattedValue){
+			// summary:
+			//		Sets the date on this textbox. Note: value can be a JavaScript Date literal or a string to be parsed.
+			if(value !== undefined){
+				if(typeof value == "string"){
+					value = stamp.fromISOString(value);
+				}
+				if(this._isInvalidDate(value)){
+					value = null;
+				}
+				if(value instanceof Date && !(this.dateClassObj instanceof Date)){
+					value = new this.dateClassObj(value);
+				}
+			}
+			this.inherited(arguments, [value, priorityChange, formattedValue]);
+			if(this.value instanceof Date){
+				this.filterString = "";
+			}
+
+			// Set the dropdown's value to match, unless we are being updated due to the user navigating the TimeTextBox
+			// dropdown via up/down arrow keys.
+			if(priorityChange !== false && this.dropDown){
+				this.dropDown.set('value', value, false);
+			}
+		},
+
+		_set: function(attr, value){
+			// Avoid spurious watch() notifications when value is changed to new Date object w/the same value
+			if(attr == "value"){
+				if(value instanceof Date && !(this.dateClassObj instanceof Date)){
+					value = new this.dateClassObj(value);
+				}
+				var oldValue = this._get("value");
+				if(oldValue instanceof this.dateClassObj && this.compare(value, oldValue) == 0){
+					return;
+				}
+			}
+			this.inherited(arguments);
+		},
+
+		_setDropDownDefaultValueAttr: function(/*Date*/ val){
+			if(this._isInvalidDate(val)){
+				// convert null setting into today's date, since there needs to be *some* default at all times.
+				 val = new this.dateClassObj();
+			}
+			this._set("dropDownDefaultValue", val);
+		},
+
+		openDropDown: function(/*Function*/ callback){
+			// rebuild drop down every time, so that constraints get copied (#6002)
+			if(this.dropDown){
+				this.dropDown.destroy();
+			}
+			var PopupProto = lang.isString(this.popupClass) ? lang.getObject(this.popupClass, false) : this.popupClass,
+				textBox = this,
+				value = this.get("value");
+			this.dropDown = new PopupProto({
+				onChange: function(value){
+					// this will cause InlineEditBox and other handlers to do stuff so make sure it's last
+					textBox.set('value', value, true);
+				},
+				id: this.id + "_popup",
+				dir: textBox.dir,
+				lang: textBox.lang,
+				value: value,
+				textDir: textBox.textDir,
+				currentFocus: !this._isInvalidDate(value) ? value : this.dropDownDefaultValue,
+				constraints: textBox.constraints,
+				filterString: textBox.filterString, // for TimeTextBox, to filter times shown
+				datePackage: textBox.datePackage,
+				isDisabledDate: function(/*Date*/ date){
+					// summary:
+					//		disables dates outside of the min/max of the _DateTimeTextBox
+					return !textBox.rangeCheck(date, textBox.constraints);
+				}
+			});
+
+			this.inherited(arguments);
+		},
+
+		_getDisplayedValueAttr: function(){
+			return this.textbox.value;
+		},
+
+		_setDisplayedValueAttr: function(/*String*/ value, /*Boolean?*/ priorityChange){
+			this._setValueAttr(this.parse(value, this.constraints), priorityChange, value);
+		}
+	});
+
+
+// ==============================================================================================================
+
+
+//	declare("DurationTextBox", _DateTimeTextBox, {
+	 declare("DurationTextBox", _DurationTextBox, {
+		// summary:
+		//		A validating, serializable, range-bound time text box with a drop down time picker
+
+		baseClass: "dijitTextBox dijitComboBox", //  dijitTimeTextBox",
+		popupClass: _DurationPicker,
+//		_selector: "time",
+
+/*=====
+		// constraints: TimeTextBox.__Constraints
+		//		Despite the name, this parameter specifies both constraints on the input
+		//		(including minimum/maximum allowed values) as well as
+		//		formatting options.  See `dijit/form/TimeTextBox.__Constraints` for details.
+		constraints:{},
+=====*/
+
+		// value: Date
+		//		The value of this widget as a JavaScript Date object.  Note that the date portion implies time zone and daylight savings rules.
+		//
+		//		Example:
+		// |	new dijit/form/TimeTextBox({value: stamp.fromISOString("T12:59:59", new Date())})
+		//
+		//		When passed to the parser in markup, must be specified according to locale-independent
+		//		`stamp.fromISOString` format.
+		//
+		//		Example:
+		// |	<input data-dojo-type='dijit/form/TimeTextBox' value='T12:34:00'>
+		value: new Number(0),		// value.toString()="NaN"
+		//FIXME: in markup, you have no control over daylight savings
+
+		// Add scrollbars if necessary so that dropdown doesn't cover the <input>
+		maxHeight: -1,
+
+		openDropDown: function(/*Function*/ callback){
+			this.inherited(arguments);
+
+			// Fix #18683
+			var selectedNode = query(".dijitTimePickerItemSelected", this.dropDown.domNode),
+				parentNode=this.dropDown.domNode.parentNode;
+			if(selectedNode[0]){
+				// Center the selected node in the client area of the popup.
+				parentNode.scrollTop=selectedNode[0].offsetTop-(parentNode.clientHeight-selectedNode[0].clientHeight)/2;
+			}else{
+				// There is no currently selected value. Position the list so that the median
+				// node is visible.
+				parentNode.scrollTop=(parentNode.scrollHeight-parentNode.clientHeight)/2;
+                        }
+
+			// For screen readers, as user arrows through values, populate <input> with latest value.
+			this.dropDown.on("input", lang.hitch(this, function(){
+				this.set('value', this.dropDown.get("value"), false);
+			}));
+		},
+
+		_onInput: function(){
+			this.inherited(arguments);
+
+			// set this.filterString to the filter to apply to the drop down list;
+			// it will be used in openDropDown()
+			var val = this.get('displayedValue');
+console.log(val);                        
+			this.filterString = (val && !this.parse(val, this.constraints)) ? val.toLowerCase() : "";
+
+			// close the drop down and reopen it, in order to filter the items shown in the list
+			// and also since the drop down may need to be repositioned if the number of list items has changed
+			// and it's being displayed above the <input>
+			if(this._opened){
+				this.closeDropDown();
+			}
+			this.openDropDown();
+		}
+	});
+
+
+// ==============================================================================================================
+
+
+
+
+    parser.parse().then(function() { 
+    });
+
+    // ===============================================
+    // Set data for duration input.
+    // ===============================================
+    var zeroTo99 = [];
+    for( i = 0; i < 100; ++i ) {
+      zeroTo99.push({name: i, id: i});
+    } 
+    var zeroTo59 = [];
+    for( i = 0; i < 60; ++i ) {
+      zeroTo59.push({name: i, id: i});
+    } 
+
+    var zeroTo59Store = new LegacyMemory({ data: zeroTo59 });
+    var zeroTo99Store = new LegacyMemory({ data: zeroTo99 });
+
+
+
+
+    registry.byId("TrainingRestBeforeH").set("store", zeroTo99Store);
+    registry.byId("TrainingRestAfterH").set("store", zeroTo99Store);
+    registry.byId("TrainingDurationHour").set("store", zeroTo99Store);
+
+    registry.byId("TrainingRestBeforeH").set("regExp", '[0-9]+');
+    registry.byId("TrainingRestAfterH").set("regExp", '[0-9]+');
+    registry.byId("TrainingDurationHour").set("regExp", '[0-9]+');
+
+    registry.byId("TrainingRestBeforeM").set("store", zeroTo59Store);
+    registry.byId("TrainingRestAfterM").set("store", zeroTo59Store);
+    registry.byId("TrainingDurationMinute").set("store", zeroTo59Store);
+
+ 
+
+});
+
+  </script>
+
+</head>
+<body class="claro">
+      <div data-dojo-type="dijit/form/Form" id="TrainingForm" data-dojo-id="TrainingForm" encType="multipart/form-data" action="" method="">
+        <table class="dijitDialogPaneContentArea">
+          <tr id="PkTraining">
+            <td><label for="pk">Primary key</label></td>
+            <td><input data-dojo-type="dijit/form/TextBox" name="pk" id="TrainingPk" readonly="true" disabled="true"></td>
+          </tr>
+          <tr>
+            <td><label for="name">Name</label></td>
+            <td><input data-dojo-type="dijit/form/TextBox" name="name" id="TrainingName" required="true"></td>
+          </tr>
+          <tr>
+            <td><label for="fk_cm">Crew member</label></td>
+            <td><select data-dojo-type="dijit/form/FilteringSelect" name="fk_cm" id="TrainingCrewMemberSelect" required="false"/></td>
+          </tr>
+          <tr>
+            <td><label for="transportationTime">Transportation time apply</label></td>
+            <td><input data-dojo-type="dijit/form/CheckBox" name="transportationTime" id="TrainingTransportationTime" value="true" required="true"></td>
+          </tr>
+          <tr>
+            <td><label for="restbefore">Rest before</label></td>
+            <td>
+              <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="rest_before_hour" id="TrainingRestBeforeH" value="0" data-dojo-props="" required="true">h&nbsp;
+              <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="rest_before_minute" id="TrainingRestBeforeM" value="0" data-dojo-props="" required="true">m
+            </td>
+          </tr>
+          <tr>
+            <td><label for="start">Start date time</label></td>
+            <td class="datetime">
+              <input id="TrainingStartDate" name="start_date" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"/>
+              <input id="TrainingStartTime" name="start_time" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'"/></td>
+          </tr>
+          <tr>
+            <td><label for="duration">Duration</label></td>
+            <td>
+              <input id="TrainingDurationHour"   class="durationHour" data-dojo-type="dijit/form/ComboBox" name="duration_hour" data-dojo-props="placeHolder:'0'" required="true" readonly="true" />h&nbsp;
+              <input id="TrainingDurationMinute" class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="duration_minute" data-dojo-props="placeHolder:'0'" required="true" readonly="true" />m
+            </td>
+          </tr>
+         </tr>
+          <tr>
+            <td><label for="duration1"><b>DurationNew</b></label></td>
+            <td>
+              <input id="TrainingDuration"  class="durationHour" data-dojo-type="DurationTextBox" name="duration_hour" required="true" />
+              <!-- <input id="TrainingStartTime" name="start_time" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'"/></td> -->
+            </td>
+           <tr>
+          <tr>
+            <td><label for="end">End date time</label></td>
+            <td class="datetime">
+              <input id="TrainingEndDate" name="end_date" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'" readonly="true" disabled="true" />
+              <input id="TrainingEndTime" name="end_time" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'00:00'" readonly="true" disabled="true" />
+            </td>
+          </tr>
+          <tr>
+            <td><label for="restafter">Rest after</label></td>
+            <td>
+              <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="rest_after_hour" id="TrainingRestAfterH" value="0" data-dojo-props="" required="true">h&nbsp;
+              <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="rest_after_minute" id="TrainingRestAfterM" value="0" data-dojo-props="" required="true">m
+            </td>
+          </tr>
+        </table>
+
+        <div class="dijitDialogPaneActionBar">
+          <button data-dojo-type="dijit/form/Button" type="button" id="CreateTraining">Create</button>
+          <button data-dojo-type="dijit/form/Button" type="button" id="DeleteTraining" class="delete">Delete</button>
+          <button data-dojo-type="dijit/form/Button" type="button" id="DuplicateTraining">Duplicate</button>
+          <button data-dojo-type="dijit/form/Button" type="button" id="SaveTraining">Save</button>
+        </div>
+      </div>
+</body>
+</html>

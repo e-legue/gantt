@@ -5,11 +5,14 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema"
 xmlns:fn="http://www.w3.org/2005/xpath-functions" 
 extension-element-prefixes="xs fn">
 
-  <xsl:output method="xml" doctype-system="http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd" doctype-public="-//W3C//DTD XHTML 1.0 Transitional//EN" indent="yes"/>
+  <xsl:output method="xml" indent="yes"/>
 
   <xsl:template match="/">
-    <data xmlns="http://www.ad-opt.com/2009/Altitude/data">
-      <xsl:apply-templates select="//activity[type='TRP' and fk_cm=0]"/>
+    <data>
+
+      <xsl:variable name="StartPeriodX" select="//calendar[relative=0]/x"/>
+
+      <xsl:apply-templates select="//activity[type='TRP' and x &gt; $StartPeriodX]"/>
     </data>
   </xsl:template>
 
