@@ -1,15 +1,17 @@
 <html lang="en">
 
 <!-- TODO LIST 
-1 - Provide a default station.xml file.
-2 - Problem on copy/paste trip with line affectation.
-3 - Add note linked with an event.
-4 - Add an event radio "create event on start period" in Calendar/Set start period(s)".
-5 - Add missing tasks, RSV and RSV group.
-6 - See what can be done with Remi's tool (python).
-7 - Do not display transportation time if null.
-8 - Provide a widget about duration, instead of 2 selects (hours and minutes).
-9 - Generate a station file with the right date about dst, regarding the dataset.
+ 1 - Provide a default station.xml file.
+ 2 - Problem on copy/paste trip with line affectation.
+ 3 - Add note linked with an event.
+ 4 - Add an event radio "create event on start period" in Calendar/Set start period(s)".
+ 5 - Add missing tasks, RSV group.
+ 6 - See what can be done with Remi's tool (python).
+ 8 - Provide a widget about duration, instead of 2 selects (hours and minutes).
+ 9 - Generate a station file with the right date about dst, regarding the dataset.
+10 - Disable back navigator.
+   https://stackoverflow.com/questions/12381563/how-to-stop-browser-back-button-using-javascript
+   https://dojotoolkit.org/reference-guide/1.10/dojo/back.html
 -->
 
 <head>
@@ -252,7 +254,6 @@ var dojoConfig = {
 
   <script src="http://ajax.googleapis.com/ajax/libs/dojo/1.12.2/dojo/dojo.js"></script>
 
-
   <script>
 require([
   "dojo/text!./xml/Gantt2Qual.xsl",
@@ -401,6 +402,7 @@ function(
   JSZip,
   FileSaver) {
 
+
 var TRIP     = "TRP";
 var TRAINING = "TRN";
 var RESERVE  = "RSV";
@@ -485,6 +487,7 @@ var FixedCheckedMultiSelect = declare("dojox/form/FixedCheckedMultiSelect", [ Ch
   },
 });
 
+
 // ===============================================
 // Set data for duration input.
 // ===============================================
@@ -499,8 +502,6 @@ for( i = 0; i < 60; ++i ) {
 
 var zeroTo59Store = new LegacyMemory({ data: zeroTo59 });
 var zeroTo99Store = new LegacyMemory({ data: zeroTo99 });
-
-
 
 
 // ===============================================
@@ -698,8 +699,6 @@ for( i = 0; i < array.length; i++) {
 
 var timezoneStoreAdapter = new DstoreAdapter(timezoneStore);
 registry.byId("CalendarTimezone").set("store", timezoneStoreAdapter);
-
-
 
 // ===============================================
 // Display "detail" of activity, or event.
@@ -1971,7 +1970,8 @@ var activityModel = declare(Model, {
     transportationTime : "boolean",
     restBefore         : "numeric",
     restAfter          : "numeric",
-    type               : "string",
+    type               : "string", // main type of activity TRP, TRN, RSV, LVE
+    activityType       : "string",  // for RSV, could be ASBY, HSBY, etc...
     lbtStart           : "string",
     lbtEnd             : "string",
     utcStart           : "string",
@@ -2270,6 +2270,8 @@ var activityModel = declare(Model, {
     self.midnightOffset = false;
     self.transportationTime = formObject.transportationTime == "true";
 
+    self.activityType = formObject.activityType;
+
     var duration = Number(formObject.duration_hour) * 60 + Number(formObject.duration_minute);
 
     self.duration   = duration;
@@ -2304,6 +2306,8 @@ var activityModel = declare(Model, {
     var formObject = domForm.toObject("VacationForm");
 
     self.name = LEAVE;
+
+    self.activityType = formObject.activityType;
 
     self.fk_cm = Number(formObject.fk_cm);
 
@@ -4362,7 +4366,19 @@ registry.byId("SetStartPeriods").on("click", function() {
   var newStarts = registry.byId("CalendarStartPeriods").value;
   var ref =  newStarts.length > 0 ? newStarts[0] : 0; 
 
-  var i = 0; 
+  var i = 0;
+
+  var fCreateEvent = registry.byId("CalendarStartCreateEvent").value;
+
+  var yCoord;
+
+  if( fCreateEvent ) {
+    yCoord = yCoordStore.addSync({
+        pk     : yCoordStore.GetNextPKSequence(),
+        y      : -1,
+        height : HEIGHT_LINE_HL,
+    });
+  }
 
   calendarStore.forEach(function(item) {
     item.set("relative", item.pk - ref);
@@ -4371,6 +4387,16 @@ registry.byId("SetStartPeriods").on("click", function() {
       if( i == 0 ) XStartPeriod = item.x;
       if( i == 1 ) XStartNextPeriod = item.x;  
       i+=1;
+
+      if( fCreateEvent ) {
+        eventStore.addSync({
+            pk          : eventStore.GetNextPKSequence(),
+            label       : "Start period ",
+            long_label  : item.name + " -- Start period", 
+            x           : item.x,
+            fk_yc       : yCoord.pk,
+        });
+      }
     }
     else {
       item.set("startperiod", false);
@@ -4447,28 +4473,6 @@ registry.byId("CreateCrewMember").on("click", function() {
   crewMemberStore.Toto();
 });
 
-
-/*
-registry.byId("CreateCrewMember").on("click", function() {
-  if( !registry.byId("CreateCrewMemberForm").validate() ) {
-    return;
-  }
-
-  // Add the new crew in the store. Event will trigger the drawing.
-  crewMemberStore.addSync({
-    pk        : crewMemberStore.GetNextPKSequence(),
-    name      : registry.byId("CrewMemberName").get("value"),
-    birthdate : registry.byId("CrewMemberBirthDate").get("value").toISOString().substring(0, 10),
-    lineCount : 1,
-  });
-
-  registry.byId("CreateCrewMemberForm").reset();
-
-  topic.publish("refreshGraph");
-
-  CreateCrewMemberDialog.hide();
-});
-*/
 
 //
 //  _____        __     __     ____   ______  ______ 
@@ -5584,6 +5588,7 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
 
 </head>
 <body class="claro">
+
   <div id="loader">
     <div id="loaderInner" style="direction:ltr;">Loading libraries ...</div> 
   </div>
@@ -5623,7 +5628,7 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
               <div id="MenuBusinessObjectCreateActivityTraining"  data-dojo-type="dijit/MenuItem">Training</div>
               <div id="MenuBusinessObjectCreateActivityTrip"      data-dojo-type="dijit/MenuItem">Trip</div>
               <div id="MenuBusinessObjectCreateActivityReserve"   data-dojo-type="dijit/MenuItem">Reserve</div>
-              <div id="MenuBusinessObjectCreateActivityTaskGroup" data-dojo-type="dijit/MenuItem">TaskGroup</div>
+              <div id="MenuBusinessObjectCreateActivityTaskGroup" data-dojo-type="dijit/MenuItem" display="none">TaskGroup</div> 
             </div>
           </div>
         </div>
@@ -5967,6 +5972,18 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
             <td><input data-dojo-type="dijit/form/TextBox" name="name" id="ReserveName" required="true"></td>
           </tr>
           <tr>
+            <td><label for="activityType">Type</label></td>
+            <td>
+              <select data-dojo-type="dijit/form/FilteringSelect" name="activityType" id="ReserveType" required="true">
+                 <option value="RSV">Reserve (RSV)</option>
+                 <option value="SBY">Home standby (SBY)</option>
+                 <option value="ASBY">Airport standby (ASBY)</option>
+                 <option value="TSBY">Standby for training (TSBY)</option>
+                 <option value="USBY">ULR standby (USBY)</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
             <td><label for="fk_cm">Crew member</label></td>
             <td><select data-dojo-type="dijit/form/FilteringSelect" name="fk_cm" id="ReserveCrewMemberSelect" required="false"/></td>
           </tr>
@@ -6261,6 +6278,10 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
           <tr>
             <td><label for="start">Start period date(s)</label></td>
             <td><input multiple="true" data-dojo-type="dojox/form/CheckedMultiSelect" name="start" id="CalendarStartPeriods" size="14"></td>
+          </tr>
+          <tr>
+            <td><label for="create">Create related event(s)</label></td>
+            <td><input id="CalendarStartCreateEvent" name="create" data-dojo-type="dijit/form/CheckBox"></td>
           </tr>
         </table>
 
@@ -6566,6 +6587,18 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
           <tr>
             <td><label for="fk_cm">Crew member</label></td>
             <td><select data-dojo-type="dijit/form/FilteringSelect" name="fk_cm" id="VacationCrewMemberSelect" required="true"/></td>
+          </tr>
+          <tr>
+            <td><label for="activityType">Type</label></td>
+            <td>
+              <select data-dojo-type="dijit/form/FilteringSelect" name="activityType" id="VacationType" required="true">
+                 <option value="LVE">Leave (LVE)</option>
+                 <option value="ULVE">Unpaid leave (ULVE)</option>
+                 <option value="RLV">Requested leave (RLV)</option>
+                 <option value="ELV">Emergency leave (ELV)</option>
+                 <option value="MLV">Maternity/Paternity leave (MLV)</option>
+              </select>
+            </td>
           </tr>
           <tr>
             <td><label for="start_date">Start date</label></td>
