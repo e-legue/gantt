@@ -1,9 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xsl:stylesheet version="1.0" 
-xmlns:xsl="http://www.w3.org/1999/XSL/Transform" 
-xmlns:xs="http://www.w3.org/2001/XMLSchema" 
-xmlns:fn="http://www.w3.org/2005/xpath-functions" 
-extension-element-prefixes="xs fn">
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
   <xsl:output method="xml" indent="yes"/>
 
@@ -12,7 +8,7 @@ extension-element-prefixes="xs fn">
 
       <xsl:variable name="StartPeriodX" select="//calendar[relative=0]/x"/>
 
-      <xsl:apply-templates select="//activity[type='TRP' and x &gt; $StartPeriodX]"/>
+      <xsl:apply-templates select="//activity[type='TRP' and not(x &lt; $StartPeriodX)]"/>
     </data>
   </xsl:template>
 
@@ -29,6 +25,10 @@ extension-element-prefixes="xs fn">
     <xsl:param name="ref" />
     <xsl:param name="length" />
 
+    <xsl:message>ARGUMENT relativeUTC</xsl:message>
+    <xsl:message><xsl:value-of select="$ref"></xsl:value-of></xsl:message>
+    <xsl:message><xsl:value-of select="$length"></xsl:value-of></xsl:message>
+
     <xsl:variable name="relative_day"  select="floor(($length - $ref ) div 1440)" />
     <xsl:variable name="hour" select="$length - $ref - $relative_day * 1440" />
 
@@ -42,6 +42,9 @@ extension-element-prefixes="xs fn">
   <xsl:template name="leg">
     <xsl:param name="status" />
     <xsl:param name="ref" />
+
+    <xsl:message>ARGUMENT leg</xsl:message>
+    <xsl:message><xsl:value-of select="$ref"></xsl:value-of></xsl:message>
 
     <xsl:element name="status"><xsl:value-of select="$status" /></xsl:element>
     <xsl:element name="flight-number"><xsl:value-of select="name"></xsl:value-of></xsl:element>
@@ -153,8 +156,8 @@ extension-element-prefixes="xs fn">
           </xsl:call-template>
         </xsl:element>
 
-        <!-- refBeginDayUTC contains x position of the begin day of the trip. This is used to compute relative start/end of legs or lays. -->
-        <xsl:variable name="refBeginDayUTC" select="x - number(substring(utcStart,12,2)) * 60 + number(substring(utcStart,15,2))" />
+        <!-- refBeginDay contains x position of the begin day of the trip. This is used to compute relative start/end of legs or lays. -->
+        <xsl:variable name="refBeginDay" select="xRefUTC" />
 
         <xsl:element name="trip-element-list">
           <xsl:for-each select="//activity[fk_parent=current()/pk]">
@@ -175,7 +178,7 @@ extension-element-prefixes="xs fn">
                   </xsl:element>
                   <xsl:element name="rstart-utc">
                     <xsl:call-template name="relativeUTC">
-                      <xsl:with-param name="ref"    select="$refBeginDayUTC" />
+                      <xsl:with-param name="ref"    select="$refBeginDay" />
                       <xsl:with-param name="length" select="x" />
                     </xsl:call-template>
                   </xsl:element>
@@ -185,7 +188,7 @@ extension-element-prefixes="xs fn">
                 <xsl:element name="leg">
                   <xsl:call-template name="leg">
                     <xsl:with-param name="status">A</xsl:with-param>
-                    <xsl:with-param name="ref" select="$refBeginDayUTC" />
+                    <xsl:with-param name="ref" select="$refBeginDay" />
                   </xsl:call-template>
                 </xsl:element>
               </xsl:when>
@@ -193,7 +196,7 @@ extension-element-prefixes="xs fn">
                 <xsl:element name="leg">
                   <xsl:call-template name="leg">
                     <xsl:with-param name="status">D</xsl:with-param>
-                    <xsl:with-param name="ref" select="$refBeginDayUTC" />
+                    <xsl:with-param name="ref" select="$refBeginDay" />
                   </xsl:call-template>
                 </xsl:element>
               </xsl:when>
