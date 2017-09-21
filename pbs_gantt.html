@@ -256,11 +256,6 @@ var dojoConfig = {
 
   <script>
 require([
-  "dojo/text!./xml/Gantt2Qual.xsl",
-  "dojo/text!./xml/Gantt2Station.xsl",
-  "dojo/text!./xml/Gantt2Trip_sup.xsl",
-  "dojo/text!./xml/Gantt2Trip.xsl",
-  "dojo/text!./xml/Gantt2Acts.xsl",
   "dojo/_base/declare",
   "dojo/window",
   "dojo/sniff",
@@ -275,7 +270,8 @@ require([
   "dojo/dom-class",
   "dojo/json",
   "dojo/parser",
-  "dojo/request/script",
+//   "dojo/request/script",
+  "dojo/request/xhr",
   "dojo/date",
   "dojo/Stateful", 
   "dojo/query", 
@@ -342,12 +338,6 @@ require([
   "vkbeautify/vkbeautify",
 ], 
 function(
-  Gantt2QualXsl,
-  Gantt2StationXsl,
-  Gantt2TripSupXsl,
-  Gantt2TripXsl,
-  Gantt2ActsXsl,
-  // dojo section    
   declare,
   win,
   has,
@@ -362,7 +352,8 @@ function(
   domClass,
   json,
   parser, 
-  script,
+//   script,
+  xhr,
   date,
   Stateful,
   query,
@@ -1965,6 +1956,7 @@ var activityModel = declare(Model, {
     name               : "string",
     fullName           : "string",
     x                  : "numeric",
+    xRefUTC            : "numeric",
     duration           : "numeric",
     midnightOffset     : "boolean",
     transportationTime : "boolean",
@@ -2353,7 +2345,6 @@ var activityModel = declare(Model, {
     var startDateTimeTrip = moment.tz(formObject.start_date + formObject.start_time, timezoneStore.getSync(config.CalendarTimezone).name);
 
     self.lbtStart = startDateTimeTrip.format("YYYY-MM-DD HH:mm");
-    self.utcStart = startDateTimeTrip.utc().format("YYYY-MM-DD HH:mm");
     self.x        = getPositionX(startDateTimeTrip);
 
     var fullName = fk_cm ? crewMemberStore.getSync(fk_cm).name : "Open time";
@@ -2398,6 +2389,8 @@ var activityModel = declare(Model, {
     var endDateTimeTrip = startDateTimeTrip.clone().add(self.duration, 'm');
 
     self.lbtEnd         = endDateTimeTrip.format("YYYY-MM-DD HH:mm");
+    // computation on startDateTimeTrip should be done before using utc()....
+    self.utcStart       = startDateTimeTrip.utc().format("YYYY-MM-DD HH:mm");
     self.utcEnd         = endDateTimeTrip.utc().format("YYYY-MM-DD HH:mm");
     self.block          = block;
     self.credit         = credit;
@@ -2407,11 +2400,13 @@ var activityModel = declare(Model, {
     self.creditInPeriod = creditInPeriod;
     self.dutyInPeriod   = dutyInPeriod;
 
+    self.xRefUTC = getPositionX(moment.tz(self.utcStart.substring(0, 10), "UTC"));
+
     self.SetLineNb();
   },
   SaveDetails : function(fEdit){
     var self = this; // current trip.
-    xDetail = self.x;
+    var xDetail = self.x;
 
     var arrPkDetail = [];
 
@@ -2467,6 +2462,7 @@ var activityModel = declare(Model, {
         item.x         = xDetail;
         item.duration  = width;
         item.station   = items[i].station;
+
         activityStore.putSync(item);
 
         // find pk detail in original list and remove it.
@@ -4189,6 +4185,8 @@ registry.byId("SaveFile").on("click", function() {
   saveAs(blob, filename);   
 
   SaveFileDialog.hide();
+
+  registry.byId("MenuCurrentFile").set("label", filename);
 }, true);
 
 // -----------------------------------------------
@@ -5358,16 +5356,23 @@ function SetUpNoteDialog(pkNote) {
 function ProcessXslt(id, strXml, strXslt) {
   var domParser = new DOMParser();
 
-  var xslt = domParser.parseFromString(strXslt, "text/xml");
   var xml  = domParser.parseFromString(strXml,  "text/xml");
 
   var xsltProcessor = new XSLTProcessor();
-  xsltProcessor.importStylesheet(xslt);
 
-  var fragment = xsltProcessor.transformToDocument(xml);
-  var serializer = new XMLSerializer();
+  var testTransform = document.implementation.createDocument("", "test", null);
+  testTransform.addEventListener("load", onload, false);
+  testTransform.load(strXslt);
 
-  dom.byId(id).nextSibling.CodeMirror.getDoc().setValue(vkbeautify.xml(serializer.serializeToString(fragment))); 
+  function onload() {
+    xsltProcessor.importStylesheet(testTransform);
+          
+    var fragment = xsltProcessor.transformToDocument(xml);
+
+    var serializer = new XMLSerializer();
+
+    dom.byId(id).nextSibling.CodeMirror.getDoc().setValue(vkbeautify.xml(serializer.serializeToString(fragment))); 
+  }
 }
 
 
@@ -5425,11 +5430,11 @@ SaveFileToPIDialog.on("show", function() {
   var serializer = new XMLSerializer();
   var strXml = serializer.serializeToString(svg.dom);
 
-  ProcessXslt('XMLqual',     strXml, Gantt2QualXsl);
-  ProcessXslt('XMLacts',     strXml, Gantt2ActsXsl); 
-  ProcessXslt('XMLtrip',     strXml, Gantt2TripXsl); 
-  ProcessXslt('XMLtrip_sup', strXml, Gantt2TripSupXsl); 
-  ProcessXslt('XMLstation',  strXml, Gantt2StationXsl); 
+  ProcessXslt('XMLqual',     strXml, "xsl/Gantt2Qual.xsl");
+  ProcessXslt('XMLacts',     strXml, "xsl/Gantt2Acts.xsl"); 
+  ProcessXslt('XMLtrip',     strXml, "xsl/Gantt2Trip.xsl"); 
+  ProcessXslt('XMLtrip_sup', strXml, "xsl/Gantt2Trip_sup.xsl"); 
+  ProcessXslt('XMLstation',  strXml, "xsl/Gantt2Station.xsl"); 
 
   s.hide();
 });

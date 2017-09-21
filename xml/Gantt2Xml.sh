@@ -52,13 +52,13 @@ function headerVerbose {
 }
 
 headerVerbose station.xml
-xsltproc $xsl_verbose -o station.xml  Gantt2Station.xsl  $SOURCE_FILE
+xsltproc $xsl_verbose -o station.xml  ../xsl/Gantt2Station.xsl  $SOURCE_FILE
 headerVerbose qual.xml
-xsltproc $xsl_verbose -o qual.xml     Gantt2Qual.xsl     $SOURCE_FILE
+xsltproc $xsl_verbose -o qual.xml     ../xsl/Gantt2Qual.xsl     $SOURCE_FILE
 headerVerbose actc.xml
-xsltproc $xsl_verbose -o acts.xml     Gantt2Acts.xsl     $SOURCE_FILE
+xsltproc $xsl_verbose -o acts.xml     ../xsl/Gantt2Acts.xsl     $SOURCE_FILE
 headerVerbose trip.xml
-xsltproc $xsl_verbose -o trip.xml     Gantt2Trip.xsl     $SOURCE_FILE
+xsltproc $xsl_verbose -o trip.xml     ../xsl/Gantt2Trip.xsl     $SOURCE_FILE
 headerVerbose trip_sup.xml
-xsltproc $xsl_verbose -o trip_sup.xml Gantt2Trip_sup.xsl $SOURCE_FILE
+xsltproc $xsl_verbose -o trip_sup.xml ../xsl/Gantt2Trip_sup.xsl $SOURCE_FILE
 
