@@ -7,6 +7,8 @@
  6 - See what can be done with Remi's tool (python).
  8 - Provide a widget about duration, instead of 2 selects (hours and minutes).
  9 - Generate a station file with the right date about dst, regarding the dataset.
+11 - Use Object inheritance.
+12 - Use XltTransform.js iso load which is deprecated.
 -->
 
 <head>
@@ -3992,7 +3994,7 @@ registry.byId("SHActivityDuties").on("change", function(isChecked) {
 // Load XML station file dialog
 // -----------------------------------------------
 registry.byId("LoadStation").on("click", function() {
-  var upload = registry.byId("uploader");
+  var upload = registry.byId("uploaderStation");
 
   if( typeof(upload) == 'undefined' || typeof(upload._files) == 'undefined' ) {
     alert("Please select an XML file");
@@ -4055,7 +4057,7 @@ registry.byId("LoadStation").on("click", function() {
 // Load SVG file dialog
 // -----------------------------------------------
 registry.byId("LoadSvg").on("click", function() {
-  var upload = registry.byId("uploader2");
+  var upload = registry.byId("uploaderSVG");
 
   if( typeof(upload) == 'undefined' || typeof(upload._files) == 'undefined' ) {
     alert("Please select an SVG file");
@@ -6147,12 +6149,12 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
         <table class="dijitDialogPaneContentArea">
           <tr>
             <td>
-              <input name="uploadedfile" multiple="false" type="file" id="uploader2" data-dojo-type="dojox/form/Uploader" data-dojo-props="label: 'Select an SVG File'"/> 
+              <input name="uploadedfile" multiple="false" type="file" id="uploaderSVG" data-dojo-type="dojox/form/Uploader" data-dojo-props="label: 'Select an SVG File'"/> 
             </td>
           </tr>
           <tr>
             <td>
-              <div id="files2" data-dojo-type="dojox/form/uploader/FileList" uploaderId="uploader2"></div>
+              <div id="files2" data-dojo-type="dojox/form/uploader/FileList" uploaderId="uploaderSVG"></div>
             </td>
           </tr>
         </table>
@@ -6168,22 +6170,33 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
     <div data-dojo-type="dijit/Dialog" id="LoadStationDialog" data-dojo-id="LoadStationDialog" title="Load an XML station file" style="display: none;">
       <div data-dojo-type="dijit/form/Form" id="LoadStationForm" data-dojo-id="LoadStationForm" encType="multipart/form-data" action="" method="">
         <p><b>Warning</b>, this operation will delete the current graph.</p>
-        <table class="dijitDialogPaneContentArea">
-          <tr>
-            <td>
-              <input name="uploadedfile" multiple="false" type="file" id="uploader" data-dojo-type="dojox/form/Uploader" data-dojo-props="label: 'Select an XML File'"/> 
-            </td>
-          </tr>
-          <tr>
-            <td>
-              <div id="files" data-dojo-type="dojox/form/uploader/FileList" uploaderId="uploader"></div>
-            </td>
-          </tr>
-        </table>
+        <div style="width: 350px; height: 300px">
+          <div data-dojo-type="dijit.layout.TabContainer" style="width: 100%; height: 100%;">
+            <div data-dojo-type="dijit.layout.ContentPane" title="User selection" selected="true">
+              <table class="dijitDialogPaneContentArea">
+                <tr>
+                  <td>
+                    <input name="uploadedfile" multiple="false" type="file" id="uploaderStation" data-dojo-id="uploaderStation" data-dojo-type="dojox/form/Uploader" data-dojo-props="label: 'Select an XML File'" onclick="alert('toto');"/> 
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <div id="files" data-dojo-type="dojox/form/uploader/FileList" uploaderId="uploaderStation" onchange="alert('titi');"></div>
+                  </td>
+                </tr>
+              </table>
+              <button data-dojo-type="dijit/form/Button" type="button" id="LoadStation">Load file</button>
+            </div>
+            <div data-dojo-type="dijit.layout.ContentPane" title="template stations">
+              <input type="radio" data-dojo-type="dijit/form/RadioButton" name="drink" id="station128" value="station128.xml" /> <label for="station128">128 stations around the world</label> <br />
+              <input type="radio" data-dojo-type="dijit/form/RadioButton" name="drink" id="station3"   value="station3.xml"   /> <label for="station3">3 stations (AUH, CDG &amp; YUL)</label> <br />
+              <button data-dojo-type="dijit/form/Button" type="button" id="UseStation">Use file</button>
+            </div>
+          </div>
+        </div>
 
         <div class="dijitDialogPaneActionBar">
           <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){LoadStationDialog.hide();}">Cancel</button>
-          <button data-dojo-type="dijit/form/Button" type="button" id="LoadStation">Load file</button>
         </div>
       </div>
     </div>

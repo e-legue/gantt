@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<data xmlns = "http://www.ad-opt.com/2009/Altitude/data">
+       <station id="AUH">
+		<code>AUH</code>
+		<name>Abu Dhabi International Apt</name>
+		<dst-shift>00h00</dst-shift>
+		<dst-start-lst>2013-03-31 02:00</dst-start-lst>
+		<dst-end-lst>2013-10-27 03:00</dst-end-lst>
+		<utc-offset>04h00</utc-offset>
+		<region-list>
+			<region>MDE</region>
+		</region-list>
+	</station>
+	<station id="CDG">
+		<code>CDG</code>
+		<name>Paris Charles de Gaulle Apt</name>
+		<dst-shift>01h00</dst-shift>
+		<dst-start-lst>2013-03-31 02:00</dst-start-lst>
+		<dst-end-lst>2013-10-27 03:00</dst-end-lst>
+		<utc-offset>01h00</utc-offset>
+		<region-list>
+			<region>EUR</region>
+		</region-list>
+	</station>
+	<station id="YUL">
+		<code>YUL</code>
+		<name>Montreal</name>
+		<dst-shift>01h00</dst-shift>
+		<dst-start-lst>2013-03-10 02:00</dst-start-lst>
+		<dst-end-lst>2013-11-03 02:00</dst-end-lst>
+		<utc-offset>-05h00</utc-offset>
+		<region-list>
+			<region>NOA</region>
+		</region-list>
+	</station>
+</data>
