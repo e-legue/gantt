@@ -1,7 +1,7 @@
 <html lang="en">
 
 <!-- TODO LIST 
- 2 - Problem on copy/paste trip with line affectation.
+ 2 - find a nice way to reorganize activities regarding empty lines.
  3 - Add note linked with an event.
  6 - See what can be done with Remi's tool (python).
  8 - Provide a widget about duration, instead of 2 selects (hours and minutes).
@@ -2651,37 +2651,29 @@ activityStore.on("add", function(event) {
       OpenTimeLineCount = Math.max(event.target.lineNb, OpenTimeLineCount);
     }
   }
-
-/*
-  activityStore.filter({lineNb: event.target.lineNb}).fetch().then( function(items) {
-    console.log(event.target);
-    if( items.length == 0 ) {
-      var filter = new activityStore.Filter();
-      var activityStoreFilter = filter.eq('fk_cm', event.target.fk_cm).gt('lineNb', event.target.lineNb);
-
-      activityStore.filter(activityStoreFilter).forEach( function(item) {
-        item.lineNb -= 1;
-      });
-      var cm = crewMemberStore.getSync(event.target.fk_cm);
- 
-      if( cm.lineCount > 1 ) {
-        cm.lineCount -= 1;
-        crewMemberStore.putSync(cm);
-      }
-    }
-  });
-*/
-
-
- // c'est ici que ca doit se passer.....
-
-
-
 });
 
 
 activityStore.on("update", function(event) {
   activityStore.nextPk = Math.max(event.target.pk + 1, activityStore.nextPk); 
+
+ // c'est ici que ca doit se passer.....
+  var cmRef = event.target.fk_cm;
+
+  var iMax = 0;
+  activityStore.filter({fk_cm: cmRef}).sort('lineNb').forEach( function(item) {
+    console.log(item.lineNb);
+    iMax = item.lineNb;
+  });
+
+  if( cmRef ) {
+    var cm = crewMemberStore.getSync(event.target.fk_cm);
+    cm.lineCount = iMax;
+    crewMemberStore.putSync(cm);
+  }
+  else {
+    OpenTimeLineCount = iMax;
+  }
 });
 
 
@@ -2694,11 +2686,17 @@ activityStore.on("delete", function(event) {
       activityStore.filter(activityStoreFilter).forEach( function(item) {
         item.lineNb -= 1;
       });
-      var cm = crewMemberStore.getSync(event.target.fk_cm);
- 
-      if( cm.lineCount > 1 ) {
-        cm.lineCount -= 1;
-        crewMemberStore.putSync(cm);
+
+      if( event.targe.fk_cm) {
+        var cm = crewMemberStore.getSync(event.target.fk_cm);
+   
+        if( cm.lineCount > 1 ) {
+          cm.lineCount -= 1;
+          crewMemberStore.putSync(cm);
+        }
+      }
+      else {
+        OpenTimeLineCount -= 1;
       }
     }
   });
@@ -4349,6 +4347,10 @@ registry.byId("SetCalendar").on("click", function() {
   }
   RemoveIntroMessage();
 
+  
+  var s = registry.byId("basicStandby");
+  s.show();
+
   setFromForm(config, dom.byId("SetCalendarForm"));
 
   var start = moment.tz(config.CalendarStart, timezoneStore.getSync(config.CalendarTimezone).name);
@@ -4421,7 +4423,8 @@ registry.byId("SetCalendar").on("click", function() {
   configurationStore.putSync(config);
 
   topic.publish("refreshGraph");
-
+  
+  s.hide();
   SetCalendarDialog.hide();
 });
 

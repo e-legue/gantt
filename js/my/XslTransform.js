@@ -1,4 +1,4 @@
-dojo.provide("XslTransform");
+// dojo.provide("XslTransform");
 
 dojo.declare("XslTransform", [],
 {
