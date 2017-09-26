@@ -1,7 +1,6 @@
 <html lang="en">
 
 <!-- TODO LIST 
- 1 - Provide a default station.xml file.
  2 - Problem on copy/paste trip with line affectation.
  3 - Add note linked with an event.
  6 - See what can be done with Remi's tool (python).
@@ -3990,6 +3989,60 @@ registry.byId("SHActivityDuties").on("change", function(isChecked) {
   updateDisplay(isChecked, svg.dom.getElementsByClassName("DUTY"));
 }, true);
 
+registry.byId("UseStation").on("click", function() {
+  var formObject = domForm.toObject("LoadStationForm");
+
+  console.log(formObject.tplStation);
+
+  if( formObject.tplStation == undefined ){
+    alert("Please select a template file");
+    return;
+  }
+    
+  var s = registry.byId("basicStandby");
+  s.show();
+
+  // configurationStore.Reset();
+  calendarStore.Reset();
+  activityStore.Reset();
+  crewMemberStore.Reset();
+  eventStore.Reset();
+  distanceStore.Reset();
+  stationStore.Reset(); 
+  noteStore.Reset(); 
+  yCoordStore.Reset();
+
+
+  xhr("references/" + formObject.tplStation, {
+    handleAs: "xml"
+  }).then(function(data){
+    LoadStationStore(data, MODE_XML);
+
+    config.MenuCalendar                = false;
+    config.MenuCalendarSetStartEnd     = false;
+    config.MenuBusinessObject          = true;
+    config.MenuGraphOption             = true;
+    config.MenuHighLights              = true;
+    config.MenuResolution              = true;
+    config.MenuFileSaveSVGFile         = true;
+    config.MenuFileExportToPI          = true;
+    config.MenuCalendarSetStartPeriods = true;
+
+
+    configurationStore.putSync(config);
+
+    s.hide();
+    LoadStationDialog.hide();
+
+
+
+
+  }); 
+
+
+
+});
+
 // -----------------------------------------------
 // Load XML station file dialog
 // -----------------------------------------------
@@ -4030,27 +4083,29 @@ registry.byId("LoadStation").on("click", function() {
       LoadStationStore(xmlDom, MODE_XML);
       
       topic.publish("refreshGraph");
+
+      config.MenuCalendar                = false;
+      config.MenuCalendarSetStartEnd     = false;
+      config.MenuBusinessObject          = true;
+      config.MenuGraphOption             = true;
+      config.MenuHighLights              = true;
+      config.MenuResolution              = true;
+      config.MenuFileSaveSVGFile         = true;
+      config.MenuFileExportToPI          = true;
+      config.MenuCalendarSetStartPeriods = true;
+
+
+      configurationStore.putSync(config);
+
+      s.hide();
+      LoadStationDialog.hide();
+
     };
   })(f);
 
   // Read in the file as a text.
   reader.readAsText(f);
 
-  config.MenuCalendar                = false;
-  config.MenuCalendarSetStartEnd     = false;
-  config.MenuBusinessObject          = true;
-  config.MenuGraphOption             = true;
-  config.MenuHighLights              = true;
-  config.MenuResolution              = true;
-  config.MenuFileSaveSVGFile         = true;
-  config.MenuFileExportToPI          = true;
-  config.MenuCalendarSetStartPeriods = true;
-
-
-  configurationStore.putSync(config);
-
-  s.hide();
-  LoadStationDialog.hide();
 });
 
 // -----------------------------------------------
@@ -6185,12 +6240,12 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
                   </td>
                 </tr>
               </table>
-              <button data-dojo-type="dijit/form/Button" type="button" id="LoadStation">Load file</button>
+              <button data-dojo-type="dijit/form/Button" type="button" id="LoadStation" style="float:right;">Load file</button>
             </div>
             <div data-dojo-type="dijit.layout.ContentPane" title="template stations">
-              <input type="radio" data-dojo-type="dijit/form/RadioButton" name="drink" id="station128" value="station128.xml" /> <label for="station128">128 stations around the world</label> <br />
-              <input type="radio" data-dojo-type="dijit/form/RadioButton" name="drink" id="station3"   value="station3.xml"   /> <label for="station3">3 stations (AUH, CDG &amp; YUL)</label> <br />
-              <button data-dojo-type="dijit/form/Button" type="button" id="UseStation">Use file</button>
+              <input type="radio" data-dojo-type="dijit/form/RadioButton" name="tplStation" id="station128" value="station128.xml" /> <label for="station128">128 stations around the world</label> <br />
+              <input type="radio" data-dojo-type="dijit/form/RadioButton" name="tplStation" id="station3"   value="station3.xml"   /> <label for="station3">3 stations (AUH, CDG &amp; YUL)</label> <br />
+              <button data-dojo-type="dijit/form/Button" type="button" id="UseStation" style="float:right;">Use file</button>
             </div>
           </div>
         </div>
