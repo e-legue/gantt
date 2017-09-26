@@ -243,7 +243,11 @@ var dojoConfig = {
   }, {
     name: "filesaver",
     location: "https://cdn.rawgit.com/eligrey/FileSaver.js/1.3.3",
-  }
+  }, {
+    name: "my", 
+    location: location.pathname.replace(/\/[^/]+$/, '') + "/js/my",
+  },
+
   ]
 };
   </script>
@@ -266,7 +270,6 @@ require([
   "dojo/dom-class",
   "dojo/json",
   "dojo/parser",
-//   "dojo/request/script",
   "dojo/request/xhr",
   "dojo/date",
   "dojo/Stateful", 
@@ -299,6 +302,7 @@ require([
   "codemirror/lib/codemirror",
   "jszip/jszip",
   "filesaver/FileSaver",
+  "my/XslTransform",
   
   "dojo/domReady!",
 
@@ -348,7 +352,6 @@ function(
   domClass,
   json,
   parser, 
-//   script,
   xhr,
   date,
   Stateful,
@@ -384,10 +387,11 @@ function(
   // moment section
   moment,
   timezone,
-  // codemirror section 
+  // other section 
   CodeMirror,
   JSZip,
-  FileSaver) {
+  FileSaver,
+  XslTransform) {
 
 
 var TRIP     = "TRP";
@@ -2550,6 +2554,7 @@ var activityModel = declare(Model, {
       }
     });
 
+
     // Est ce que je dois trouver le plus grand des lineNb qui ne soit pas 
     // l'activite courante pour mettre le nombre de lineCount du crew ?
 
@@ -4642,19 +4647,8 @@ registry.byId("DeleteVacation").on("click", function() {
 
 
 registry.byId("DuplicateVacation").on("click", function() {
-  var source = activityStore.getSync(registry.byId("VacationPk").get("value"));
-
-  var copy = new activityModel(source);
-
-  copy.pk = activityStore.GetNextPKSequence();
-  copy.SetLineNb();
-  copy.fk_yc = undefined;
-
-  activityStore.addSync(copy);
-
-  VacationDialog.hide();
-
-  topic.publish("refreshGraph");
+  registry.byId("VacationPk").set("value", "");        
+  activityStore.Toto("Vacation");
 });
 
 
@@ -4788,19 +4782,8 @@ registry.byId("DeleteTraining").on("click", function() {
 
 
 registry.byId("DuplicateTraining").on("click", function() {
-  var source = activityStore.getSync(registry.byId("TrainingPk").get("value"));
-
-  var copy = new activityModel(source);
-
-  copy.pk = activityStore.GetNextPKSequence();
-  copy.SetLineNb();
-  copy.fk_yc = undefined;
-
-  activityStore.addSync(copy);
-
-  TrainingDialog.hide();
-
-  topic.publish("refreshGraph");
+  registry.byId("TrainingPk").set("value", "");
+  activityStore.Toto("Training");
 });
 
 
@@ -4920,19 +4903,8 @@ registry.byId("DeleteReserve").on("click", function() {
 
 
 registry.byId("DuplicateReserve").on("click", function() {
-  var source = activityStore.getSync(registry.byId("ReservePk").get("value"));
-
-  var copy = new activityModel(source);
-
-  copy.pk = activityStore.GetNextPKSequence();
-  copy.SetLineNb();
-  copy.fk_yc = undefined;
-
-  activityStore.addSync(copy);
-
-  ReserveDialog.hide();
-
-  topic.publish("refreshGraph");
+  registry.byId("ReservePk").set("value", "");        
+  activityStore.Toto("Reserve");
 });
 
 
