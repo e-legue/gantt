@@ -2252,7 +2252,8 @@ var activityModel = declare(Model, {
 
     var formObject = domForm.toObject("ReserveForm");
 
-    self.name = formObject.name;         
+    self.name         = formObject.activityType;         
+    self.activityType = formObject.activityType;
 
     var fk_cm = Number(formObject.fk_cm);
 
@@ -2260,7 +2261,6 @@ var activityModel = declare(Model, {
     self.midnightOffset = false;
     self.transportationTime = formObject.transportationTime == "true";
 
-    self.activityType = formObject.activityType;
 
     var duration = Number(formObject.duration_hour) * 60 + Number(formObject.duration_minute);
 
@@ -2295,8 +2295,7 @@ var activityModel = declare(Model, {
 
     var formObject = domForm.toObject("VacationForm");
 
-    self.name = LEAVE;
-
+    self.name         = formObject.activityType;
     self.activityType = formObject.activityType;
 
     self.fk_cm = Number(formObject.fk_cm);
@@ -2478,15 +2477,16 @@ var activityModel = declare(Model, {
       activityStore.removeSync(arrPkDetail[i]);
     }
   },
-  InitDayOff : function(fk_cm, day) {
+  InitDayOff : function(fk_cm, day, type) {
   // this form is not working in edition, only creation.
     var self = this;
 
     var calendarDay = calendarStore.getSync(day); 
 
     self.type               = DAY_OFF;
+    self.activityType       = type; 
+    self.name               = type;
     self.pk                 = activityStore.GetNextPKSequence();
-    self.name               = DAY_OFF;
     self.fk_cm              = fk_cm;
     self.midnightOffset     = true;
     self.transportationTime = false;
@@ -2651,6 +2651,32 @@ activityStore.on("add", function(event) {
       OpenTimeLineCount = Math.max(event.target.lineNb, OpenTimeLineCount);
     }
   }
+
+/*
+  activityStore.filter({lineNb: event.target.lineNb}).fetch().then( function(items) {
+    console.log(event.target);
+    if( items.length == 0 ) {
+      var filter = new activityStore.Filter();
+      var activityStoreFilter = filter.eq('fk_cm', event.target.fk_cm).gt('lineNb', event.target.lineNb);
+
+      activityStore.filter(activityStoreFilter).forEach( function(item) {
+        item.lineNb -= 1;
+      });
+      var cm = crewMemberStore.getSync(event.target.fk_cm);
+ 
+      if( cm.lineCount > 1 ) {
+        cm.lineCount -= 1;
+        crewMemberStore.putSync(cm);
+      }
+    }
+  });
+*/
+
+
+ // c'est ici que ca doit se passer.....
+
+
+
 });
 
 
@@ -4550,6 +4576,7 @@ registry.byId("CreateDayOff").on("click", function() {
   CreateDayOffDialog.hide();
   var crewMemberPk = parseInt(registry.byId("DayOffCrewMemberSelect").value);
   var days         = registry.byId("DayOffDatesSelect").value; 
+  var type         = registry.byId("DayOffType").value;
 
   // to avoid the "at least one item must be selected" message, form data are save in 
   // local variables before reseting the form.
@@ -4558,7 +4585,7 @@ registry.byId("CreateDayOff").on("click", function() {
   days.forEach(function(day) {
     var activity = new activityModel();
 
-    activity.InitDayOff(crewMemberPk, day);
+    activity.InitDayOff(crewMemberPk, day, type);
 
     activityStore.addSync(activity);
 
@@ -6001,8 +6028,8 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
             <td><input data-dojo-type="dijit/form/TextBox" name="pk" id="ReservePk" readonly="true" disabled="true"></td>
           </tr>
           <tr>
-            <td><label for="name">Name</label></td>
-            <td><input data-dojo-type="dijit/form/TextBox" name="name" id="ReserveName" required="true"></td>
+            <td><label for="fk_cm">Crew member</label></td>
+            <td><select data-dojo-type="dijit/form/FilteringSelect" name="fk_cm" id="ReserveCrewMemberSelect" required="false"/></td>
           </tr>
           <tr>
             <td><label for="activityType">Type</label></td>
@@ -6015,10 +6042,6 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
                  <option value="USBY">ULR standby (USBY)</option>
               </select>
             </td>
-          </tr>
-          <tr>
-            <td><label for="fk_cm">Crew member</label></td>
-            <td><select data-dojo-type="dijit/form/FilteringSelect" name="fk_cm" id="ReserveCrewMemberSelect" required="false"/></td>
           </tr>
           <tr>
             <td><label for="transportationTime">Transportation time apply</label></td>
@@ -6199,24 +6222,24 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
         <p><b>Warning</b>, this operation will delete the current graph.</p>
         <div style="width: 350px; height: 300px">
           <div data-dojo-type="dijit.layout.TabContainer" style="width: 100%; height: 100%;">
-            <div data-dojo-type="dijit.layout.ContentPane" title="User selection" selected="true">
+            <div data-dojo-type="dijit.layout.ContentPane" title="User selection">
               <table class="dijitDialogPaneContentArea">
                 <tr>
                   <td>
-                    <input name="uploadedfile" multiple="false" type="file" id="uploaderStation" data-dojo-id="uploaderStation" data-dojo-type="dojox/form/Uploader" data-dojo-props="label: 'Select an XML File'" onclick="alert('toto');"/> 
+                    <input name="uploadedfile" multiple="false" type="file" id="uploaderStation" data-dojo-id="uploaderStation" data-dojo-type="dojox/form/Uploader" data-dojo-props="label: 'Select an XML File'"/> 
                   </td>
                 </tr>
                 <tr>
                   <td>
-                    <div id="files" data-dojo-type="dojox/form/uploader/FileList" uploaderId="uploaderStation" onchange="alert('titi');"></div>
+                    <div id="files" data-dojo-type="dojox/form/uploader/FileList" uploaderId="uploaderStation"/>
                   </td>
                 </tr>
               </table>
               <button data-dojo-type="dijit/form/Button" type="button" id="LoadStation" style="float:right;">Load file</button>
             </div>
-            <div data-dojo-type="dijit.layout.ContentPane" title="template stations">
+            <div data-dojo-type="dijit.layout.ContentPane" title="Template stations" selected="true">
               <input type="radio" data-dojo-type="dijit/form/RadioButton" name="tplStation" id="station128" value="station128.xml" /> <label for="station128">128 stations around the world</label> <br />
-              <input type="radio" data-dojo-type="dijit/form/RadioButton" name="tplStation" id="station3"   value="station3.xml"   /> <label for="station3">3 stations (AUH, CDG &amp; YUL)</label> <br />
+              <input type="radio" data-dojo-type="dijit/form/RadioButton" name="tplStation" id="station3"   value="station3.xml"   /> <label for="station3">3 stations (AUH, BEG &amp; SEZ)</label> <br />
               <button data-dojo-type="dijit/form/Button" type="button" id="UseStation" style="float:right;">Use file</button>
             </div>
           </div>
@@ -6343,6 +6366,18 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
           <tr>
             <td><label for="crewmemeber">Crew member</label></td>
             <td><select data-dojo-type="dijit/form/FilteringSelect" name="crewmember" id="DayOffCrewMemberSelect" required="true"></td>
+          </tr>
+          <tr>
+            <td><label for="activityType">Type</label></td>
+            <td>
+              <select data-dojo-type="dijit/form/FilteringSelect" name="activityType" id="DayOffType" required="true">
+                 <option value="OFF">Day Off (OFF)<option>
+                 <option value="ROFF">Requested Day Off (ROFF)<option>
+                 <option value="OOFF">Out of base Day Off (OOFF)<option>
+                 <option value=""><option>
+
+              </select>
+            </td>
           </tr>
           <tr>
             <td><label for="start">date(s)</label></td>

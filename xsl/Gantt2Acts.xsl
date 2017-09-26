@@ -27,16 +27,7 @@
       <xsl:when test="type='LAY' or type='LEGA' or type='LEGD' or type='STA'">
         <!-- nothing to do with this activity -->
       </xsl:when>
-      <xsl:when test="type='DO'">
-        <xsl:element name="task">
-          <xsl:element name="activity-type">
-            <xsl:attribute name="ref"><xsl:value-of select="type"/></xsl:attribute>
-          </xsl:element> 
-          <xsl:element name="start-date-lbt"><xsl:value-of select="substring(lbtStart,1,10)"/></xsl:element>
-          <xsl:element name="end-date-lbt"><xsl:value-of select="substring(lbtEnd,1,10)"/></xsl:element>
-        </xsl:element>
-      </xsl:when>
-      <xsl:when test="type='LVE'">
+      <xsl:when test="type='LVE' or type='DO'">
         <xsl:element name="task">
           <xsl:element name="activity-type">
             <xsl:attribute name="ref"><xsl:value-of select="activityType"/></xsl:attribute>
