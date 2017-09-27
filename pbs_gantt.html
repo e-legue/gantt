@@ -2302,12 +2302,10 @@ activityStore.on("add", function(event) {
 activityStore.on("update", function(event) {
   activityStore.nextPk = Math.max(event.target.pk + 1, activityStore.nextPk); 
 
- // c'est ici que ca doit se passer.....
   var cmRef = event.target.fk_cm;
 
   var iMax = 0;
-  activityStore.filter({fk_cm: cmRef}).sort('lineNb').forEach( function(item) {
-    console.log(item.lineNb);
+  activityStore.filter({fk_cm: cmRef, fk_parent: undefined}).sort('lineNb').forEach( function(item) {
     iMax = item.lineNb;
   });
 
