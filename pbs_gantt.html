@@ -67,6 +67,17 @@ var dojoConfig = {
   <script src="http://ajax.googleapis.com/ajax/libs/dojo/1.12.2/dojo/dojo.js"></script>
 
   <script>
+var hours0To99 = [];
+for( i = 0; i < 100; ++i ) {
+  hours0To99.push({name: i, id: i});
+} 
+var minutes0To59 = [];
+for( i = 0; i < 60; ++i ) {
+  minutes0To59.push({name: i, id: i});
+} 
+  </script>  
+
+  <script>
 require([
   "dojo/_base/declare",
   "dojo/window",
@@ -276,27 +287,9 @@ on(window, "resize", function() {
 });
 
 
-
 /*
- * Set data for duration input.
+ * Type of leg
  */
-var zeroTo99 = [];
-for( i = 0; i < 100; ++i ) {
-  zeroTo99.push({name: i, id: i});
-} 
-var zeroTo59 = [];
-for( i = 0; i < 60; ++i ) {
-  zeroTo59.push({name: i, id: i});
-} 
-
-var zeroTo59Store = new LegacyMemory({ data: zeroTo59 });
-var zeroTo99Store = new LegacyMemory({ data: zeroTo99 });
-
-
-
-// ===============================================
-// Type of leg
-// ===============================================
 typeLegStore = new ObjectStore({
   objectStore: LegacyObservable(new LegacyMemory({
     data: {
@@ -318,51 +311,10 @@ parser.parse().then(function() {
 });
 
 
-registry.byId("TrainingRestBeforeH").set("store", zeroTo99Store);
-registry.byId("TrainingRestAfterH").set("store", zeroTo99Store);
-registry.byId("TrainingDurationHour").set("store", zeroTo99Store);
-
-registry.byId("TrainingRestBeforeH").set("regExp", '[0-9]+');
-registry.byId("TrainingRestAfterH").set("regExp", '[0-9]+');
-registry.byId("TrainingDurationHour").set("regExp", '[0-9]+');
-
-registry.byId("TrainingRestBeforeM").set("store", zeroTo59Store);
-registry.byId("TrainingRestAfterM").set("store", zeroTo59Store);
-registry.byId("TrainingDurationMinute").set("store", zeroTo59Store);
-
-registry.byId("ReserveRestBeforeH").set("store", zeroTo99Store);
-registry.byId("ReserveRestAfterH").set("store", zeroTo99Store);
-registry.byId("ReserveDurationHour").set("store", zeroTo99Store);
-
-registry.byId("ReserveRestBeforeH").set("regExp", '[0-9]+');
-registry.byId("ReserveRestAfterH").set("regExp", '[0-9]+');
-registry.byId("ReserveDurationHour").set("regExp", '[0-9]+');
-
-registry.byId("ReserveRestBeforeM").set("store", zeroTo59Store);
-registry.byId("ReserveRestAfterM").set("store", zeroTo59Store);
-registry.byId("ReserveDurationMinute").set("store", zeroTo59Store);
 
 
 
 
-registry.byId("TripRestBeforeH").set("store", zeroTo99Store);
-registry.byId("TripRestAfterH").set("store", zeroTo99Store);
-
-registry.byId("TripRestBeforeH").set("regExp", '[0-9]+');
-registry.byId("TripRestAfterH").set("regExp", '[0-9]+');
-
-registry.byId("TripRestBeforeM").set("store", zeroTo59Store);
-registry.byId("TripRestAfterM").set("store", zeroTo59Store);
-
-registry.byId("transportationTime").set("store", zeroTo99Store);
-registry.byId("reportTime").set("store", zeroTo99Store);
-registry.byId("releaseTime").set("store", zeroTo99Store);
-registry.byId("midnightOffset").set("store", zeroTo99Store);
-
-registry.byId("transportationTime").set("regExp", '[0-9]+');
-registry.byId("reportTime").set("regExp", '[0-9]+');
-registry.byId("releaseTime").set("regExp", '[0-9]+');
-registry.byId("midnightOffset").set("regExp", '[0-9]+');
 
 // ===============================================
 // Install gantt svg data at the right place.
@@ -3510,6 +3462,9 @@ grid.on('dgrid-datachange', function(event) {
   }
 });
 
+var zeroTo59Store = new LegacyMemory({ data: minutes0To59 });
+var zeroTo99Store = new LegacyMemory({ data: hours0To99 });
+
 var columns = [{
   label      : "Station",
   field      : "station",
@@ -5673,6 +5628,10 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
       </svg>
     </div>
 
+    <div data-dojo-type="dojo/store/Memory" data-dojo-props="data: hours0To99" data-dojo-id="HourStore"></div>
+    <div data-dojo-type="dojo/store/Memory" data-dojo-props="data: minutes0To59" data-dojo-id="MinuteStore"></div>
+
+
     <div data-dojo-type="dijit/Dialog" id="TrainingDialog" data-dojo-id="TrainingDialog" title="Create training" style="display: none;" data-dojo-props="onHide: function() {TrainingForm.reset();}" >
       <div data-dojo-type="dijit/form/Form" id="TrainingForm" data-dojo-id="TrainingForm" encType="multipart/form-data" action="" method="">
         <table class="dijitDialogPaneContentArea">
@@ -5695,8 +5654,8 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
           <tr>
             <td><label for="restbefore">Rest before</label></td>
             <td>
-              <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="rest_before_hour" id="TrainingRestBeforeH" value="0" data-dojo-props="" required="true">h&nbsp;
-              <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="rest_before_minute" id="TrainingRestBeforeM" value="0" data-dojo-props="" required="true">m
+              <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="rest_before_hour" id="TrainingRestBeforeH" value="0" data-dojo-props="regExp: '\\d+', store: HourStore" required="true">h&nbsp;
+              <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="rest_before_minute" id="TrainingRestBeforeM" value="0" data-dojo-props="store: MinuteStore" required="true">m
             </td>
           </tr>
           <tr>
@@ -5708,8 +5667,8 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
           <tr>
             <td><label for="duration">Duration</label></td>
             <td>
-              <input id="TrainingDurationHour"   class="durationHour" data-dojo-type="dijit/form/ComboBox" name="duration_hour" data-dojo-props="placeHolder:'0'" required="true" readonly="true"/>h&nbsp;
-              <input id="TrainingDurationMinute" class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="duration_minute" data-dojo-props="placeHolder:'0'" required="true" readonly="true"/>m
+              <input id="TrainingDurationHour"   class="durationHour" data-dojo-type="dijit/form/ComboBox" name="duration_hour" data-dojo-props="regExp: '\\d+', store: HourStore, placeHolder:'0'" required="true" readonly="true"/>h&nbsp;
+              <input id="TrainingDurationMinute" class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="duration_minute" data-dojo-props="store: MinuteStore, placeHolder:'0'" required="true" readonly="true"/>m
             </td>
           </tr>
           <tr>
@@ -5722,8 +5681,8 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
           <tr>
             <td><label for="restafter">Rest after</label></td>
             <td>
-              <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="rest_after_hour" id="TrainingRestAfterH" value="0" data-dojo-props="" required="true">h&nbsp;
-              <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="rest_after_minute" id="TrainingRestAfterM" value="0" data-dojo-props="" required="true">m
+              <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="rest_after_hour" id="TrainingRestAfterH" value="0" data-dojo-props="regExp: '\\d+', store: HourStore" required="true">h&nbsp;
+              <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="rest_after_minute" id="TrainingRestAfterM" value="0" data-dojo-props="store: MinuteStore" required="true">m
             </td>
           </tr>
         </table>
@@ -5768,8 +5727,8 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
           <tr>
             <td><label for="restbefore">Rest before</label></td>
             <td>
-              <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="rest_before_hour" id="ReserveRestBeforeH" value="0" data-dojo-props="" required="true">h&nbsp;
-              <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="rest_before_minute" id="ReserveRestBeforeM" value="0" data-dojo-props="" required="true">m
+              <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="rest_before_hour" id="ReserveRestBeforeH" value="0" data-dojo-props="regExp: '\\d+', store: HourStore" required="true">h&nbsp;
+              <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="rest_before_minute" id="ReserveRestBeforeM" value="0" data-dojo-props="store: MinuteStore" required="true">m
             </td>
           </tr>
           <tr>
@@ -5781,8 +5740,8 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
           <tr>
             <td><label for="duration">Duration</label></td>
             <td>
-              <input id="ReserveDurationHour"   class="durationHour" data-dojo-type="dijit/form/ComboBox" name="duration_hour" data-dojo-props="placeHolder:'0'" required="true" readonly="true"/>h&nbsp;
-              <input id="ReserveDurationMinute" class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="duration_minute" data-dojo-props="placeHolder:'0'" required="true" readonly="true"/>m
+              <input id="ReserveDurationHour"   class="durationHour" data-dojo-type="dijit/form/ComboBox" name="duration_hour" data-dojo-props="regExp: '\\d+', store: HourStore, placeHolder:'0'" required="true" readonly="true"/>h&nbsp;
+              <input id="ReserveDurationMinute" class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="duration_minute" data-dojo-props="store: MinuteStore, placeHolder:'0'" required="true" readonly="true"/>m
             </td>
           </tr>
           <tr>
@@ -5795,8 +5754,8 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
           <tr>
             <td><label for="restafter">Rest after</label></td>
             <td>
-              <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="rest_after_hour" id="ReserveRestAfterH" value="0" data-dojo-props="" required="true">h&nbsp;
-              <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="rest_after_minute" id="ReserveRestAfterM" value="0" data-dojo-props="" required="true">m
+              <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="rest_after_hour" id="ReserveRestAfterH" value="0" data-dojo-props="regExp: '\\d+', store: HourStore" required="true">h&nbsp;
+              <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="rest_after_minute" id="ReserveRestAfterM" value="0" data-dojo-props="store: MinuteStore" required="true">m
             </td>
           </tr>
         </table>
@@ -6141,19 +6100,19 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
         <table class="dijitDialogPaneContentArea">
           <tr>
             <td><label for="transportationTime">Transportation time duration (in minutes)</label></td>
-            <td><input data-dojo-type="dijit/form/ComboBox" name="transportationTime" id="transportationTime" value="0" data-dojo-props="" required="true" style="width: 5em;"></td>
+            <td><input data-dojo-type="dijit/form/ComboBox" name="transportationTime" id="transportationTime" value="0" data-dojo-props="regExp: '\\d+', store: HourStore" required="true" style="width: 5em;"></td>
           </tr>
           <tr>
             <td><label for="reportTime">Report time (in minutes)</label></td>
-            <td><input data-dojo-type="dijit/form/ComboBox" name="reportTime" id="reportTime" value="20" data-dojo-props="" required="true" style="width: 5em;"></td>
+            <td><input data-dojo-type="dijit/form/ComboBox" name="reportTime" id="reportTime" value="20" data-dojo-props="regExp: '\\d+', store: HourStore" required="true" style="width: 5em;"></td>
           </tr>
           <tr>
             <td><label for="releaseTime">Release time (in minutes)</label></td>
-            <td><input data-dojo-type="dijit/form/ComboBox" name="releaseTime" id="releaseTime" value="15" data-dojo-props="" required="true" style="width: 5em;"></td>
+            <td><input data-dojo-type="dijit/form/ComboBox" name="releaseTime" id="releaseTime" value="15" data-dojo-props="regExp: '\\d+', store: HourStore" required="true" style="width: 5em;"></td>
           </tr>
           <tr>
             <td><label for="midnightOffset">Midnight offset (in minutes)</label></td>
-            <td><input data-dojo-type="dijit/form/ComboBox" name="midnightOffset" id="midnightOffset" value="0" data-dojo-props="constraints:{max: 1440}" required="true" style="width: 5em;"></td>
+            <td><input data-dojo-type="dijit/form/ComboBox" name="midnightOffset" id="midnightOffset" value="0" data-dojo-props="regExp: '\\d+', store: HourStore, constraints:{max: 1440}" required="true" style="width: 5em;"></td>
           </tr>
         </table>
 
@@ -6298,8 +6257,8 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
           <tr>
             <td><label for="restbefore">Rest before</label></td>
             <td>
-              <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="rest_before_hour" id="TripRestBeforeH" value="0" data-dojo-props="" required="true">h&nbsp;
-              <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="rest_before_minute" id="TripRestBeforeM" value="0" data-dojo-props="" required="true">m
+              <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="rest_before_hour" id="TripRestBeforeH" value="0" data-dojo-props="regExp: '\\d+', store: HourStore" required="true">h&nbsp;
+              <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="rest_before_minute" id="TripRestBeforeM" value="0" data-dojo-props="store: MinuteStore" required="true">m
             </td>
           </tr>
           <tr>
@@ -6323,8 +6282,8 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
           <tr>
             <td><label for="restafter">Rest after</label></td>
             <td>
-              <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="rest_after_hour" id="TripRestAfterH" value="0" data-dojo-props="" required="true">h&nbsp;
-              <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="rest_after_minute" id="TripRestAfterM" value="0" data-dojo-props="" required="true">m
+              <input class="durationHour" data-dojo-type="dijit/form/ComboBox" name="rest_after_hour" id="TripRestAfterH" value="0" data-dojo-props="regExp: '\\d+', store: HourStore" required="true">h&nbsp;
+              <input class="durationMinute" data-dojo-type="dijit/form/FilteringSelect" name="rest_after_minute" id="TripRestAfterM" value="0" data-dojo-props="store: MinuteStore" required="true">m
             </td>
           </tr>
         </table>
