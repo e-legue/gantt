@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="http://cdn.rawgit.com/SitePen/dgrid/v1.1.0/css/skins/claro.css"/>
   <link rel="stylesheet" href="http://codemirror.net/lib/codemirror.css"/>
   <link rel="stylesheet" href="http://codemirror.net/addon/fold/foldgutter.css"/>
-  <link rel="stylesheet" href="css/pbs_gant.css"/>
+  <link rel="stylesheet" href="css/pbs_gantt.css"/>
 
   <script>
 var dojoConfig = {
@@ -114,6 +114,7 @@ require([
   "codemirror/lib/codemirror",
   "jszip/jszip",
   "filesaver/FileSaver",
+  "my/FixedCheckedMultiSelect",
   "my/XslTransform",
   
   "dojo/domReady!",
@@ -203,6 +204,7 @@ function(
   CodeMirror,
   JSZip,
   FileSaver,
+  FixedCheckedMultiSelect,
   XslTransform) {
 
 
@@ -268,27 +270,6 @@ on(window, "resize", function() {
   domStyle.set("gantt", { height: windowSize.h - 6 - 3 * 8 - dom.byId("navMenu").offsetHeight + "px" });
 });
 
-
-/*
- * Fix to support reset on CheckedMultiSelect.
- * source: http://jsfiddle.net/FNL3h/
- */
-var FixedCheckedMultiSelect = declare("dojox/form/FixedCheckedMultiSelect", [ CheckedMultiSelect ], {
-  reset: function() {
-    var self = this;
-    self.inherited(arguments);
-    if (!self._resetValue || !self._resetValue.length) {
-      self._updateSelection();
-    }
-  },
-  validator: function() {
-    var self = this;
-    if (!self.required) {
-      return true;
-    }
-    return self.value.length > 0 ? true : false; 
-  },
-});
 
 
 // ===============================================
@@ -2499,7 +2480,7 @@ activityStore.on("delete", function(event) {
         item.lineNb -= 1;
       });
 
-      if( event.targe.fk_cm) {
+      if( event.target.fk_cm) {
         var cm = crewMemberStore.getSync(event.target.fk_cm);
    
         if( cm.lineCount > 1 ) {
@@ -6203,11 +6184,9 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
             <td><label for="activityType">Type</label></td>
             <td>
               <select data-dojo-type="dijit/form/FilteringSelect" name="activityType" id="DayOffType" required="true">
-                 <option value="OFF">Day Off (OFF)<option>
-                 <option value="ROFF">Requested Day Off (ROFF)<option>
-                 <option value="OOFF">Out of base Day Off (OOFF)<option>
-                 <option value=""><option>
-
+                 <option value="OFF">Day Off (OFF)</option>
+                 <option value="ROFF">Requested Day Off (ROFF)</option>
+                 <option value="OOFF">Out of base Day Off (OOFF)</option>
               </select>
             </td>
           </tr>
