@@ -543,7 +543,7 @@ function GetFormatedDuration(dur) {
 // large enough to insert the duration, the dimension line is
 // extended.
 function SVG_drawDimensionLine(G, pk, xFrom, xTo, y) {
-  var duration        = xTo - xFrom;
+  var duration        = Math.abs(xTo - xFrom);
   var yHorizontalLine = y + HEIGHT_LINE_HL / 2;
 
   // draw measure  <-------  dst -------->
@@ -571,13 +571,15 @@ function SVG_drawDimensionLine(G, pk, xFrom, xTo, y) {
     lblText.setAttributeNS(null,"style", "text-anchor: start");
   }
 
+  var orientation = xFrom < xTo ? 1 : -1; 
+
   // draw arrow.
-  G.appendChild(SVG_drawLine("distance", xFrom, yHorizontalLine, xFrom + xinc, yHorizontalLine + inc));
-  G.appendChild(SVG_drawLine("distance", xFrom, yHorizontalLine, xFrom + xinc, yHorizontalLine - inc ));
+  G.appendChild(SVG_drawLine("distance", xFrom, yHorizontalLine, xFrom + orientation * xinc, yHorizontalLine + inc));
+  G.appendChild(SVG_drawLine("distance", xFrom, yHorizontalLine, xFrom + orientation * xinc, yHorizontalLine - inc ));
 
   // draw second arrow.
-  G.appendChild(SVG_drawLine("distance", xTo, yHorizontalLine, xTo - xinc, yHorizontalLine + inc));
-  G.appendChild(SVG_drawLine("distance", xTo, yHorizontalLine, xTo - xinc, yHorizontalLine - inc));
+  G.appendChild(SVG_drawLine("distance", xTo, yHorizontalLine, xTo - orientation * xinc, yHorizontalLine + inc));
+  G.appendChild(SVG_drawLine("distance", xTo, yHorizontalLine, xTo - orientation * xinc, yHorizontalLine - inc));
 }
 
 // Draw an extension line, used to link activity with dimension line.
@@ -603,13 +605,6 @@ function SVG_drawDistance(item) {
 
   var xFrom = item.GetEventFrom().GetX();
   var xTo   = item.GetEventTo().GetX();
-
-  if( xTo < xFrom ) {
-    var tmp = xFrom;
-
-    xFrom = xTo;
-    xTo   = xFrom;
-  }
 
   var y = item.GetYCoord();
 
