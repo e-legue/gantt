@@ -277,8 +277,7 @@ var svg = {
 
                              
 /*
- * Resize graph size according to window size, then svg graph is the bigger it
- * is possible.
+ * Callback used to update gantt size according to window size.
  */
 on(window, "resize", function() {
   var windowSize = win.getBox();
@@ -287,27 +286,16 @@ on(window, "resize", function() {
 });
 
 
-/*
- * Type of leg
+/* 
+ * As soon as everything is parsed, then remove "loading librairies ..." message and display
+ * the content div, with the rigth 'size' on the svg tag which id is "gantt".
  */
-typeLegStore = new ObjectStore({
-  objectStore: LegacyObservable(new LegacyMemory({
-    data: {
-      identifier: 'type',
-      items: [
-        { 'type': 'A', 'name': 'Active' },
-        { 'type': 'D', 'name': 'Deadhead' },
-      ],
-    }
-  })),
-  labelProperty: "name"
-});
-
-
-
 parser.parse().then(function() { 
   dom.byId("loader").style.display = "none";
   dom.byId("content").style.display = "block";
+
+  // Send an event resize on window to force the call of the previous callback.
+  on.emit(window, "resize", {bubbles: true,cancelable: true});
 });
 
 
@@ -316,10 +304,7 @@ parser.parse().then(function() {
 
 
 
-// ===============================================
-// Install gantt svg data at the right place.
-// ===============================================
-on.emit(window, "resize", {bubbles: true,cancelable: true});
+
 
 
 // ===============================================
@@ -3455,8 +3440,29 @@ grid.on('dgrid-datachange', function(event) {
   }
 });
 
+
+/*
+ * dojo memory for setting store in duration hour and minute widget.
+ */          
 var zeroTo59Store = new LegacyMemory({ data: minutes0To59 });
 var zeroTo99Store = new LegacyMemory({ data: hours0To99 });
+
+/*
+ * Type of leg
+ */
+typeLegStore = new ObjectStore({
+  objectStore: LegacyObservable(new LegacyMemory({
+    data: {
+      identifier: 'type',
+      items: [
+        { 'type': 'A', 'name': 'Active' },
+        { 'type': 'D', 'name': 'Deadhead' },
+      ],
+    }
+  })),
+  labelProperty: "name"
+});
+
 
 var columns = [{
   label      : "Station",
