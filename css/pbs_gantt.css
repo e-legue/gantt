@@ -1,0 +1,185 @@
+.thinButton .dijitButtonNode {
+  padding : 0px !important;
+}
+
+.thinButtonHover .dijitButtonNode {
+  border-color        : #a5beda !important;
+  border-bottom-color : #5c7590 !important;
+  border-right-color  : #5c7590 !important;
+  color               : #000 !important;
+  background-color    : #fcfdff !important;
+}
+
+.thinButtonActive .dijitButtonNode {
+  border-color : #366dba !important;
+  background-color   : #ededed !important;
+}
+
+.datetime {
+  border         : 1px solid #759dc0;
+  background     : white;
+  display        : inline-block;
+  width          : auto;
+  vertical-align : middle;
+}
+
+.datetime > .dijitDateTextBox {
+  border       : none;
+  padding-left : .25em;
+  width        : 10em;
+}
+
+.datetime > .dijitDateTextBox > .dijitButtonNode {
+  border              : none;
+  background-image    : url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAABp0lEQVQ4y43TP2hTcRAH8E/CI4QGRKSGugkiooNUhYh9k6i4COIah4JDFkclKthFUfHFvRBQqEMGQR2LoHaKfzKo7dBRFBxEHByaIkGiyz14hoIe/Ljffe9+x9337lcyIWkrW8UBpP1ue1DAP6OOI/1uez3HS2krq+AyjuEWlrEd53AeU7iG1XhzHJfwGvcSLOJCOO9PFHQyknUm8DNx9iRoFhyHcBN78Q3bAp/FAnZNJGqWUS0A13EKO/AU5cA7OIppPC7EV5O4vIpTlIe2lgeh5zCXJ1jAGxzEZr/bXktbWYLDGOPdcNAb1xrNWVSwFglelNJW9juYPY2rkXA/GlgK+yy+4m3YVzDASrnYz8R90p7aKjYpgEv4iSHW8R23w/cyfDeihUeY+SvBcND7UGs0P2HU77ZH+JK2srsY97vtjdjGDpLhoPej1mjO5JuYczAXmzjCviAwH9mJqOh9jPZiVLlSbGFn6EpsX73gq8c0cs6mixyMQy9jNzbxEb/wJOIG2IjeK3gepI5LaSvrB0F34tH/SBIfrJpgPibwrFDiv2Qcizf/B6rfbiV80qpEAAAAAElFTkSuQmCC);
+  background-color    : transparent;
+  background-repeat   : no-repeat;
+  background-position : center;
+  width               : 22px;
+  height              : 22px;
+}
+
+.datetime > .dijitDateTextBox > .dijitButtonNode > .dijitArrowButtonInner,
+.datetime > .dijitTimeTextBox > .dijitButtonNode > .dijitArrowButtonInner {
+  display : none;
+}
+
+.datetime > .dijitTimeTextBox {
+  border       : none;
+  padding-left : .25em;
+  width        : 5em;
+}
+
+.datetime > .dijitTimeTextBox > .dijitArrowButton {
+  border              : none;
+  background-image    : url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAB9ElEQVQ4y7WVP2gUQRTGf1mWrSSIEYuUqcTqPAiIf1aCzXkowTKt0wSzTYoUB8oRPEhxRZpRYjGWkjZNuEaEASHVkTqF5SFyhJBKDjnSfIOTIXeXQl/1dt5737739ptv55hiZeXmgTqwqKMB0PfWnE+qmZsA9ABoAQ2gSMIjoAfseGuOpgKWlSuAXeBNdDwGhvJvA1l0vgdsemtGITlLwA4isGNgDVgAngMv5a8plin3QLWXAdVZQ34HWPbW7HtrzoAaUPfWnHlr9oFl5aCa3Usja2ff9YKOt+Yd17Cycu+Btxr/kbfmKFesJbBjoD0D5B6wCWwA28ALTdACVjNRI4za9daMo+LHZeXuJGBfgYdA5q35A3TD6GXl5nPxrFDbh0lDn4C8rNwKcFNgp8Azb81v5RyqtgDqWUTaIbBUVm49AnwF3AC+JWA/1fFr4G5Eq8Vs2r68NSfAikAHwNMAlvCUmDaDiLQ/vDV7V4DeB554a4ZJ7DNwolqAQQ70dZ0KoAl8uaLTX1MGaaqxEdDPdNF7Cm6Vlcu5pil3S489b8152OGOdlGbxcPE2qoZC+OvOJSV+xDd4w6wLZ6Fr1mE/aqztm4JwEdvzUYKGMShEYlDVzxbAnJ9gKbGrIVRgdWgOJPkaz2RqVP5t2bJ1/8V2H/xC7gA3Mu8RLBms9sAAAAASUVORK5CYII%3D);
+  background-color    : transparent;
+  background-repeat   : no-repeat;
+  background-position : center;
+  width               : 22px;
+  height              : 22px;
+}
+
+.datetime > .timezone {
+  display      : inline-block;
+  height       : 22px;
+  width        : 2em;
+  padding-left : .25em;
+}
+
+.datetime > .dijitTimeTextBox > .dijitInputContainer > span.dijitPlaceHolder {
+  padding-top : 2px;
+}
+
+.durationHour {
+  width : 4.25em;
+}
+
+.durationMinute {
+  width : 3.25em;
+}
+
+#CalendarStartPeriods {
+  height : 14em; /* DOES NOT WORK */
+}
+
+#TripGrid th, #TripGrid tr {
+  font-size : 12px;
+}
+
+.dgrid {
+  margin : 0px;
+}
+
+.dgrid-grid {
+  width  : 900px;
+  height : 300px;
+}
+
+.dgrid-list {
+  width : 200px;
+}
+
+.dgrid .field-pk {
+  width : 2em;
+}
+
+.dgrid .field-order {
+  width : 2em;
+}
+
+.dgrid .field-station {
+  width : 6em;
+}
+
+.dgrid .field-lblType {
+  width : 9em;
+}
+
+.dgrid .field-legType {
+  width : 8em;
+}
+
+.dgrid .field-startDateTime {
+  width : 11em;
+  color : gray;
+}
+
+.dgrid .field-dhour {
+  width : 6em;
+}
+
+.dgrid .field-dminute {
+  width : 6em;
+}
+
+.dgrid .field-endDateTime {
+  width : 11em;
+  color : gray;
+}
+
+.dgrid-row {
+  height : 30px;
+}
+
+.dgrid-row-even {
+  background-color : ivory !important;
+}
+
+.CodeMirror {
+  border : 1px solid gray;
+  height : 100%;
+}
+
+#gantt {  
+  border   : 1px solid lightgray;
+  overflow : scroll;
+}
+
+.delete .dijitButtonNode {
+  background-color : #ffd500 !important;
+}
+
+.delete:hover .dijitButtonNode {
+  background-color : #ffa500 !important;
+}
+
+form {
+  margin : 0;
+}
+
+.dojoxCheckedMultiSelect .dojoxCheckedMultiSelectWrapper {
+  height : 300px !important;
+}
+
+#MenuCurrentFile {
+  float: right;
+}
+
+#zoom {
+  position : absolute;
+  z-index  : 300;
+  right    : 40px;
+  bottom   : 40px;
+  opacity  : 1;
+}

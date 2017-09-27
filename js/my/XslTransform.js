@@ -1,6 +1,6 @@
-// dojo.provide("XslTransform");
+define(["dojo/_base/declare"], function(declare){
 
-dojo.declare("XslTransform", [],
+  var XslTransform = declare("XslTransform", [],
 {
 	_xslDoc : null,
 	_xslPath : null,
@@ -9,7 +9,7 @@ dojo.declare("XslTransform", [],
 		this._xslPath = xslPath;
 	},
 
-	transform : function(xmlPath) {
+	transformPath : function(xmlPath) {
 		if (this._xslDoc === null)
 			this._xslDoc = this._loadXML(this._xslPath);
 
@@ -24,6 +24,29 @@ dojo.declare("XslTransform", [],
 
 	  		var ownerDocument = document.implementation.createDocument("", "", null);
 	  		result = xsltProcessor.transformToFragment(xmlDoc, ownerDocument);
+		} else {
+			alert("Your browser doesn't support XSLT!");
+		}
+
+		return result;
+
+	},
+
+        transformXMLDocument : function(xmlDoc) {
+		if (this._xslDoc === null)
+			this._xslDoc = this._loadXML(this._xslPath);
+
+		var result = null;
+		var xmlDoc1 = this.createXMLDocument(xmlDoc);
+
+		if (dojo.isIE) {
+			result = xmlDoc1.transformNode(this._xslDoc);
+		} else if(typeof XSLTProcessor !== undefined) {
+			xsltProcessor = new XSLTProcessor();
+	  		xsltProcessor.importStylesheet(this._xslDoc);
+
+	  		var ownerDocument = document.implementation.createDocument("", "", null);
+	  		result = xsltProcessor.transformToFragment(xmlDoc1, ownerDocument);
 		} else {
 			alert("Your browser doesn't support XSLT!");
 		}
@@ -65,4 +88,6 @@ dojo.declare("XslTransform", [],
 
 		return xml;
 	}
+});
+  return XslTransform;
 });
