@@ -4020,7 +4020,6 @@ registry.byId("SetCalendar").on("click", function() {
   if( !registry.byId("SetCalendarForm").validate() ) {
     return;
   }
-
   
   var s = registry.byId("basicStandby");
   s.show();
@@ -4038,8 +4037,6 @@ registry.byId("SetCalendar").on("click", function() {
       calendarStore.removeSync(days[i].pk);
     }
   });        
-
-  // moment.tz.setDefault();
 
   var dstStatus = start.isDST();
 
@@ -5290,36 +5287,28 @@ function setFromForm(object, form) {
 }
 
 
-/**
-* Handle mouse wheel event.
-*/
-function getEventPoint(evt) {
+
+/*
+ * On mousewheel event, and ctrl or alt keypressed, change the zoom factor.
+ */        
+on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
+  // check that ctrl or alt key is pressed.             
+  if( !evt.ctrlKey && !evt.altKey ) {
+    return;
+  }
+
+  if(evt.preventDefault) {
+    evt.preventDefault();
+  }          
+
+//   evt.returnValue = false;
+
+  var delta = evt.wheelDelta ? evt.wheelDelta / 3600 : evt.detail / -90;
+
   var p = svg.dom.createSVGPoint();
 
   p.x = evt.clientX;
   p.y = evt.clientY;
-
-  return p;
-}
-
-
-var fadeArgs = {
-  node: "zoom",
-  duration: 5000,
-};
-
-
-on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
-  if( !evt.ctrlKey && !evt.altKey )
-  return;
-
-  if(evt.preventDefault)
-  evt.preventDefault();
-
-  evt.returnValue = false;
-
-  var delta = evt.wheelDelta ? evt.wheelDelta / 3600 : evt.detail / -90;
-  var p = getEventPoint(evt);
 
   p = p.matrixTransform(svg.domViewport.getCTM().inverse());
 
@@ -5332,9 +5321,10 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
 
   svg.SetSizeAttributes();
 
-  domStyle.set("zoom", {opacity: 1});        
+  // update zoom factor, display it, and set fade out in 5 seconds.
   dom.byId("zoom").innerHTML = (matrix.a).toFixed(3);
-  dojo.fadeOut(fadeArgs).play();
+  domStyle.set("zoom", {opacity: 1});        
+  dojo.fadeOut({node: "zoom", duratin: 5000}).play();
 });
 
 
