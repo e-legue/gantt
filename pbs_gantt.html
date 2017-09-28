@@ -1081,6 +1081,7 @@ var configurationModel = declare(Model, {
     // the first one is set by using the second one.
     if( typeof(self.CalendarTimezoneName) == "undefined" && typeof(self.CalendarTimezone) != "undefined" ) {
       self.CalendarTimezoneName = TimezoneStore.get(self.CalendarTimezone).name;
+      configurationStore.putSync(self);          
     }
 
     if( typeof(self.CalendarTimezone) != "undefined" ) {
@@ -1739,11 +1740,11 @@ var activityModel = declare(Model, {
     var copy = Object.create(self);
 
     if( copy.type == RESERVE ) {
-      var start =  moment(copy.lbtStart);
+      var start = new Date(copy.lbtStart);
 
       copy.set({
-        start_date: start.toDate(),
-        start_time: start.toDate(),
+        start_date: start,
+        start_time: start,
         rest_before_hour: parseInt(copy.restBefore / 60),
         rest_before_minute: copy.restBefore % 60,
         rest_after_hour: parseInt(copy.restAfter / 60),
@@ -1757,11 +1758,11 @@ var activityModel = declare(Model, {
       registry.byId('ReserveForm').set('value', copy);
     }
     else if( copy.type == TRAINING ) {
-      var start =  moment(copy.lbtStart);
+      var start =  new Date(copy.lbtStart);
 
       copy.set({
-        start_date: start.toDate(),
-        start_time: start.toDate(),
+        start_date: start,
+        start_time: start,
         rest_before_hour: parseInt(copy.restBefore / 60),
         rest_before_minute: copy.restBefore % 60,
         rest_after_hour: parseInt(copy.restAfter / 60),
@@ -1775,21 +1776,18 @@ var activityModel = declare(Model, {
       registry.byId('TrainingForm').set('value', copy);
     }
     else if( copy.type == LEAVE ) {
-      var start =  moment(copy.lbtStart);
-      var end   =  moment(copy.lbtEnd);
-
       copy.set({
-        start_date: start.toDate(),
-        end_date: end.toDate(),
+        start_date: new Date(copy.lbtStart),
+        end_date: new Date(copy.lbtEnd),
       });
       registry.byId('VacationForm').set('value', copy);
     }
     else if( copy.type == TRIP ) {
-      var start =  moment(copy.lbtStart);
+      var start = new Date(copy.lbtStart);
 
       copy.set({
-        start_date: start.toDate(),
-        start_time: start.toDate(),
+        start_date: start,
+        start_time: start,
         rest_before_hour: parseInt(copy.restBefore / 60),
         rest_before_minute: copy.restBefore % 60,
         rest_after_hour: parseInt(copy.restAfter / 60),
@@ -1868,7 +1866,6 @@ var activityModel = declare(Model, {
 
     var startDateTimeTraining  = moment.tz(formObject.start_date + formObject.start_time, config.CalendarTimezoneName);
     var endDateTimeTraining    = startDateTimeTraining.clone().add(self.duration, 'm');
-
 
     self.lbtStart = startDateTimeTraining.format("YYYY-MM-DD HH:mm");
     self.lbtEnd   = endDateTimeTraining.format("YYYY-MM-DD HH:mm");
@@ -3684,8 +3681,6 @@ registry.byId("SHActivityDuties").on("change", function(isChecked) {
 registry.byId("UseStation").on("click", function() {
   var formObject = domForm.toObject("LoadStationForm");
 
-  console.log(formObject.tplStation);
-
   if( formObject.tplStation == undefined ){
     alert("Please select a template file");
     return;
@@ -3694,7 +3689,6 @@ registry.byId("UseStation").on("click", function() {
   var s = registry.byId("basicStandby");
   s.show();
 
-  // configurationStore.Reset();
   calendarStore.Reset();
   activityStore.Reset();
   crewMemberStore.Reset();
@@ -3755,7 +3749,6 @@ registry.byId("LoadStation").on("click", function() {
   var s = registry.byId("basicStandby");
   s.show();
 
-  // configurationStore.Reset();
   calendarStore.Reset();
   activityStore.Reset();
   crewMemberStore.Reset();
@@ -3950,15 +3943,23 @@ registry.byId("CalendarTimezone").on("change", function() {
   var item = TimezoneStore.get(this.get("value"));
 
   // Set default time zone, based on user input.
-  moment.tz.setDefault(item.name);
 
-  if( item ) {          
+  if( item ) {
+    config.CalendarTimezone     = item.id;
+    config.CalendarTimezoneName = item.name;
+    
+    configurationStore.putSync(config);          
+
+    moment.tz.setDefault(item.name);
+
     registry.byId("CalendarStation").set("disabled", false);
 
     if( !registry.byId("CalendarStation").get("value") ) {
 
       var zone = moment.tz.zone(item.name);
 
+      // Need to find a date outside of the DST to find a match with
+      // station definitions.
       var dateOutsideDST = moment();
 
       while( dateOutsideDST.isDST() ) {
@@ -3980,7 +3981,10 @@ registry.byId("CalendarTimezone").on("change", function() {
  * updated. XXXX is member of Training, Reserve, Trip, Vacation set.
  */
 registry.byId("CalendarStart").on("change", function() {
-  Xorig = moment.tz(self.CalendarStart, self.CalendarTimezoneName).unix();
+  // Here, the date is in local time. So, to avoid any problem, year, month and date are 
+  // used to generate a moment timezone date in the right timezone.
+  var startDate = this.get("value");
+  Xorig = moment.tz([startDate.getFullYear(), startDate.getMonth(), startDate.getDate()], config.CalendarTimezoneName).unix();
 
   registry.byId("CalendarEnd").constraints.min = date.add(this.get("value"), "day", 1);
   registry.byId("CalendarEnd").dropDownDefaultValue = this.get("value");     
@@ -4016,11 +4020,12 @@ registry.byId("SetCalendar").on("click", function() {
   if( !registry.byId("SetCalendarForm").validate() ) {
     return;
   }
-  RemoveIntroMessage();
 
   
   var s = registry.byId("basicStandby");
   s.show();
+
+  RemoveIntroMessage();
 
   setFromForm(config, dom.byId("SetCalendarForm"));
 
@@ -4028,15 +4033,13 @@ registry.byId("SetCalendar").on("click", function() {
   var end   = moment.tz(config.CalendarEnd, config.CalendarTimezoneName);
   var range = end.diff(start, "days");
 
-  Xorig = start.unix();
-
   calendarStore.fetch().then(function(days) {
     for (var i = days.length - 1; i >= 0; i--) {
       calendarStore.removeSync(days[i].pk);
     }
   });        
 
-  moment.tz.setDefault();
+  // moment.tz.setDefault();
 
   var dstStatus = start.isDST();
 
@@ -4046,9 +4049,11 @@ registry.byId("SetCalendar").on("click", function() {
   XStartPeriod = 0;
 
   for(i = 0; i < range; i++) {
-
+    
     var nextDay = moment(start).add(1, "days");   
     width = nextDay.diff(start, "hours") * 60;
+
+
 
     calendarStore.addSync({
       name     : start.format().substring(0, 10),
@@ -5582,7 +5587,7 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
   fill : gray;
 }
 
-#calendar > .weekend {
+#calendar > .weekend > .day_label{
   fill : black;
   font-weight: bold;
 }
