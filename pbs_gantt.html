@@ -8,6 +8,7 @@
  9 - Generate a station file with the right date about dst, regarding the dataset.
 11 - Use Object inheritance.
 12 - Use XltTransform.js iso load which is deprecated.
+13 - Add a value to set the width of a event.
 -->
 
 <head>
@@ -90,7 +91,6 @@ function(
    * Load timezones.
    */ 
   var array = timezone.tz.names();
-
 
   for( i = 0; i < array.length; i++) {
     timezoneData.push({id: i, name: array[i]});
@@ -329,8 +329,6 @@ parser.parse().then(function() {
 
 
 
-// var timezoneStoreAdapter = new DstoreAdapter(timezoneStore);
-// registry.byId("CalendarTimezone").set("store", timezoneStoreAdapter);
 
 // ===============================================
 // Display "detail" of activity, or event.
@@ -453,6 +451,7 @@ var HEIGHT_LINE_CM   = 140;
 var MARGIN_BOTTOM_CM = 20;
 var HEIGHT_LINE_HL   = 40;
 
+
 // Draw a rectangle.
 function SVG_drawRect(className, x, y, width, height) {
   var rectangle = document.createElementNS(svgNS, "rect");
@@ -573,6 +572,7 @@ function SVG_drawDimensionLine(G, pk, xFrom, xTo, y) {
   G.appendChild(SVG_drawLine("distance", xTo, yHorizontalLine, xTo - orientation * xinc, yHorizontalLine - inc));
 }
 
+
 // Draw an extension line, used to link activity with dimension line.
 function SVG_drawExtensionLine(G, x, y, origin) {
   if( typeof(origin) != 'undefined' ){
@@ -606,6 +606,7 @@ function SVG_drawDistance(item) {
 }
 
 
+// Get the hour inc to fit with graph compression.
 function GetIncHour() {
   if( config.XGraphCompression < 1 ) return 60;
   if( config.XGraphCompression <= 2 ) return 120;
@@ -615,6 +616,7 @@ function GetIncHour() {
 }
 
 
+// Get a size font to fit with graph compression.
 function GetFontSize() {
   if( config.XGraphCompression <  5 ) return "40px";
   if( config.XGraphCompression < 10 ) return "30px";
@@ -709,8 +711,8 @@ function SVG_drawCrewMember(item) {
 }
 
 /*
+ * Draw a curly brace to delimit duties on a trip.
  * original code: http://bl.ocks.org/alexhornbake/6005176
- *
  */
 function SVG_drawDuty(x1, x2, iDuty) {
   //Calculate unit vector
@@ -1074,7 +1076,7 @@ var configurationModel = declare(Model, {
    * After loading the configuration from svg file (store), set up the UI interface, and 
    * some calendar and timezone UI items.
    */
-  ApplyConfig : function() {
+  UpdateForBackwardCompatibility : function() {
     var self = this;
 
     // CalendarTimezoneName has been introduced after CalendarTimezone (id). Thus for backward compatibility,
@@ -1083,45 +1085,6 @@ var configurationModel = declare(Model, {
       self.CalendarTimezoneName = TimezoneStore.get(self.CalendarTimezone).name;
       configurationStore.putSync(self);          
     }
-/*
-    if( typeof(self.CalendarTimezone) != "undefined" ) {
-      registry.byId("CalendarTimezone").set("value", self.CalendarTimezone);
-    }  
-    else {
-      alert("Error - your SVG file has no CalendarZimezone defined.");
-    }
-
-    if( typeof(self.CalendarStart) != "undefined" ) {
-      registry.byId("CalendarStart").set("value", self.CalendarStart);
-    }
-    if( typeof(self.CalendarEnd) != "undefined" ) {
-      registry.byId("CalendarEnd").set("value", self.CalendarEnd);
-    }
-*/          
-/*
-    // Set resolution.
-    var id = "xgc" + self.XGraphCompression.toString().replace(".", "_");
-    registry.byId(id).set("checked", true);
-    
-    registry.byId("SHCalendarHours").set("checked", self.SHCalendarHours);
-    registry.byId("SHCalendarDayX").set("checked", self.SHCalendarDayX);
-    registry.byId("SHCalendarDayYYYYMMDD").set("checked", self.SHCalendarDayYYYYMMDD);
-    registry.byId("SHCalendarDayBars").set("checked", self.SHCalendarDayBars);
-    registry.byId("SHCalendarHourBars").set("checked", self.SHCalendarHourBars);
-    registry.byId("SHCalendarMon").set("checked", self.SHCalendarMon);
-    registry.byId("SHCalendarTue").set("checked", self.SHCalendarTue);
-    registry.byId("SHCalendarWed").set("checked", self.SHCalendarWed);
-    registry.byId("SHCalendarThu").set("checked", self.SHCalendarThu);
-    registry.byId("SHCalendarFri").set("checked", self.SHCalendarFri);
-    registry.byId("SHCalendarSat").set("checked", self.SHCalendarSat);
-    registry.byId("SHCalendarSun").set("checked", self.SHCalendarSun);
-
-    registry.byId("SHActivityHours").set("checked", self.SHActivityHours);
-    registry.byId("SHActivityDetails").set("checked", self.SHActivityDetails);
-    registry.byId("SHActivityDetailHours").set("checked", self.SHActivityDetailHours);
-    registry.byId("SHActivityDetailStations").set("checked", self.SHActivityDetailStations);
-    registry.byId("SHActivityDuties").set("checked", self.SHActivityDuties);
-*/          
   },
 
   updateCheckboxProperty : function(property, isChecked) {
@@ -1152,6 +1115,24 @@ var configurationModel = declare(Model, {
     }
 
     configurationStore.putSync(self);
+  },
+
+  enableMenusAfterLoadingStationFile : function() {
+    var self = this;
+
+    self.MenuCalendar                = false;
+    self.MenuCalendarSetStartEnd     = false;
+    self.MenuBusinessObject          = true;
+    self.MenuGraphOption             = true;
+    self.MenuHighLights              = true;
+    self.MenuResolution              = true;
+    self.MenuFileSaveSVGFile         = true;
+    self.MenuFileExportToPI          = true;
+    self.MenuCalendarSetStartPeriods = true;
+
+    configurationStore.putSync(self);
+  
+    topic.publish("refreshGraph");
   },
 
 
@@ -3353,11 +3334,11 @@ function SaveStores() {
 function LoadSvgStores(svgNode) {
   RemoveIntroMessage();
 
-
   LoadStore(svgNode, configurationStore);
   // load single object (id 0) in config.
   config = configurationStore.getSync(0);
-  config.ApplyConfig();
+
+  config.UpdateForBackwardCompatibility();
 
   LoadStore(svgNode, calendarStore);
   LoadStore(svgNode, yCoordStore);
@@ -3488,6 +3469,7 @@ grid.on('dgrid-datachange', function(event) {
  */          
 var zeroTo59Store = new LegacyMemory({ data: minutes0To59Data });
 var zeroTo99Store = new LegacyMemory({ data: hours0To99Data });
+
 
 /*
  * Type of leg
@@ -3727,18 +3709,45 @@ registry.byId("SHActivityDuties").on("change", function(isChecked) {
 
 
 
+/*
+ * Reset business object stores.
+ */
+function ResetStores() {
+  calendarStore.Reset();
+  activityStore.Reset();
+  crewMemberStore.Reset();
+  eventStore.Reset();
+  distanceStore.Reset();
+  stationStore.Reset(); 
+  noteStore.Reset(); 
+  yCoordStore.Reset();
+}
 
 
+/* 
+ * When a new station file is processed, the config need to be reinitialized, and
+ * some UI too as the MenuCurrentFile and the SetCalendarForm.
+ * Then the graph is refreshed.
+ */          
+function PreCleanupLoadStationFile() {          
+  config = configurationStore.Model();
+
+  configurationStore.putSync(config);          
+
+  registry.byId("MenuCurrentFile").set("label", "No file");
+  registry.byId("SetCalendarForm").reset();
+
+  topic.publish("refreshGraph");
+}
 
 
-
-
-
-
-
-
-
-
+/*
+ * Load a template XML Station file
+ * 
+ * Before processing file, some cleanup is done, then the template
+ * file is fetched and the station store is initialized. On completion,
+ * menu configuration is updated.
+ */
 registry.byId("UseStation").on("click", function() {
   var formObject = domForm.toObject("LoadStationForm");
 
@@ -3750,57 +3759,28 @@ registry.byId("UseStation").on("click", function() {
   var s = registry.byId("basicStandby");
   s.show();
 
-  calendarStore.Reset();
-  activityStore.Reset();
-  crewMemberStore.Reset();
-  eventStore.Reset();
-  distanceStore.Reset();
-  stationStore.Reset(); 
-  noteStore.Reset(); 
-  yCoordStore.Reset();
-
-  config = configurationStore.Model();
-
-  configurationStore.putSync(config);          
-
-  registry.byId("MenuCurrentFile").set("label", "No file");
-  registry.byId("SetCalendarForm").reset();
-
-  topic.publish("refreshGraph");
+  ResetStores();
+  PreCleanupLoadStationFile();
 
   xhr("references/" + formObject.tplStation, {
     handleAs: "xml"
   }).then(function(data){
     LoadStationStore(data, MODE_XML);
 
-    config.MenuCalendar                = false;
-    config.MenuCalendarSetStartEnd     = false;
-    config.MenuBusinessObject          = true;
-    config.MenuGraphOption             = true;
-    config.MenuHighLights              = true;
-    config.MenuResolution              = true;
-    config.MenuFileSaveSVGFile         = true;
-    config.MenuFileExportToPI          = true;
-    config.MenuCalendarSetStartPeriods = true;
-
-
-    configurationStore.putSync(config);
+    config.enableMenusAfterLoadingStationFile();
 
     s.hide();
     LoadStationDialog.hide();
-
-
-
-
   }); 
-
-
-
 });
 
-// -----------------------------------------------
-// Load XML station file dialog
-// -----------------------------------------------
+
+/*
+ * Load a user defined XML Station file
+ * 
+ * This is exactly the same fonctionality as for template file, but now the
+ * station file is uploaded.
+ */
 registry.byId("LoadStation").on("click", function() {
   var upload = registry.byId("uploaderStation");
 
@@ -3818,23 +3798,8 @@ registry.byId("LoadStation").on("click", function() {
   var s = registry.byId("basicStandby");
   s.show();
 
-  calendarStore.Reset();
-  activityStore.Reset();
-  crewMemberStore.Reset();
-  eventStore.Reset();
-  distanceStore.Reset();
-  stationStore.Reset(); 
-  noteStore.Reset(); 
-  yCoordStore.Reset();
-          
-  config = configurationStore.Model();
-
-  configurationStore.putSync(config);          
-
-  registry.byId("MenuCurrentFile").set("label", "No file");
-  registry.byId("SetCalendarForm").reset();
-
-  topic.publish("refreshGraph");
+  ResetStores();
+  PreCleanupLoadStationFile();
 
   var reader = new FileReader();
 
@@ -3845,31 +3810,17 @@ registry.byId("LoadStation").on("click", function() {
 
       LoadStationStore(xmlDom, MODE_XML);
       
-      topic.publish("refreshGraph");
-
-      config.MenuCalendar                = false;
-      config.MenuCalendarSetStartEnd     = false;
-      config.MenuBusinessObject          = true;
-      config.MenuGraphOption             = true;
-      config.MenuHighLights              = true;
-      config.MenuResolution              = true;
-      config.MenuFileSaveSVGFile         = true;
-      config.MenuFileExportToPI          = true;
-      config.MenuCalendarSetStartPeriods = true;
-
-
-      configurationStore.putSync(config);
+      config.enableMenusAfterLoadingStationFile();
 
       s.hide();
       LoadStationDialog.hide();
-
     };
   })(f);
 
   // Read in the file as a text.
   reader.readAsText(f);
-
 });
+
 
 // -----------------------------------------------
 // Load SVG file dialog
@@ -3891,15 +3842,7 @@ registry.byId("LoadSvg").on("click", function() {
   var s = registry.byId("basicStandby");
   s.show();
 
-  // configurationStore.Reset();
-  calendarStore.Reset();
-  activityStore.Reset();
-  crewMemberStore.Reset();
-  eventStore.Reset();
-  distanceStore.Reset();
-  stationStore.Reset(); 
-  noteStore.Reset(); 
-  yCoordStore.Reset();
+  ResetStores();
 
   var reader = new FileReader();
 
@@ -4069,7 +4012,7 @@ registry.byId("SetCalendar").on("click", function() {
 
   RemoveIntroMessage();
 
-  config.updateFromFrom("SetCalendarForm");
+  config.updateFromForm("SetCalendarForm");
   
   registry.byId("SetCalendarForm").reset();
 
