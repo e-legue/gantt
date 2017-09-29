@@ -1019,9 +1019,9 @@ var configurationModel = declare(Model, {
     midnightOffset                                : { type : "numeric", default : 0, },
     reportTime                                    : { type : "numeric", default : 0, },
     releaseTime                                   : { type : "numeric", default : 0, },
-    CalendarTimezone                              : { type : "numeric", default : undefined, },
-    CalendarTimezoneName                          : { type : "string",  default : undefined, },
-    CalendarStation                               : { type : "string",  default : undefined, },
+    CalendarTimezone                              : { type : "numeric", default : -1, },
+    CalendarTimezoneName                          : { type : "string",  default : "", },
+    CalendarStation                               : { type : "string",  default : "", },
     CalendarStart                                 : { type : "string",  default : undefined, },
     CalendarEnd                                   : { type : "string",  default : undefined, },
     MenuFile                                      : { type : "boolean", default : false, },
@@ -1083,7 +1083,7 @@ var configurationModel = declare(Model, {
       self.CalendarTimezoneName = TimezoneStore.get(self.CalendarTimezone).name;
       configurationStore.putSync(self);          
     }
-
+/*
     if( typeof(self.CalendarTimezone) != "undefined" ) {
       registry.byId("CalendarTimezone").set("value", self.CalendarTimezone);
     }  
@@ -1097,7 +1097,8 @@ var configurationModel = declare(Model, {
     if( typeof(self.CalendarEnd) != "undefined" ) {
       registry.byId("CalendarEnd").set("value", self.CalendarEnd);
     }
-
+*/          
+/*
     // Set resolution.
     var id = "xgc" + self.XGraphCompression.toString().replace(".", "_");
     registry.byId(id).set("checked", true);
@@ -1120,7 +1121,40 @@ var configurationModel = declare(Model, {
     registry.byId("SHActivityDetailHours").set("checked", self.SHActivityDetailHours);
     registry.byId("SHActivityDetailStations").set("checked", self.SHActivityDetailStations);
     registry.byId("SHActivityDuties").set("checked", self.SHActivityDuties);
+*/          
   },
+
+  updateCheckboxProperty : function(property, isChecked) {
+    var self = this;
+    
+    self[property] = isChecked;
+    configurationStore.putSync(self);
+  }, 
+
+  updateXGraphCompression : function(value) {
+    var self = this; 
+          
+    self.XGraphCompression = value;
+
+    configurationStore.putSync(self);
+
+    topic.publish("refreshGraph");
+  },
+
+  updateFromForm : function(strFormId) {
+    var self       = this;
+    var formObject = domForm.toObject(strFormId);
+         
+    for(var key in formObject){
+      if(formObject.hasOwnProperty(key)) {
+        self[key] = formObject[key]; 
+      }
+    }
+
+    configurationStore.putSync(self);
+  },
+
+
 });
 
 var configurationStore = new Memory({
@@ -3583,22 +3617,27 @@ function updateDisplay(isChecked, nodes) {
 
 registry.byId("SHCalendarHours").on("change", function(isChecked) {
   updateDisplay(isChecked, svg.dom.getElementsByClassName("hour_label"));
+  config.updateCheckboxProperty("SHCalendarHours", isChecked);  
 }, true);
 
 registry.byId("SHCalendarDayX").on("change", function(isChecked) {
   updateDisplay(isChecked, svg.dom.getElementsByClassName("relative"));
+  config.updateCheckboxProperty("SHCalendarDayX", isChecked);  
 }, true);
 
 registry.byId("SHCalendarDayYYYYMMDD").on("change", function(isChecked) {
   updateDisplay(isChecked, svg.dom.getElementsByClassName("yyyymmdd"));
+  config.updateCheckboxProperty("SHCalendarDayYYYYMMDD", isChecked);  
 }, true);
 
 registry.byId("SHCalendarDayBars").on("change", function(isChecked) {
   updateDisplay(isChecked, svg.dom.getElementsByClassName("day_bar"));
+  config.updateCheckboxProperty("SHCalendarDayBars", isChecked);  
 }, true);
 
 registry.byId("SHCalendarHourBars").on("change", function(isChecked) {
   updateDisplay(isChecked, svg.dom.getElementsByClassName("hour_bar"));
+  config.updateCheckboxProperty("SHCalendarHourBars", isChecked);  
 }, true);
 
 
@@ -3615,44 +3654,46 @@ function updateWeekend(isChecked, nodes) {
 
 registry.byId("SHCalendarMon").on("change", function(isChecked) {
   updateWeekend(isChecked, svg.dom.getElementsByClassName("Mon"));
+  config.updateCheckboxProperty("SHCalendarMon", isChecked);  
 }, true);
 registry.byId("SHCalendarTue").on("change", function(isChecked) {
   updateWeekend(isChecked, svg.dom.getElementsByClassName("Tue"));
+  config.updateCheckboxProperty("SHCalendarTue", isChecked);  
 }, true);
 registry.byId("SHCalendarWed").on("change", function(isChecked) {
   updateWeekend(isChecked, svg.dom.getElementsByClassName("Wed"));
+  config.updateCheckboxProperty("SHCalendarWed", isChecked);  
 }, true);
 registry.byId("SHCalendarThu").on("change", function(isChecked) {
   updateWeekend(isChecked, svg.dom.getElementsByClassName("Thu"));
+  config.updateCheckboxProperty("SHCalendarThu", isChecked);  
 }, true);
 registry.byId("SHCalendarFri").on("change", function(isChecked) {
   updateWeekend(isChecked, svg.dom.getElementsByClassName("Fri"));
+  config.updateCheckboxProperty("SHCalendarFri", isChecked);  
 }, true);
 registry.byId("SHCalendarSat").on("change", function(isChecked) {
   updateWeekend(isChecked, svg.dom.getElementsByClassName("Sat"));
+  config.updateCheckboxProperty("SHCalendarSat", isChecked);  
 }, true);
 registry.byId("SHCalendarSun").on("change", function(isChecked) {
   updateWeekend(isChecked, svg.dom.getElementsByClassName("Sun"));
+  config.updateCheckboxProperty("SHCalendarSun", isChecked);  
 }, true);
 
-registry.byId("xgc0_25").on("change", function(value) { updateXGraphCompression(0.25); });
-registry.byId("xgc0_5" ).on("change", function(value) { updateXGraphCompression(0.5); });
-registry.byId("xgc1"   ).on("change", function(value) { updateXGraphCompression(1); });
-registry.byId("xgc2"   ).on("change", function(value) { updateXGraphCompression(2); });
-registry.byId("xgc4"   ).on("change", function(value) { updateXGraphCompression(4); });
-registry.byId("xgc5"   ).on("change", function(value) { updateXGraphCompression(5); });
-registry.byId("xgc6"   ).on("change", function(value) { updateXGraphCompression(6); });
-registry.byId("xgc8"   ).on("change", function(value) { updateXGraphCompression(8); });
-registry.byId("xgc10"  ).on("change", function(value) { updateXGraphCompression(10); });
+
+
+          
+registry.byId("xgc0_25").on("change", function(value) { config.updateXGraphCompression(0.25); });
+registry.byId("xgc0_5" ).on("change", function(value) { config.updateXGraphCompression(0.5); });
+registry.byId("xgc1"   ).on("change", function(value) { config.updateXGraphCompression(1); });
+registry.byId("xgc2"   ).on("change", function(value) { config.updateXGraphCompression(2); });
+registry.byId("xgc4"   ).on("change", function(value) { config.updateXGraphCompression(4); });
+registry.byId("xgc5"   ).on("change", function(value) { config.updateXGraphCompression(5); });
+registry.byId("xgc6"   ).on("change", function(value) { config.updateXGraphCompression(6); });
+registry.byId("xgc8"   ).on("change", function(value) { config.updateXGraphCompression(8); });
+registry.byId("xgc10"  ).on("change", function(value) { config.updateXGraphCompression(10); });
   
-
-function updateXGraphCompression(value) {
-  config.XGraphCompression = value;
-
-  configurationStore.putSync(config);          
-
-  topic.publish("refreshGraph");
-}
 
 
 // -----------------------------------------------
@@ -3660,23 +3701,43 @@ function updateXGraphCompression(value) {
 // -----------------------------------------------
 registry.byId("SHActivityHours").on("change", function(isChecked) {
   updateDisplay(isChecked, svg.dom.getElementsByClassName("act_hour"));
+  config.updateCheckboxProperty("SHActivityHours", isChecked);  
 }, true);
 
 registry.byId("SHActivityDetails").on("change", function(isChecked) {
   updateDisplay(isChecked, svg.dom.getElementsByClassName("details"));
+  config.updateCheckboxProperty("SHActivityDetails", isChecked);  
 }, true);
 
 registry.byId("SHActivityDetailHours").on("change", function(isChecked) {
   updateDisplay(isChecked, svg.dom.getElementsByClassName("dtl_hour"));
+  config.updateCheckboxProperty("SHActivityDetailHours", isChecked);  
 }, true);
 
 registry.byId("SHActivityDetailStations").on("change", function(isChecked) {
   updateDisplay(isChecked, svg.dom.getElementsByClassName("dtl_station"));
+  config.updateCheckboxProperty("SHActivityDetailStations", isChecked);  
 }, true);
 
 registry.byId("SHActivityDuties").on("change", function(isChecked) {
   updateDisplay(isChecked, svg.dom.getElementsByClassName("DUTY"));
+  config.updateCheckboxProperty("SHActivityDuties", isChecked);  
 }, true);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 registry.byId("UseStation").on("click", function() {
   var formObject = domForm.toObject("LoadStationForm");
@@ -3698,6 +3759,14 @@ registry.byId("UseStation").on("click", function() {
   noteStore.Reset(); 
   yCoordStore.Reset();
 
+  config = configurationStore.Model();
+
+  configurationStore.putSync(config);          
+
+  registry.byId("MenuCurrentFile").set("label", "No file");
+  registry.byId("SetCalendarForm").reset();
+
+  topic.publish("refreshGraph");
 
   xhr("references/" + formObject.tplStation, {
     handleAs: "xml"
@@ -3757,6 +3826,15 @@ registry.byId("LoadStation").on("click", function() {
   stationStore.Reset(); 
   noteStore.Reset(); 
   yCoordStore.Reset();
+          
+  config = configurationStore.Model();
+
+  configurationStore.putSync(config);          
+
+  registry.byId("MenuCurrentFile").set("label", "No file");
+  registry.byId("SetCalendarForm").reset();
+
+  topic.publish("refreshGraph");
 
   var reader = new FileReader();
 
@@ -3852,8 +3930,9 @@ registry.byId("LoadSvg").on("click", function() {
 // -----------------------------------------------
 
 registry.byId("ShowConstantsDialog").on("show", function() {
-  viewInForm(config, dom.byId("ShowConstantsForm"));
+  registry.byId("ShowConstantsForm").set('value', config);
 }, true);
+
 
 registry.byId("SaveConstants").on("click", function() {
   if( !registry.byId("ShowConstantsForm").validate() ) {
@@ -3861,52 +3940,12 @@ registry.byId("SaveConstants").on("click", function() {
   }
 
   ShowConstantsDialog.hide();
+  
+  config.updateFromForm("ShowConstantsForm");
 
-  setFromForm(config, dom.byId("ShowConstantsForm"));
-
-  configurationStore.putSync(config);
+  registry.byId("ShowConstantsForm").reset();
 
   topic.publish("refreshGraph");
-});
-
-// -----------------------------------------------
-// Show/Hide calendar dialog
-// -----------------------------------------------
-
-registry.byId("ShowHideCalendarDialog").on("show", function() {
-  viewInForm(config, dom.byId("ShowHideCalendarForm"));
-}, true);
-
-registry.byId("SaveShowHideCalendar").on("click", function() {
-  if( !registry.byId("ShowHideCalendarForm").validate() ) {
-    return;
-  }
-
-  ShowHideCalendarDialog.hide();
-
-  setFromForm(config, dom.byId("ShowHideCalendarForm"));
-
-  configurationStore.putSync(config);
-});
-
-// -----------------------------------------------
-// Show/Hide activity dialog
-// -----------------------------------------------
-
-registry.byId("ShowHideActivityDialog").on("show", function() {
-  viewInForm(config, dom.byId("ShowHideActivityForm"));
-}, true);
-
-registry.byId("SaveShowHideActivity").on("click", function() {
-  if( !registry.byId("ShowHideActivityForm").validate() ) {
-    return;
-  }
-
-  ShowHideActivityDialog.hide();
-
-  setFromForm(config, dom.byId("ShowHideActivityForm"));
-
-  configurationStore.putSync(config);
 });
 
 // -----------------------------------------------
@@ -3981,6 +4020,9 @@ registry.byId("CalendarTimezone").on("change", function() {
  * updated. XXXX is member of Training, Reserve, Trip, Vacation set.
  */
 registry.byId("CalendarStart").on("change", function() {
+  if( !this.get("value") ) {
+    return;
+  }
   // Here, the date is in local time. So, to avoid any problem, year, month and date are 
   // used to generate a moment timezone date in the right timezone.
   var startDate = this.get("value");
@@ -4012,7 +4054,8 @@ registry.byId("CalendarEnd").on("change", function() {
 }, true);
 
 registry.byId("SetCalendarDialog").on("show", function() {
-  viewInForm(config, dom.byId("SetCalendarForm"));
+  registry.byId("SetCalendarForm").set('value', config);
+  console.log(config);
 }, true);
 
 
@@ -4026,7 +4069,9 @@ registry.byId("SetCalendar").on("click", function() {
 
   RemoveIntroMessage();
 
-  setFromForm(config, dom.byId("SetCalendarForm"));
+  config.updateFromFrom("SetCalendarForm");
+  
+  registry.byId("SetCalendarForm").reset();
 
   var start = moment.tz(config.CalendarStart, config.CalendarTimezoneName);
   var end   = moment.tz(config.CalendarEnd, config.CalendarTimezoneName);
@@ -5220,74 +5265,6 @@ registry.byId("SaveZipFile").on("click", function() {
 
 
 
-// ==============================================
-// FORM
-// ==============================================
-function viewInForm(object, form) {
-  for(var i = 0; i < form.elements.length; i++ ) {
-    if(form.elements[i].name) {
-      var element = form.elements[i];
-      var name = element.name;
-      var value = object[name];
-
-      console.log(name);
-      console.log(element);
-      console.log(element.type);
-      console.log(element.checked);
-      console.log(object[name]);
-      if( typeof(object[name]) != 'undefined' ) {
-        if( element.type == "checkbox" ) {
-          console.log('on checked');
-          console.log(registry.byId(name));
-          registry.byId(name).set("checked", value);
-        }
-        else {
-          console.log('on value');
-          console.log(registry.byId(name));
-          if( registry.byId(name) ) {
-            registry.byId(name).set("value", value);
-          }
-          else  {
-            console.log("================================================");          
-            console.log("************************************************");          
-            console.log("j'aime pas ca:" + name);          
-            console.log("************************************************");          
-            console.log("================================================");          
-            var input = query("input[name=" + name + "]", form)[0];
-            if(input) {
-              console.log(name + "---" + value);
-              // here is a little hack. dijit dialog create an hidden input with the right name.
-              // but the one used to display is the sibling before. So I reference the parent and
-              // pick the first child with the right class.
-              var dijitInputInner  = query(".dijitInputInner", input.parentNode)[0];
-              var dijitPlaceHolder = query(".dijitPlaceHolder", input.parentNode)[0];
-
-              console.log(dijitInputInner);
-
-              if( dijitInputInner ) dijitInputInner.value = value;
-              if( dijitPlaceHolder ) dijitPlaceHolder.style.display = "none";  
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
-function setFromForm(object, form) {
-  for(var i = 0; i < form.elements.length; i++ ) {
-    if(form.elements[i].name) {
-      // console.log(form.elements[i].name);
-      // console.log(form.elements[i].value);
-      // console.log(form.elements[i].type);
-      // console.log(form.elements[i].checked);
-      object[form.elements[i].name] =form.elements[i].type == "checkbox" ?  form.elements[i].checked : form.elements[i].value;
-    }
-  }
-}
-
-
-
 /*
  * On mousewheel event, and ctrl or alt keypressed, change the zoom factor.
  */        
@@ -5811,7 +5788,7 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
         </table>
 
         <div class="dijitDialogPaneActionBar">
-          <button data-dojo-type="dijit/form/Button" type="button" id="SaveShowHideActivity">Close</button>
+          <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){ShowHideActivityDialog.hide();}">Close</button>
         </div>
       </div>
     </div>
@@ -5878,7 +5855,7 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
         </table>
 
         <div class="dijitDialogPaneActionBar">
-          <button data-dojo-type="dijit/form/Button" type="button" id="SaveShowHideCalendar">Close</button>
+          <button data-dojo-type="dijit/form/Button" type="button" data-dojo-props="onClick:function(){ShowHideCalendarDialog.hide();}">Close</button>
         </div>
       </div>
     </div>
