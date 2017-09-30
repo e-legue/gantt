@@ -95,6 +95,9 @@ function(
   for( i = 0; i < array.length; i++) {
     timezoneData.push({id: i, name: array[i]});
   }
+
+
+
 });
 
   </script>  
@@ -321,8 +324,27 @@ parser.parse().then(function() {
 });
 
 
+/*
+ * Start Date Time + duration Hour:Minute => End Date Time (readonly).
+ */
+function UpdateEndDateTime(prefixId) {
+  var mydate = moment(registry.byId(prefixId + "StartDate").get("value"));
+  var mytime = moment(registry.byId(prefixId + "StartTime").get("value"));
 
+  mydate.hours(mytime.hours());
+  mydate.minutes(mytime.minutes());
 
+  var duration = moment.duration({
+    hours: registry.byId(prefixId + "DurationHour").get("value"), 
+    minutes: registry.byId(prefixId + "DurationMinute").get("value")
+  });
+
+  mydate.add(duration);
+  
+  // update end date and time fields.
+  registry.byId(prefixId + "EndDate").set("value", mydate.toDate());
+  registry.byId(prefixId + "EndTime").set("value", mydate.toDate());
+} 
 
 
 
@@ -370,31 +392,6 @@ function PopupActivityDetail(activityId) {
     myDialog.show();
   }
 }
-
-// Start Date Time + duration Hour Minute => 
-// End Date Time (readonly).
-// Here, dojo/date is used, as only local dates
-// are handled. 
-// ===============================================
-function UpdateEndDateTime(prefixId) {
-  var mydate = moment(registry.byId(prefixId + "StartDate").get("value"));
-  var mytime = moment(registry.byId(prefixId + "StartTime").get("value"));
-
-  mydate.hours(mytime.hours());
-  mydate.minutes(mytime.minutes());
-
-  var duration = moment.duration({
-    hours: registry.byId(prefixId + "DurationHour").get("value"), 
-    minutes: registry.byId(prefixId + "DurationMinute").get("value")
-  });
-
-  mydate.add(duration);
-  
-  // update end date and time fields.
-  registry.byId(prefixId + "EndDate").set("value", mydate.toDate());
-  registry.byId(prefixId + "EndTime").set("value", mydate.toDate());
-} 
-
 //     
 //   _____ __      __ _____  
 //  / ____|\ \    / // ____| 
@@ -3962,30 +3959,42 @@ registry.byId("CalendarTimezone").on("change", function() {
  * On change, the Xorig is updated and XXXStartDate minimum constraints are
  * updated. XXXX is member of Training, Reserve, Trip, Vacation set.
  */
-registry.byId("CalendarStart").on("change", function() {
-  if( !this.get("value") ) {
+registry.byId("CalendarStart").on("change", function(value) {
+  if( value == null ) {
     return;
   }
+
   // Here, the date is in local time. So, to avoid any problem, year, month and date are 
   // used to generate a moment timezone date in the right timezone.
-  var startDate = this.get("value");
-  Xorig = moment.tz([startDate.getFullYear(), startDate.getMonth(), startDate.getDate()], config.CalendarTimezoneName).unix();
+  Xorig = moment.tz([value.getFullYear(), value.getMonth(), value.getDate()], config.CalendarTimezoneName).unix();
 
-  registry.byId("CalendarEnd").constraints.min = date.add(this.get("value"), "day", 1);
-  registry.byId("CalendarEnd").dropDownDefaultValue = this.get("value");     
+  registry.byId("CalendarEnd").constraints.min = date.add(value, "day", 1);
+  registry.byId("CalendarEnd").dropDownDefaultValue = value;     
 
-  registry.byId("TrainingStartDate").constraints.min = this.get("value");
-  registry.byId("TrainingStartDate").dropDownDefaultValue = this.get("value");
-  registry.byId("ReserveStartDate").constraints.min = this.get("value");
-  registry.byId("ReserveStartDate").dropDownDefaultValue = this.get("value");
-  registry.byId("TripStartDate").constraints.min = this.get("value");
-  registry.byId("TripStartDate").dropDownDefaultValue = this.get("value");
-  registry.byId("VacationStartDate").constraints.min = this.get("value");
-  registry.byId("VacationStartDate").dropDownDefaultValue = this.get("value");
+  registry.byId("TrainingStartDate").constraints.min = value;
+  registry.byId("TrainingStartDate").dropDownDefaultValue = value;
+  registry.byId("ReserveStartDate").constraints.min = value;
+  registry.byId("ReserveStartDate").dropDownDefaultValue = value;
+  registry.byId("TripStartDate").constraints.min = value;
+  registry.byId("TripStartDate").dropDownDefaultValue = value;
+  registry.byId("VacationStartDate").constraints.min = value;
+  registry.byId("VacationStartDate").dropDownDefaultValue = value;
 }, true);
 
-registry.byId("CalendarEnd").on("change", function() {
-  var maxDate = date.add(this.get("value"), "day", -1);
+
+/*
+ * Event change on CalendarEnd.
+ *
+ * On change, XXXStartDate maximum constraints are
+ * updated with this end date, minus one day. XXXX is member of 
+ * Training, Reserve, Trip, Vacation set.
+ * Also, VacationEndDate constraint maximum is updated.
+ */
+registry.byId("CalendarEnd").on("change", function(value) {
+  if( value == null ) {
+    return;
+  }
+  var maxDate = date.add(value, "day", -1);
 
   registry.byId("CalendarStart").constraints.max = maxDate;
 
@@ -3993,7 +4002,7 @@ registry.byId("CalendarEnd").on("change", function() {
   registry.byId("ReserveStartDate").constraints.max = maxDate;
   registry.byId("TripStartDate").constraints.max = maxDate;
   registry.byId("VacationStartDate").constraints.max = maxDate;
-  registry.byId("VacationEndDate").constraints.max = this.get("value");
+  registry.byId("VacationEndDate").constraints.max = value;
 }, true);
 
 registry.byId("SetCalendarDialog").on("show", function() {
