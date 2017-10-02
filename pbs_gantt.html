@@ -8,7 +8,6 @@
  9 - Generate a station file with the right date about dst, regarding the dataset.
 11 - Use Object inheritance.
 12 - Use XltTransform.js iso load which is deprecated.
-13 - Add a value to set the width of a event.
 -->
 
 <head>
@@ -499,7 +498,9 @@ function SVG_drawEvent(item) {
 
   group.setAttributeNS(null,"transform","translate(0, " + item.GetYCoord() + ")");
   group.setAttributeNS(null, "id", item.get("ident"));
+  group.setAttributeNS(null, "fill", item.color);
   svg.domCalendar.appendChild(group);
+
 
   var lblText = SVG_drawText("event_label", item.x + 10, HEIGHT_LINE_HL / 2, item.get("label"));
   on(lblText, "click", function(evt) {
@@ -511,9 +512,10 @@ function SVG_drawEvent(item) {
   // a specific group.
   var groupBar     = document.createElementNS(svgNS, "g");
   groupBar.setAttributeNS(null, "id", item.get("barident"));
+  groupBar.setAttributeNS(null, "fill", item.color);
   svg.domCalendarBar.appendChild(groupBar);
 
-  groupBar.appendChild(SVG_drawRect("event", item.x, 0, 1, 1));
+  groupBar.appendChild(SVG_drawRect("event", item.x, 0, item.thickness, 1));
 }
 
 
@@ -752,6 +754,70 @@ function SVG_drawDuty(x1, x2, iDuty) {
 }
 
 
+/*
+ * Draw detail of a trip. Only TRIP activities have details.
+ */ 
+function SVG_drawActivityDetail(activity, G, hourSize, endMargin) { 
+  activityStore.filter({fk_parent: activity.pk}).sort('x').fetch().then(function(objects) {
+    if( objects.length == 0 ) { 
+      // skip drawing duty curly braces.
+      return; 
+    }
+
+    var unitY = HEIGHT_LINE_CM / 14; 
+
+    var endDetailActivity = moment.tz(activity.get("lbtStart"), config.CalendarTimezoneName);
+
+    var Gdetails = document.createElementNS(svgNS, "g");
+    Gdetails.setAttributeNS(null, "transform", "translate(0," + 6 * unitY +")");
+    Gdetails.setAttributeNS(null, "class", "details");
+
+    G.appendChild(Gdetails);
+
+    var xDutyStart = 0;
+    var iDuty      = 1;
+
+
+    for(i = 0; i < objects.length; i++) {
+      var Rect = document.createElementNS(svgNS,"rect");
+      var x    = objects[i].x -activity.x;
+       
+      Rect.setAttributeNS(null, "class", objects[i].get("type"));
+      Rect.setAttributeNS(null, "x", CompressX(x));
+      Rect.setAttributeNS(null, "y", unitY);
+      Rect.setAttributeNS(null, "rx", 1);
+      Rect.setAttributeNS(null, "ry", 1);
+      Rect.setAttributeNS(null, "width", CompressX(objects[i].duration));
+      Rect.setAttributeNS(null, "height", 4 * unitY);
+
+      if( objects[i].type == "LAY" ) {
+        Gdetails.appendChild(SVG_drawDuty(xDutyStart, x, iDuty));
+        iDuty += 1;
+        xDutyStart = objects[i+1].x - activity.x;
+      }
+
+      Gdetails.appendChild(Rect);
+
+      if( i % 2 == 0 && i != 0 && i != objects.length -1 ) {
+        Gdetails.appendChild(SVG_drawText("dtl_station", objects[i].x + objects[i].duration / 2 - activity.x, unitY -2, objects[i].station ));
+      }
+      if( i % 2 == 1 ) {
+        Gdetails.appendChild(SVG_drawText("dtl_hour start_hour", objects[i].x - activity.x, unitY + hourSize, endDetailActivity.format("HH:mm")));
+        // useless since the distance tool allows to measure duration !          
+        //          Gdetails.appendChild(SVG_drawText("duration", objects[i].x + objects[i].duration / 2 - activity.x, 3 * unitY , "<- " + formatDurationInHoursMinutes(objects[i].duration) + " ->"));
+      }
+
+      endDetailActivity.add(objects[i].duration, "m");
+
+      if( i % 2 == 1 ) {
+        Gdetails.appendChild(SVG_drawText("dtl_hour end_hour" , objects[i].x + objects[i].duration - activity.x, 5 * unitY - endMargin, endDetailActivity.format("HH:mm")));
+      }
+
+    }
+    Gdetails.appendChild(SVG_drawDuty(xDutyStart, activity.duration, iDuty));
+  });
+}
+
 // Draw an activity. As the others, the drawing is embedded into a g node 
 // with a translation on y, and belongs to crewmember or opentime line.
 // Therefore no y translation is necessary, a x is used to draw the activity on
@@ -825,63 +891,7 @@ function SVG_drawActivity(activity) {
     G.appendChild(SVG_drawText("act_hour end_hour", activity.duration + transportationTime + Number(activity.restAfter), 11 * unitY - endMargin, endActivity.format("HH:mm")));
   }
 
-
-  activityStore.filter({fk_parent: activity.pk}).sort('x').fetch().then(function(objects) {
-    if( objects.length == 0 ) { 
-      // skip drawing duty curly braces.
-      return; 
-    }
-
-    var endDetailActivity = moment.tz(activity.get("lbtStart"), config.CalendarTimezoneName);
-
-    var Gdetails = document.createElementNS(svgNS, "g");
-    Gdetails.setAttributeNS(null, "transform", "translate(0," + 6 * unitY +")");
-    Gdetails.setAttributeNS(null, "class", "details");
-
-    G.appendChild(Gdetails);
-
-    var xDutyStart = 0;
-    var iDuty      = 1;
-
-
-    for(i = 0; i < objects.length; i++) {
-      var Rect = document.createElementNS(svgNS,"rect");
-      var x    = objects[i].x -activity.x;
-       
-      Rect.setAttributeNS(null, "class", objects[i].get("type"));
-      Rect.setAttributeNS(null, "x", CompressX(x));
-      Rect.setAttributeNS(null, "y", unitY);
-      Rect.setAttributeNS(null, "rx", 1);
-      Rect.setAttributeNS(null, "ry", 1);
-      Rect.setAttributeNS(null, "width", CompressX(objects[i].duration));
-      Rect.setAttributeNS(null, "height", 4 * unitY);
-
-      if( objects[i].type == "LAY" ) {
-        Gdetails.appendChild(SVG_drawDuty(xDutyStart, x, iDuty));
-        iDuty += 1;
-        xDutyStart = objects[i+1].x - activity.x;
-      }
-
-      Gdetails.appendChild(Rect);
-
-      if( i % 2 == 0 && i != 0 && i != objects.length -1 ) {
-        Gdetails.appendChild(SVG_drawText("dtl_station", objects[i].x + objects[i].duration / 2 - activity.x, unitY -2, objects[i].station ));
-      }
-      if( i % 2 == 1 ) {
-        Gdetails.appendChild(SVG_drawText("dtl_hour start_hour", objects[i].x - activity.x, unitY + hourSize, endDetailActivity.format("HH:mm")));
-        // useless since the distance tool allows to measure duration !          
-        //          Gdetails.appendChild(SVG_drawText("duration", objects[i].x + objects[i].duration / 2 - activity.x, 3 * unitY , "<- " + formatDurationInHoursMinutes(objects[i].duration) + " ->"));
-      }
-
-      endDetailActivity.add(objects[i].duration, "m");
-
-      if( i % 2 == 1 ) {
-        Gdetails.appendChild(SVG_drawText("dtl_hour end_hour" , objects[i].x + objects[i].duration - activity.x, 5 * unitY - endMargin, endDetailActivity.format("HH:mm")));
-      }
-
-    }
-    Gdetails.appendChild(SVG_drawDuty(xDutyStart, activity.duration, iDuty));
-  });
+  SVG_drawActivityDetail(activity, G, hourSize, endMargin);  
 }
 
 var selectedElement = 0;
@@ -2598,6 +2608,8 @@ var eventModel = declare(Model, {
     fk_act_detail : "numeric", // 0 means no activity detail.
     fk_yc         : "numeric",
     order         : "numeric",
+    thickness     : { type: "numeric", default: 1, },
+    color         : { type: "string", default: "#ff0000", }, 
     ident         : new ComputedProperty({
       dependsOn : ["pk"],
       getValue  : function(pk) {
@@ -2709,9 +2721,11 @@ var eventStore = new TrackableMemory({
 
     var item = pk ? self.getSync(pk): new eventModel();
 
-    var label   = registry.byId("EventLabel").get("value");
-    var days    = registry.byId("EventDatesSelect").value; 
-    var time    = registry.byId("EventTime").value; 
+    var label     = registry.byId("EventLabel").get("value");
+    var days      = registry.byId("EventDatesSelect").value; 
+    var time      = registry.byId("EventTime").value; 
+    var color     = registry.byId("EventColorPaletteWidget").get("value");
+    var thickness = registry.byId("EventThickness").get("value");
 
     // to avoid the "at least one item must be selected" message, form data are save in 
     // local variables before reseting the form.
@@ -2739,6 +2753,8 @@ var eventStore = new TrackableMemory({
             long_label  : when.format("YYYY-MM-DD HH:mm") + " -- " + label, 
             x           : getPositionX(when),
             fk_yc       : yCoordinate.pk,
+            color       : color,
+            thickness   : thickness,
           });
         }
       }
@@ -2762,6 +2778,8 @@ var eventStore = new TrackableMemory({
               items[i].label = label;
               items[i].long_label = when.format("YYYY-MM-DD HH:mm") + " -- " + label;
               items[i].x = getPositionX(when);
+              items[i].color = color;
+              items[i].thickness = thickness;
 
               self.putSync(items[i]);
               days.splice(index, 1);
@@ -2782,6 +2800,8 @@ var eventStore = new TrackableMemory({
               long_label  : when.format("YYYY-MM-DD HH:mm") + " -- " + label, 
               x           : getPositionX(when),
               fk_yc       : item.fk_yc,
+              color       : color,
+              thickness   : thickness,
             });
           }
         }
@@ -2990,7 +3010,7 @@ var tripDetailStore = new TrackableMemory({
   _updDur         : function(array) {
     var self = this;
 
-    var currentDate = moment(self.startDateTime);
+    var currentDate = moment.tz(self.startDateTime, config.CalendarTimezoneName);
     for( i = 0; i < array.length ; ++i ) {
       array[i].startDateTime = currentDate.format("YYYY-MM-DD HH:mm");
       currentDate.add(array[i].dminute, "m");
@@ -3297,7 +3317,7 @@ function LoadStore(svgDoc, store) {
 
   for(var i = 0; i < childrenNodes.length; i ++) {
     var data = childrenNodes[i];
-    var def = {};
+    var def = new store.Model(); // allow to get default values.
 
     if( data.nodeType == 3) {  // allow to edit svg and put white characters.
       continue;
@@ -4077,13 +4097,14 @@ registry.byId("SetCalendar").on("click", function() {
       while( start.isDST() == InitialState ) {
         start.add(1, "minutes");
       }
+      var dstEvent =  new eventModel();    
 
-      eventStore.addSync({
-        pk         : eventStore.GetNextPKSequence(),
-        label      : InitialState ? "End DST" : "Start DST",
-        long_label : InitialState ? "End DST" : "Start DST",
-        x          : getPositionX(start),
-      });
+      dstEvent.pk         = eventStore.GetNextPKSequence();
+      dstEvent.label      = InitialState ? "End DST" : "Start DST";
+      dstEvent.long_label = InitialState ? "End DST" : "Start DST";
+      dstEvent.x          = getPositionX(start);
+
+      eventStore.addSync(dstEvent);
     }
 
     x += width;
@@ -4159,13 +4180,15 @@ registry.byId("SetStartPeriods").on("click", function() {
       i+=1;
 
       if( fCreateEvent ) {
-        eventStore.addSync({
-            pk          : eventStore.GetNextPKSequence(),
-            label       : "Start period ",
-            long_label  : item.name + " -- Start period", 
-            x           : item.x,
-            fk_yc       : yCoord.pk,
-        });
+        var startPeriodEvent = new eventModel();
+
+        startPeriodEvent.pk          = eventStore.GetNextPKSequence();
+        startPeriodEvent.label       = "Start period ";
+        startPeriodEvent.long_label  = item.name + " -- Start period"; 
+        startPeriodEvent.x           = item.x;
+        startPeriodEvent.fk_yc       = yCoord.pk;
+
+        eventStore.addSync(startPeriodEvent);
       }
     }
     else {
@@ -4671,7 +4694,7 @@ function FillInEventForm(pk_item) {
   var item = eventStore.getSync(pk_item);
 
   registry.byId('EventForm').set('value', item);
-  var eventTime = moment(getDateTime(item.x).format("YYYY-MM-DD HH:mm"));
+  var eventTime = moment.tz(getDateTime(item.x).format("YYYY-MM-DD HH:mm"), config.CalendarTimezoneName);
   registry.byId('EventTime').set('value', eventTime.toDate());
 
   var days = [];
@@ -4680,6 +4703,8 @@ function FillInEventForm(pk_item) {
   }); 
 
   registry.byId("EventDatesSelect").set("value", days);
+
+  registry.byId("EventColorPaletteWidget").set("value", item.color);
 }
 
 
@@ -4723,6 +4748,12 @@ registry.byId("SaveEvent").on("click", function() {
 registry.byId("EventInvertSelectionDates").on("click", function() {
   registry.byId("EventDatesSelect").invertSelection(); 
 });
+
+registry.byId("EventColorPaletteWidget").on("change", function(value) {
+  domStyle.set(dom.byId("EventColorSwatch"), "backgroundColor", value);
+  dijit.popup.close(registry.byId("EventColorPaletteDialog"));
+});
+
 
 
 //                                         
@@ -4881,8 +4912,8 @@ function TryEnableGrid() {
     tripDetailStore.reportTime = config.reportTime;
     tripDetailStore.releaseTime = config.releaseTime;
 
-    var mydate = moment(registry.byId("TripStartDate").get("value"));
-    var mytime = moment(registry.byId("TripStartTime").get("value"));
+    var mydate = moment.tz(registry.byId("TripStartDate").get("value"), config.CalendarTimezoneName);
+    var mytime = moment.tz(registry.byId("TripStartTime").get("value"), config.CalendarTimezoneName);
 
     // rebuild the start date from StartDate and StartTime field values, 
     mydate.hours(mytime.hours());
@@ -5405,12 +5436,7 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
   fill        : black;
 }
 
-.event {
-  fill : red;
-}
-
 .event_label {
-  fill        : red;
   font-weight : bold;
 }
 
@@ -5667,11 +5693,11 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
             <td><label for="activityType">Type</label></td>
             <td>
               <select data-dojo-type="dijit/form/FilteringSelect" name="activityType" id="ReserveType" required="true">
-                 <option value="RSV">Reserve (RSV)</option>
-                 <option value="SBY">Home standby (SBY)</option>
-                 <option value="ASBY">Airport standby (ASBY)</option>
-                 <option value="TSBY">Standby for training (TSBY)</option>
-                 <option value="USBY">ULR standby (USBY)</option>
+                <option value="RSV">Reserve (RSV)</option>
+                <option value="SBY">Home standby (SBY)</option>
+                <option value="ASBY">Airport standby (ASBY)</option>
+                <option value="TSBY">Standby for training (TSBY)</option>
+                <option value="USBY">ULR standby (USBY)</option>
               </select>
             </td>
           </tr>
@@ -6003,9 +6029,9 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
             <td><label for="activityType">Type</label></td>
             <td>
               <select data-dojo-type="dijit/form/FilteringSelect" name="activityType" id="DayOffType" required="true">
-                 <option value="OFF">Day Off (OFF)</option>
-                 <option value="ROFF">Requested Day Off (ROFF)</option>
-                 <option value="OOFF">Out of base Day Off (OOFF)</option>
+                <option value="OFF">Day Off (OFF)</option>
+                <option value="ROFF">Requested Day Off (ROFF)</option>
+                <option value="OOFF">Out of base Day Off (OOFF)</option>
               </select>
             </td>
           </tr>
@@ -6100,6 +6126,28 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
             <td><label for="time">Time</label></td>
             <td class="datetime">
               <input id="EventTime" name="time" type="text" data-dojo-type="dijit/form/TimeTextBox" data-dojo-props="constraints:{  timePattern: 'HH:mm'}, placeHolder:'hh:mm'" required="true"/>
+            </td>
+          </tr>
+          <tr>
+            <td><label for="color">Color</label></td>
+            <td>
+              <div id="EventColor" style="background-color: FFFFFF; border-color: black; border-width: 1px;" dojoType="dijit/form/DropDownButton">
+                <span id="EventColorText"><span id="EventColorSwatch" style="height: 10px; width: 80px; border: 1px solid black; background-color: #fff5ee;">&nbsp;&nbsp;&nbsp;&nbsp;</span></span>
+                <div dojoType="dijit/TooltipDialog" id="EventColorPaletteDialog" title="Color Palette">
+                <div dojoType="dijit/ColorPalette" name="color" id="EventColorPaletteWidget"></div>                    
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><label for="thickness">Thichness</label></td>
+            <td>
+              <select data-dojo-type="dijit/form/FilteringSelect" name="thickness" id="EventThickness" value="1" required="true">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="5">5</option>
+                <option value="7">7</option>
+              </select>
             </td>
           </tr>
         </table>
@@ -6301,11 +6349,11 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
             <td><label for="activityType">Type</label></td>
             <td>
               <select data-dojo-type="dijit/form/FilteringSelect" name="activityType" id="VacationType" required="true">
-                 <option value="LVE">Leave (LVE)</option>
-                 <option value="ULVE">Unpaid leave (ULVE)</option>
-                 <option value="RLV">Requested leave (RLV)</option>
-                 <option value="ELV">Emergency leave (ELV)</option>
-                 <option value="MLV">Maternity/Paternity leave (MLV)</option>
+                <option value="LVE">Leave (LVE)</option>
+                <option value="ULVE">Unpaid leave (ULVE)</option>
+                <option value="RLV">Requested leave (RLV)</option>
+                <option value="ELV">Emergency leave (ELV)</option>
+                <option value="MLV">Maternity/Paternity leave (MLV)</option>
               </select>
             </td>
           </tr>
