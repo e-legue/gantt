@@ -1570,7 +1570,7 @@ var crewMemberStore = new TrackableMemory({
     // 3 - reset pk
     self.nextPk = 1;
   },
-  Toto : function() {
+  SaveOrUpdate : function() {
     var self = this;
 
     var pk = Number(registry.byId("CrewMemberPk").get("value"));
@@ -2304,7 +2304,7 @@ var activityStore = new TrackableMemory({
     // 3 - reset pk
     self.nextPk = 1;
   },
-  Toto : function(type) {
+  SaveOrUpdate : function(type) {
     var self = this;
 
     if( !registry.byId(type + "Form").validate() ) {
@@ -2589,7 +2589,7 @@ var distanceStore = new Memory({
     // 3 - reset pk
     self.nextPk = 1;
   },
-  Toto : function() {
+  SaveOrUpdate : function() {
     var self = this;
 
     var pk = Number(registry.byId("DistancePk").get("value"));
@@ -2742,7 +2742,7 @@ var eventStore = new TrackableMemory({
     });
     return event;
   },
-  Toto: function(type) {
+  SaveOrUpdate: function(type) {
     var self = this;
 
     if( !registry.byId("EventForm").validate() ) {
@@ -2968,7 +2968,7 @@ var noteStore = new TrackableMemory({
     // 3 - reset pk
     self.nextPk = 1;
   },
-  Toto : function() {
+  SaveOrUpdate : function() {
     var self = this;
 
     if( !registry.byId("NoteForm").validate() ) {
@@ -4302,11 +4302,11 @@ registry.byId("DeleteCrewMember").on("click", function() {
 
 
 registry.byId("SaveCrewMember").on("click", function() {
-  crewMemberStore.Toto();
+  crewMemberStore.SaveOrUpdate();
 });
 
 registry.byId("CreateCrewMember").on("click", function() {
-  crewMemberStore.Toto();
+  crewMemberStore.SaveOrUpdate();
 });
 
 
@@ -4426,17 +4426,17 @@ registry.byId("DeleteVacation").on("click", function() {
 
 registry.byId("DuplicateVacation").on("click", function() {
   registry.byId("VacationPk").set("value", "");        
-  activityStore.Toto("Vacation");
+  activityStore.SaveOrUpdate("Vacation");
 });
 
 
 registry.byId("CreateVacation").on("click", function() {
-  activityStore.Toto("Vacation");
+  activityStore.SaveOrUpdate("Vacation");
 });
 
 
 registry.byId("SaveVacation").on("click", function() {
-  activityStore.Toto("Vacation");
+  activityStore.SaveOrUpdate("Vacation");
 });
 
 
@@ -4561,17 +4561,17 @@ registry.byId("DeleteTraining").on("click", function() {
 
 registry.byId("DuplicateTraining").on("click", function() {
   registry.byId("TrainingPk").set("value", "");
-  activityStore.Toto("Training");
+  activityStore.SaveOrUpdate("Training");
 });
 
 
 registry.byId("CreateTraining").on("click", function() {
-  activityStore.Toto("Training");
+  activityStore.SaveOrUpdate("Training");
 });
 
 
 registry.byId("SaveTraining").on("click", function() {
-  activityStore.Toto("Training");
+  activityStore.SaveOrUpdate("Training");
 });
 
 
@@ -4682,17 +4682,17 @@ registry.byId("DeleteReserve").on("click", function() {
 
 registry.byId("DuplicateReserve").on("click", function() {
   registry.byId("ReservePk").set("value", "");        
-  activityStore.Toto("Reserve");
+  activityStore.SaveOrUpdate("Reserve");
 });
 
 
 registry.byId("CreateReserve").on("click", function() {
-  activityStore.Toto("Reserve");
+  activityStore.SaveOrUpdate("Reserve");
 });
 
 
 registry.byId("SaveReserve").on("click", function() {
-  activityStore.Toto("Reserve");
+  activityStore.SaveOrUpdate("Reserve");
 });
 
      
@@ -4781,11 +4781,11 @@ registry.byId("DeleteAllEvents").on("click", function() {
 });
 
 registry.byId("CreateEvent").on("click", function() {
-  eventStore.Toto();
+  eventStore.SaveOrUpdate();
 });
 
 registry.byId("SaveEvent").on("click", function() {
-  eventStore.Toto();
+  eventStore.SaveOrUpdate();
 });
 
 
@@ -4890,12 +4890,12 @@ registry.byId("DistanceToActSelect").on("change", function(pk_activity) {
 
 
 registry.byId("CreateDistance").on("click", function() {
-  distanceStore.Toto();
+  distanceStore.SaveOrUpdate();
 });
 
 
 registry.byId("SaveDistance").on("click", function() {
-  distanceStore.Toto();
+  distanceStore.SaveOrUpdate();
 });
 
 
@@ -5044,39 +5044,18 @@ registry.byId("DeleteTrip").on("click", function() {
 
 
 registry.byId("DuplicateTrip").on("click", function() {
-  var source = activityStore.getSync(registry.byId("TripPk").get("value"));
-
-  var copy = new activityModel(source);
-
-  copy.pk = activityStore.GetNextPKSequence();
-  copy.SetLineNb();
-  copy.fk_yc = undefined;
-
-  activityStore.addSync(copy);
-
-  // Duplicate details (legs, layovers and stations) in case of trip.
-  activityStore.filter({fk_parent: source.pk}).forEach(function(item) {
-    var detailCopy = new activityModel(item);
-
-    detailCopy.pk = activityStore.GetNextPKSequence();
-    detailCopy.fk_parent = copy.pk
-
-    activityStore.addSync(detailCopy);
-  });
-
-  TripDialog.hide();
-
-  topic.publish("refreshGraph");
+  registry.byId("TripPk").set("value", "");        
+  activityStore.SaveOrUpdate("Trip");
 });
 
 
 registry.byId("CreateTrip").on("click", function() {
-  activityStore.Toto("Trip");
+  activityStore.SaveOrUpdate("Trip");
 });
 
 
 registry.byId("SaveTrip").on("click", function() {
-  activityStore.Toto("Trip");
+  activityStore.SaveOrUpdate("Trip");
 });
 
 
@@ -5101,7 +5080,7 @@ registry.byId("NoteColorPaletteWidget").on("change", function(value) {
 });
 
 registry.byId("CreateNote").on("click", function() {
-  noteStore.Toto();       
+  noteStore.SaveOrUpdate();       
 });
 
 
@@ -5115,7 +5094,7 @@ registry.byId("DeleteNote").on("click", function() {
 
 
 registry.byId("SaveNote").on("click", function() {
-  noteStore.Toto();       
+  noteStore.SaveOrUpdate();       
 });
 
 
