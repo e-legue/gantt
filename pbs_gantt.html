@@ -1307,17 +1307,20 @@ var yCoordStore = new TrackableMemory({
     return self.nextYCM;
   },  
   ComputeYAndHeigth : function() {
+    var self = this;
+
     yCoordStore.sort('y').fetch().then(function(items) {
       var nextY   = 0;
       var nextYCM = 0;
       for (var i = 0 ; i < items.length ; i++) {
         items[i].y = nextY;
-        if( typeof(items[i].fk_cm) != 'undefined' ) {
-          yCoordStore.nextYCM = nextY;
+        if( typeof(items[i].fk_cm) == 'undefined' ) {
+          nextYCM = nextY;
         }
         nextY += items[i].height;
       }
-      yCoordStore.nextY = nextY;
+      self.nextY = nextY;
+      self.nextYCM = nextYCM;
     });    
   },
   Reset : function () {
@@ -1347,8 +1350,6 @@ yCoordStore.on("add", function(event) {
     // 2 - recompute y and height of each item.
     yCoordStore.ComputeYAndHeigth();
   }
-
-console.log(yCoordStore);  
 });
 
 
@@ -1358,16 +1359,12 @@ yCoordStore.on("update", function(event) {
 
   // 2 - recompute y and height of each item.
   yCoordStore.ComputeYAndHeigth();
-
-console.log(yCoordStore);  
 });
 
 
 yCoordStore.on("delete", function(event) {
   // 1 - recompute y and height of each item.
   yCoordStore.ComputeYAndHeigth();
-
-console.log(yCoordStore);  
 });
 
 
