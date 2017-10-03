@@ -1095,11 +1095,36 @@ var configurationModel = declare(Model, {
       self.CalendarTimezoneName = TimezoneStore.get(self.CalendarTimezone).name;
       configurationStore.putSync(self);          
     }
-    
-    // moment.tz.setDefault(config.CalendarTimezoneName);
+  },
+
+  UpdateUI : function() {
+    var self = this;
 
     registry.byId("CalendarStart").set("value", self.CalendarStart);      
-    registry.byId("CalendarEnd").set("value", self.CalendarEnd);      
+    registry.byId("CalendarEnd").set("value", self.CalendarEnd);     
+
+    // Set resolution.
+    var id = "xgc" + self.XGraphCompression.toString().replace(".", "_");
+    registry.byId(id).set("checked", true);
+    
+    registry.byId("SHCalendarHours").set("checked", self.SHCalendarHours);
+    registry.byId("SHCalendarDayX").set("checked", self.SHCalendarDayX);
+    registry.byId("SHCalendarDayYYYYMMDD").set("checked", self.SHCalendarDayYYYYMMDD);
+    registry.byId("SHCalendarDayBars").set("checked", self.SHCalendarDayBars);
+    registry.byId("SHCalendarHourBars").set("checked", self.SHCalendarHourBars);
+    registry.byId("SHCalendarMon").set("checked", self.SHCalendarMon);
+    registry.byId("SHCalendarTue").set("checked", self.SHCalendarTue);
+    registry.byId("SHCalendarWed").set("checked", self.SHCalendarWed);
+    registry.byId("SHCalendarThu").set("checked", self.SHCalendarThu);
+    registry.byId("SHCalendarFri").set("checked", self.SHCalendarFri);
+    registry.byId("SHCalendarSat").set("checked", self.SHCalendarSat);
+    registry.byId("SHCalendarSun").set("checked", self.SHCalendarSun);
+
+    registry.byId("SHActivityHours").set("checked", self.SHActivityHours);
+    registry.byId("SHActivityDetails").set("checked", self.SHActivityDetails);
+    registry.byId("SHActivityDetailHours").set("checked", self.SHActivityDetailHours);
+    registry.byId("SHActivityDetailStations").set("checked", self.SHActivityDetailStations);
+    registry.byId("SHActivityDuties").set("checked", self.SHActivityDuties);
   },
 
   updateCheckboxProperty : function(property, isChecked) {
@@ -1182,6 +1207,8 @@ configurationStore.on("add, update", function(event) {
 var config = configurationStore.Model();
 
 configurationStore.addSync(config);
+
+config.UpdateUI();
 
 
 //
@@ -3368,6 +3395,7 @@ function LoadSvgStores(svgNode) {
   config = configurationStore.getSync(0);
 
   config.UpdateForBackwardCompatibility();
+  config.UpdateUI();
 
   LoadStore(svgNode, calendarStore);
   LoadStore(svgNode, yCoordStore);
