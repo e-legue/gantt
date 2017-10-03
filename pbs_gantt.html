@@ -1560,6 +1560,7 @@ crewMemberStore.on("add", function(event) {
   // 1 - inc pk sequence.
   crewMemberStore.nextPk = Math.max(event.target.pk + 1, crewMemberStore.nextPk);
 
+console.log(yCoordStore);  
   if( typeof(event.target.fk_yc) == 'undefined' ) {
     // 2 - create y coord object.
     var yCoordinate = yCoordStore.addSync({
@@ -3007,6 +3008,7 @@ var tripDetailStore = new TrackableMemory({
   reportTime      : 20,
   releaseTime     : 15,
   startDateTime   : new moment(),
+
   _updDur         : function(array) {
     var self = this;
 
@@ -3018,8 +3020,10 @@ var tripDetailStore = new TrackableMemory({
       array[i].endDateTime = currentDate.format("YYYY-MM-DD HH:mm");
     }
 
-    registry.byId("TripEndDate").set("value", currentDate.toDate());
-    registry.byId("TripEndTime").set("value", currentDate.toDate());
+    var endDate = new Date(currentDate.year(), currentDate.month(), currentDate.date(), currentDate.hour(), currentDate.minute());
+
+    registry.byId("TripEndDate").set("value", endDate);
+    registry.byId("TripEndTime").set("value", endDate);
   },
   updateDuration  : function() {
     var self = this; 
@@ -4169,6 +4173,8 @@ registry.byId("SetStartPeriods").on("click", function() {
         y      : -1,
         height : HEIGHT_LINE_HL,
     });
+
+
   }
 
   calendarStore.forEach(function(item) {
@@ -4196,6 +4202,10 @@ registry.byId("SetStartPeriods").on("click", function() {
     }
     calendarStore.put(item);
   });
+
+  if( fCreatedEvent ) {
+    yCoord.ComputeYAndHeight();
+  }
 
   SetStartPeriodsDialog.hide();
 
@@ -4694,7 +4704,8 @@ function FillInEventForm(pk_item) {
   var item = eventStore.getSync(pk_item);
 
   registry.byId('EventForm').set('value', item);
-  var eventTime = moment.tz(getDateTime(item.x).format("YYYY-MM-DD HH:mm"), config.CalendarTimezoneName);
+  // var eventTime = moment.tz(getDateTime(item.x).format("YYYY-MM-DD HH:mm"), config.CalendarTimezoneName);
+  var eventTime = moment(getDateTime(item.x).format("YYYY-MM-DD HH:mm"));
   registry.byId('EventTime').set('value', eventTime.toDate());
 
   var days = [];
@@ -4907,46 +4918,42 @@ registry.byId("MenuBusinessObjectCreateActivityTrip").on("click", function() {
 
 
 function TryEnableGrid() {
-  if(   registry.byId("TripStartTime").get("value") != null 
-  && registry.byId("TripStartDate").get("value") != null ) {
-    tripDetailStore.reportTime = config.reportTime;
-    tripDetailStore.releaseTime = config.releaseTime;
-
-    var mydate = moment.tz(registry.byId("TripStartDate").get("value"), config.CalendarTimezoneName);
-    var mytime = moment.tz(registry.byId("TripStartTime").get("value"), config.CalendarTimezoneName);
-
-    // rebuild the start date from StartDate and StartTime field values, 
-    mydate.hours(mytime.hours());
-    mydate.minutes(mytime.minutes());
-
-    tripDetailStore.startDateTime = mydate;
-
-    if( tripDetailStore.len == 0 ) {
-
-      tripDetailStore.addSync({
-        pk      : 1,
-        order   : 1,
-        type    : "sta",
-        station : config.CalendarStation,
-      });
-      tripDetailStore.addSync({
-        pk      : 2,
-        order   : 2,
-        type    : "leg",
-        legType : "A",
-        dhour   : 2,
-        dminute : 0,
-      });
-      tripDetailStore.addSync({
-        pk      : 3,
-        order   : 3,
-        type    : "sta",
-        station : config.CalendarStation,
-      });
-    }
-    // allow to recompute end date time.
-    tripDetailStore.process();
+  var startDate = registry.byId("TripStartDate").get("value");
+  var startTime = registry.byId("TripStartTime").get("value");
+  if( startDate == null || startTime == null ) {
+    return;   
   }
+
+  tripDetailStore.reportTime    = config.reportTime;
+  tripDetailStore.releaseTime   = config.releaseTime;
+  tripDetailStore.startDateTime = moment.tz([startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), startTime.getHours(), startTime.getMinutes()], config.CalendarTimezoneName);
+
+  if( tripDetailStore.len == 0 ) {
+
+    tripDetailStore.addSync({
+      pk      : 1,
+      order   : 1,
+      type    : "sta",
+      station : config.CalendarStation,
+    });
+    tripDetailStore.addSync({
+      pk      : 2,
+      order   : 2,
+      type    : "leg",
+      legType : "A",
+      dhour   : 2,
+      dminute : 0,
+    });
+    tripDetailStore.addSync({
+      pk      : 3,
+      order   : 3,
+      type    : "sta",
+      station : config.CalendarStation,
+    });
+  }
+  // allow to recompute end date time.
+  tripDetailStore.process();
+ 
 }
 
 
