@@ -1347,6 +1347,8 @@ yCoordStore.on("add", function(event) {
     // 2 - recompute y and height of each item.
     yCoordStore.ComputeYAndHeigth();
   }
+
+console.log(yCoordStore);  
 });
 
 
@@ -1356,12 +1358,16 @@ yCoordStore.on("update", function(event) {
 
   // 2 - recompute y and height of each item.
   yCoordStore.ComputeYAndHeigth();
+
+console.log(yCoordStore);  
 });
 
 
 yCoordStore.on("delete", function(event) {
   // 1 - recompute y and height of each item.
   yCoordStore.ComputeYAndHeigth();
+
+console.log(yCoordStore);  
 });
 
 
@@ -1587,7 +1593,6 @@ crewMemberStore.on("add", function(event) {
   // 1 - inc pk sequence.
   crewMemberStore.nextPk = Math.max(event.target.pk + 1, crewMemberStore.nextPk);
 
-console.log(yCoordStore);  
   if( typeof(event.target.fk_yc) == 'undefined' ) {
     // 2 - create y coord object.
     var yCoordinate = yCoordStore.addSync({
@@ -4231,7 +4236,7 @@ registry.byId("SetStartPeriods").on("click", function() {
     calendarStore.put(item);
   });
 
-  if( fCreatedEvent ) {
+  if( fCreateEvent ) {
     yCoord.ComputeYAndHeight();
   }
 
