@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.12.2/dijit/themes/claro/claro.css"/>
   <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.12.2/dojox/form/resources/CheckedMultiSelect.css"/>
   <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.12.2/dojox/form/resources/UploaderFileList.css"/>
+  <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.12.2/dojox/editor/plugins/resources/editorPlugins.css"/>
   <link rel="stylesheet" href="http://cdn.rawgit.com/SitePen/dgrid/v1.1.0/css/dgrid.css"/>
   <link rel="stylesheet" href="http://cdn.rawgit.com/SitePen/dgrid/v1.1.0/css/skins/claro.css"/>
   <link rel="stylesheet" href="http://codemirror.net/lib/codemirror.css"/>
@@ -173,12 +174,14 @@ require([
   "dijit/form/RadioButton",
   "dijit/layout/TabContainer", 
   "dijit/layout/ContentPane", 
+  "dijit/_editor/plugins/ViewSource",
   "dijit/Editor",
   "dijit/ColorPalette",
   "dijit/TooltipDialog",
   "dojox/layout/TableContainer",
   "dojox/form/Uploader",
   "dojox/form/uploader/FileList",
+  "dojox/editor/plugins/TablePlugins",
   "codemirror/mode/xml/xml",
   "codemirror/addon/fold/xml-fold",
   "codemirror/addon/edit/matchtags",
@@ -6326,8 +6329,12 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
           <tr>
             <td><label for="note">Note</label></td>
             <td>
-              <!--div data-dojo-type="dijit/Editor" id="NoteEditor" name="note" data-dojo-props="plugins:['bold','italic','underline','strikethrough','subscript','superscript','|', 'indent', 'outdent', 'justifyLeft', 'justifyCenter', 'justifyRight']" /-->
-              <div data-dojo-type="dijit/Editor" id="NoteEditor" name="note"/>
+              <div data-dojo-type="dijit/Editor" id="NoteEditor" name="note" data-dojo-props="plugins:[     'undo', 'redo', 
+                                                                                                       '|', 'bold','italic','underline','strikethrough','subscript','superscript',
+                                                                                                       '|', 'indent', 'outdent', 'justifyLeft', 'justifyCenter', 'justifyRight',
+                                                                                                       '|', {name: 'insertTable'}, {name: 'modifyTable'}, {name: 'insertTableRowBefore'}, {name: 'insertTableRowAfter'}, {name: 'insertTableColumnBefore'}, {name: 'insertTableColumnAfter'}, {name: 'deleteTableRow'}, {name: 'deleteTableColumn'}, 
+                                                                                                       '|', 'viewsource' ]" />
+              <!--div data-dojo-type="dijit/Editor" id="NoteEditor" name="note" / -->
             </td>
           </tr>
           <tr>
