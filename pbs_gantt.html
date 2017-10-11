@@ -500,7 +500,7 @@ function SVG_drawText(className, x, y, label) {
 // Draw a event in calendar.
 function SVG_drawEvent(item) {
   var group         = document.createElementNS(svgNS, "g");
-
+console.log(item);
   group.setAttributeNS(null,"transform","translate(0, " + item.GetYCoord() + ")");
   group.setAttributeNS(null, "id", item.get("ident"));
   group.setAttributeNS(null, "fill", item.color);
@@ -911,8 +911,15 @@ var sig1;
 var sig2;
 
 function selectElement(evt) {
+  // The idea is to find the parent container which name is foreignObject. Then the ID
+  // can be used to extract the primary key of the note.      
+  var target = evt.target;          
+  while( target.nodeName != 'foreignObject' ) {
+    target = target.parentNode;
+  }
+
   if( evt.ctrlKey || evt.altKey ){
-    selectedElement = evt.target.parentNode; // I don't know why target points to body. 
+    selectedElement = target;
     currentX = evt.clientX;
     currentY = evt.clientY;
     currentMatrix = selectedElement.getAttributeNS(null, "transform").slice(7,-1).split(' ');
@@ -925,13 +932,7 @@ function selectElement(evt) {
     sig2 = on(selectedElement, "mouseout, mouseup" , function(evt) { deselectElement(evt); });
   } 
   else {
-    // The idea is to find the parent container which name is foreignObject. Then the ID
-    // can be used to extract the primary key of the note.      
-    var target = evt.target;          
-    while( target.nodeName != 'foreignObject' ) {
-      target = target.parentNode;
-    }
-          
+         
     var pkNote = target.id.replace( /^\D+/g, '');
     if( pkNote ) {
       SetUpNoteDialog(pkNote);
@@ -953,7 +954,7 @@ function moveElement(evt) {
 function deselectElement(evt) {
   if(selectedElement != 0){
     var viewFactor = svg.domViewport.getCTM().a;
-    var pkNote = evt.target.id.replace( /^\D+/g, '');
+    var pkNote = selectedElement.id.replace( /^\D+/g, '');
     var note = noteStore.getSync(pkNote);
     note.x += currentMatrix[4] * config.XGraphCompression;
     note.y += currentMatrix[5];
