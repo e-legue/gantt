@@ -174,8 +174,10 @@ require([
   "dijit/form/RadioButton",
   "dijit/layout/TabContainer", 
   "dijit/layout/ContentPane", 
-  "dijit/_editor/plugins/ViewSource",
   "dijit/Editor",
+  "dijit/_editor/plugins/ViewSource",
+  "dijit/_editor/plugins/FontChoice", 
+  "dijit/_editor/plugins/TextColor",
   "dijit/ColorPalette",
   "dijit/TooltipDialog",
   "dojox/layout/TableContainer",
@@ -617,15 +619,17 @@ function GetIncHour() {
   if( config.XGraphCompression <= 2 ) return 120;
   if( config.XGraphCompression <= 4 ) return 240;
   if( config.XGraphCompression <= 6 ) return 360;
-  return 720;
+  if( config.XGraphCompression <= 10 )return 720;
+  return 1440;
 }
 
 
 // Get a size font to fit with graph compression.
 function GetFontSize() {
-  if( config.XGraphCompression <  5 ) return "40px";
-  if( config.XGraphCompression < 10 ) return "30px";
-  return "20px";
+  if( config.XGraphCompression <  5 ) return "40";
+  if( config.XGraphCompression <  8 ) return "30";
+  if( config.XGraphCompression < 15 ) return "20";
+  return "8";
 }     
 
 
@@ -640,7 +644,9 @@ function SVG_drawCalendarDate(item) {
   G.setAttributeNS(null, "class", item.get("dayweek"));
   svg.domCalendar.appendChild(G);
 
-  G.appendChild(SVG_drawText(item.get("startperiod") ? "day_label relative day_start_period" : "day_label relative", 720, -70, "Day " + item.get("relative")));
+  var day_r = SVG_drawText(item.get("startperiod") ? "day_label relative day_start_period" : "day_label relative", 720, -70, "Day " + item.get("relative"));
+  day_r.setAttributeNS(null, "style", "font-size: " + ( GetFontSize() * 1.5) );
+  G.appendChild(day_r);
 
   var day_label = SVG_drawText(item.get("startperiod") ? "day_label yyyymmdd day_start_period" : "day_label yyyymmdd", 720, -20, item.get("name"));
   day_label.setAttributeNS(null, "style", "font-size: " + GetFontSize());
@@ -919,8 +925,17 @@ function selectElement(evt) {
     sig2 = on(selectedElement, "mouseout, mouseup" , function(evt) { deselectElement(evt); });
   } 
   else {
-    var pkNote = evt.target.id.replace( /^\D+/g, '');
-    SetUpNoteDialog(pkNote);
+    // The idea is to find the parent container which name is foreignObject. Then the ID
+    // can be used to extract the primary key of the note.      
+    var target = evt.target;          
+    while( target.nodeName != 'foreignObject' ) {
+      target = target.parentNode;
+    }
+          
+    var pkNote = target.id.replace( /^\D+/g, '');
+    if( pkNote ) {
+      SetUpNoteDialog(pkNote);
+    }
   }
 }
 
@@ -984,12 +999,13 @@ function SVG_drawNote(item) {
 
   var body = document.createElement("body");
   body.setAttributeNS(null,"id", "body" + item.get("ident"));
-  body.setAttributeNS(null,"style", "padding: 10px; margin: 0; background-color:" + item.color);   
+  body.setAttributeNS(null,"style", "padding: 10; margin: 0; background-color:" + item.color);   
   body.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
 
   // span is not greedy as a div. so logically
   var span = document.createElement("span");
   span.setAttributeNS(null,"id", "span" + item.get("ident"));
+  span.setAttributeNS(null,"style", "padding: 10px; background-color: white");   
 
   span.innerHTML = item.note;
 
@@ -1000,10 +1016,29 @@ function SVG_drawNote(item) {
   var pos = domGeom.position(dom.byId("span" + item.get("ident")));
   var viewFactor = svg.domViewport.getCTM().a;
 
-  var width  = ( ( pos.w / viewFactor) + 12 + 10 ) * 1.1
-  var height = ( ( pos.h / viewFactor) + 12 + 10 ) * 1.1
-  foreignObject.setAttributeNS(null, "width", width + "px");
-  foreignObject.setAttributeNS(null, "height", height + "px");
+  var width  = ( ( pos.w / viewFactor) + 12 + 10 ) * 1.1;
+  var height = ( ( pos.h / viewFactor) + 12 + 20 ) * 1.1;
+  foreignObject.setAttributeNS(null, "width", width);
+  foreignObject.setAttributeNS(null, "height", height);
+
+  // div is not greedy as a div. so logically
+  var div = document.createElement("div");
+  div.setAttributeNS(null,"id", "div" + item.get("ident"));
+  div.setAttributeNS(null,"style", "padding: 10px; background-color: white");   
+
+  div.innerHTML = item.note;
+
+  body.removeChild(span);
+  body.appendChild(div);
+
+  /*
+  var img = document.createElement("img");
+  img.setAttributeNS(null, "src", "images/icon-move.png");
+  img.setAttributeNS(null, "height", "30");
+  img.setAttributeNS(null, "width", "30");
+  img.setAttributeNS(null, "style", "position: absolute; top: 0; right: 0");
+  body.appendChild(img);
+  */
 }
 
 // 
@@ -1613,7 +1648,9 @@ crewMemberStore.on("update", function(event) {
 
   var yCoordinate = yCoordStore.getSync(event.target.fk_yc); 
 
-  yCoordinate.height = MARGIN_TOP_CM + HEIGHT_LINE_CM * event.target.lineCount + MARGIN_BOTTOM_CM; 
+  var lineCount = Math.max(1, event.target.lineCount);
+
+  yCoordinate.height = MARGIN_TOP_CM + HEIGHT_LINE_CM * lineCount + MARGIN_BOTTOM_CM; 
 
   yCoordStore.putSync(yCoordinate);      
 });
@@ -3737,6 +3774,11 @@ registry.byId("xgc5"   ).on("change", function(value) { config.updateXGraphCompr
 registry.byId("xgc6"   ).on("change", function(value) { config.updateXGraphCompression(6); });
 registry.byId("xgc8"   ).on("change", function(value) { config.updateXGraphCompression(8); });
 registry.byId("xgc10"  ).on("change", function(value) { config.updateXGraphCompression(10); });
+registry.byId("xgc12"  ).on("change", function(value) { config.updateXGraphCompression(12); });
+registry.byId("xgc15"  ).on("change", function(value) { config.updateXGraphCompression(15); });
+registry.byId("xgc18"  ).on("change", function(value) { config.updateXGraphCompression(18); });
+registry.byId("xgc20"  ).on("change", function(value) { config.updateXGraphCompression(20); });
+registry.byId("xgc30"  ).on("change", function(value) { config.updateXGraphCompression(30); });
   
 
 
@@ -5398,6 +5440,11 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
           <div id="xgc6" data-dojo-id="xgcr7" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'xgc'">6</div>
           <div id="xgc8" data-dojo-id="xgcr8" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'xgc'">8</div>
           <div id="xgc10" data-dojo-id="xgcr9" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'xgc'">10</div>
+          <div id="xgc12" data-dojo-id="xgcr10" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'xgc'">12</div>
+          <div id="xgc15" data-dojo-id="xgcr11" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'xgc'">15</div>
+          <div id="xgc18" data-dojo-id="xgcr12" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'xgc'">18</div>
+          <div id="xgc20" data-dojo-id="xgcr13" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'xgc'">20</div>
+          <div id="xgc30" data-dojo-id="xgcr14" data-dojo-type="dijit/RadioMenuItem" data-dojo-props="group: 'xgc'">30</div>
         </div>
       </div>
       <div id="MenuCurrentFile" data-dojo-type="dijit/MenuBarItem" data-dojo-props="disabled:true">No file</div>
@@ -5578,7 +5625,7 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
           <g id="calendar_bar" transform="scale(1,1)"></g>
           <g id="calendar">
             <g id="intro">
-              <image x="20" y="20" width="140" height="195" xlink:href="https://i.ebayimg.com/00/s/MzkwWDI4MA==/z/YKQAAOSwYqxXi7cf/$_86.JPG"/>
+              <image x="20" y="20" width="140" height="195" xlink:href="images/bob.jpg"/>
 
               <text x="200" y="50"  style="fill:black;font-size:30px;">Bob, the "problem" builder v0.1</text>
               <text x="200" y="90"  style="fill:black;font-size:15px;">To start, please do one of: </text>
@@ -6319,7 +6366,7 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
       </div>
     </div>
 
-    <div data-dojo-type="dijit/Dialog" id="NoteDialog" data-dojo-id="NoteDialog" title="Write a note" style="display: none;" data-dojo-props="onHide: function() {NoteForm.reset();}" >
+    <div data-dojo-type="dijit/Dialog" id="NoteDialog" data-dojo-id="NoteDialog" title="Write a note" style="display: none;" data-dojo-props="onHide: function(){NoteForm.reset();}, _onKey: function(){}" >
       <div data-dojo-type="dijit/form/Form" id="NoteForm" data-dojo-id="NoteForm" encType="multipart/form-data" action="" method="">
         <table class="dijitDialogPaneContentArea">
           <tr id="PkNote">
@@ -6330,9 +6377,10 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
             <td><label for="note">Note</label></td>
             <td>
               <div data-dojo-type="dijit/Editor" id="NoteEditor" name="note" data-dojo-props="plugins:[     'undo', 'redo', 
+                                                                                                       '|', 'foreColor', 'hiliteColor', 'fontSize',
                                                                                                        '|', 'bold','italic','underline','strikethrough','subscript','superscript',
                                                                                                        '|', 'indent', 'outdent', 'justifyLeft', 'justifyCenter', 'justifyRight',
-                                                                                                       '|', {name: 'insertTable'}, {name: 'modifyTable'}, {name: 'insertTableRowBefore'}, {name: 'insertTableRowAfter'}, {name: 'insertTableColumnBefore'}, {name: 'insertTableColumnAfter'}, {name: 'deleteTableRow'}, {name: 'deleteTableColumn'}, 
+                                                                                                       '|', {name: 'insertTable'}, {name: 'modifyTable'}, {name: 'insertTableRowBefore'}, {name: 'insertTableRowAfter'}, {name: 'insertTableColumnBefore'}, {name: 'insertTableColumnAfter'}, {name: 'deleteTableRow'}, {name: 'deleteTableColumn'}, {name: 'colorTableCell'}, {name: 'tableContextMenu'},
                                                                                                        '|', 'viewsource' ]" />
               <!--div data-dojo-type="dijit/Editor" id="NoteEditor" name="note" / -->
             </td>
