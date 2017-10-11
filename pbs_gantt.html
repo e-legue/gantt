@@ -287,7 +287,7 @@ var svg = {
     var matrix = self.domViewport.getCTM();
 
     self.dom.setAttribute("width", (self.maxX / config.XGraphCompression - self.minX) * matrix.a ); 
-    self.dom.setAttribute("height", (self.maxY - self.minY) * matrix.a );
+    self.dom.setAttribute("height", ((self.maxY - self.minY) + 600 ) * matrix.a );
 
     matrix.e = self.minX * -1;
     matrix.f = self.minY * -1;
@@ -3965,6 +3965,7 @@ registry.byId("LoadSvg").on("click", function() {
   reader.readAsText(f);
 
   registry.byId("MenuCurrentFile").set("label", f.name);
+  registry.byId("filename").set("value", f.name);
 
   s.hide();
   LoadSvgDialog.hide();
