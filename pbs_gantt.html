@@ -2314,6 +2314,27 @@ var activityModel = declare(Model, {
   },
 });
 
+// ************************************************************************
+// ************************************************************************
+// ************************************************************************
+// ************************************************************************
+
+var TripModel = declare(activityModel, {});
+var LegModel = declare(activityModel, {});
+var DayOffModel = declare(activityModel, {});
+var LeaveModel = declare(activityModel, {});
+var TrainingModel = declare(activityModel, {});
+var ReserveModel = declare(activityModel, {});
+var TaskGroupModel = declare(activityModel, {});
+var DetailGroupModel = declare(activityModel, {});
+
+// ************************************************************************
+// ************************************************************************
+// ************************************************************************
+// ************************************************************************
+
+
+
 
 var activityStore = new TrackableMemory({
   Model             : activityModel,
