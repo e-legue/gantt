@@ -5311,13 +5311,16 @@ SaveFileToPIDialog.on("show", function() {
   s.hide();
 });
 
-registry.byId("SaveZipFile").on("click", function() {
+
+
+registry.byId("SaveFileToPIForm").on("submit", function(e) {
+  e.preventDefault();          
   if( !registry.byId("SaveFileToPIForm").validate() ) {
     return;
   }
 
   SaveFileToPIDialog.hide();   
-
+  
   var zip = new JSZip();
   zip.file("qual.xml",     dom.byId("XMLqual").value);
   zip.file("acts.xml",     dom.byId("XMLacts").value);
@@ -5329,13 +5332,11 @@ registry.byId("SaveZipFile").on("click", function() {
   var serializer = new XMLSerializer();
   zip.file("data.svg", serializer.serializeToString(svg.dom));
 
-  var zipFilename = registry.byId("zipFilename").value;
-
   zip.generateAsync({type:"blob"}).then(function(content) {
+    var zipFilename = registry.byId("zipFilename").value;
+    registry.byId("SaveFileToPIForm").reset();
     saveAs(content, zipFilename);
   });
-
-  registry.byId("SaveFileToPIForm").reset();
 });
 
 
@@ -5650,7 +5651,7 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
             <g id="intro">
               <image x="20" y="20" width="140" height="195" xlink:href="images/bob.jpg"/>
 
-              <text x="200" y="50"  style="fill:black;font-size:30px;">Bob, the "problem" builder v0.1</text>
+              <text x="200" y="50"  style="fill:black;font-size:30px;">Bob, the "problem" builder v1.0</text>
               <text x="200" y="90"  style="fill:black;font-size:15px;">To start, please do one of: </text>
               <text x="220" y="120" style="fill:black;font-size:15px;">- Use File menu to load an XML station file and then Calendar menu to set a period or</text>
               <text x="220" y="150" style="fill:black;font-size:15px;">- Use File menu to load an SVG file.</text>
@@ -6014,13 +6015,13 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
 
 
     <div data-dojo-type="dijit/Dialog" data-dojo-id="SaveFileToPIDialog" title="Save XML files compatible with PI" style="display: none;">
-      <div id="SaveFileToPIDialogContent" class ="dijitDialogPaneContentArea">
+      <div data-dojo-type="dijit/form/Form" id="SaveFileToPIForm" data-dojo-id="SaveFileToPIForm" encType="multipart/form-data" action="" method="">
+        <div id="SaveFileToPIDialogContent" class ="dijitDialogPaneContentArea">
 
-        <div data-dojo-type="dijit/form/Form" id="SaveFileToPIForm" data-dojo-id="SaveFileToPIForm" encType="multipart/form-data" action="" method="">
           <table >
             <tr>
-              <td><label for="filename">ZIP filename</label></td>
-              <td><input data-dojo-type="dijit/form/TextBox" name="filename" id="zipFilename" data-dojo-props="placeHolder: '.zip'" required="true"/></td>
+              <td><label for="zipfilename">ZIP filename</label></td>
+              <td><input data-dojo-type="dijit/form/TextBox" name="zipfilename" id="zipFilename" data-dojo-props="placeHolder: '.zip'" required="true"/></td>
             </tr>
             <tr>
               <td><label for="data">XML data</label></td>
@@ -6047,10 +6048,10 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
           </table>
           <p style="margin-top: 0; margin-bottom: 0; font-size: small;">You can use <b>Ctrl+J</b> to go to matching tag, and <b>Ctrl+F</b> to fold/unfold the current line.</p>
         </div>
-      </div>
 
-      <div class="dijitDialogPaneActionBar">
-        <button data-dojo-type="dijit/form/Button" type="button" id="SaveZipFile">Save zip file</button>
+        <div class="dijitDialogPaneActionBar">
+          <button data-dojo-type="dijit/form/Button" type="button" type="submit" id="SaveZipFile">Save zip file</button>
+        </div>
       </div>
     </div>
 
