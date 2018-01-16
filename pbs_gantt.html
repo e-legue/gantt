@@ -1343,6 +1343,7 @@ var yCoordStore = new TrackableMemory({
   GetNextYCM        : function() { // get the y coordinate for the next crewmember, ie before opentime and distance among opentime activities.
     var self = this;
 
+    console.log("GetNextYCM : "+ self.nextYCM);
     return self.nextYCM;
   },  
   ComputeYAndHeigth : function() {
@@ -1351,12 +1352,15 @@ var yCoordStore = new TrackableMemory({
     yCoordStore.sort('y').fetch().then(function(items) {
       var nextY   = 0;
       var nextYCM = 0;
+      console.log("nextYCM:" + nextYCM);
       for (var i = 0 ; i < items.length ; i++) {
+        console.log(items[i]);
         items[i].y = nextY;
+        nextY += items[i].height;
         if( typeof(items[i].fk_cm) != 'undefined' ) {
           nextYCM = nextY;
+          console.log("nextYCM:" + nextYCM);
         }
-        nextY += items[i].height;
       }
       self.nextY = nextY;
       self.nextYCM = nextYCM;
@@ -4113,6 +4117,8 @@ registry.byId("CalendarStart").on("change", function(value) {
   registry.byId("TripStartDate").dropDownDefaultValue = value;
   registry.byId("VacationStartDate").constraints.min = value;
   registry.byId("VacationStartDate").dropDownDefaultValue = value;
+  console.log("on change - CalendarStart");
+  console.log(registry.byId("VacationStartDate"));
 }, true);
 
 
@@ -4137,6 +4143,9 @@ registry.byId("CalendarEnd").on("change", function(value) {
   registry.byId("TripStartDate").constraints.max = maxDate;
   registry.byId("VacationStartDate").constraints.max = maxDate;
   registry.byId("VacationEndDate").constraints.max = value;
+  console.log("on change - CalendarEnd");
+  console.log(registry.byId("VacationStartDate"));
+  console.log(registry.byId("VacationEndDate"));
 }, true);
 
 registry.byId("SetCalendarDialog").on("show", function() {
@@ -4422,6 +4431,8 @@ registry.byId("CreateDayOff").on("click", function() {
 //                                        
 //
 registry.byId("VacationStartDate").on("change", function() {
+console.log("VacationStartDate on change");
+console.log(this.get("value"));
   var nextDay = date.add(this.get("value"), "day", 1);
   registry.byId("VacationEndDate").set("disabled", false);
   registry.byId("VacationEndDate").constraints.min = nextDay;
@@ -6452,13 +6463,21 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
               </select>
             </td>
           </tr>
+        <!--
           <tr>
             <td><label for="start_date">Start date</label></td>
-            <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="start_date" id="VacationStartDate" required="true" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"></td>
+            <td class="datetime"><input id="VacationStartDate" name="start_date" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"/></td>
+          </tr>
+          -->
+
+          <tr>
+            <td><label for="start_date">Start date</label></td>
+            <td class="datetime">
+              <input id="VacationStartDate" name="start_date" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"/>
           </tr>
           <tr>
             <td><label for="end_date">End date (excluded)</label></td>
-            <td class="datetime"><input data-dojo-type="dijit/form/DateTextBox" name="end_date" id="VacationEndDate" disabled="true" required="true" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"></td>
+            <td class="datetime"><input id="VacationEndDate" name="end_date" type="date" data-dojo-type="dijit/form/DateTextBox" data-dojo-props="constraints:{  datePattern: 'yyyy-MM-dd'}, placeHolder:'yyyy-mm-dd'"/></td>
           </tr>
         </table>
 
