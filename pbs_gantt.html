@@ -4430,6 +4430,7 @@ registry.byId("CreateDayOff").on("click", function() {
 // |______||______|/_/    \_\\/    |______|
 //                                        
 //
+/*
 registry.byId("VacationStartDate").on("change", function() {
 console.log("VacationStartDate on change");
 console.log(this.get("value"));
@@ -4449,7 +4450,7 @@ registry.byId("VacationEndDate").on("change", function() {
     registry.byId("VacationStartDate").constraints.max = registry.byId("CalendarEnd").get("value");
   }
 }, true);
-
+*/
 
 function SetUpVacationDialog(item) {
   if( item ) {
@@ -4467,12 +4468,15 @@ function SetUpVacationDialog(item) {
   else {
     VacationDialog.set("title", "Create a vacation");
 
-    var CalStart = registry.byId("CalendarStart").get("value");
-    var CalEnd   = date.add(registry.byId("CalendarEnd").get("value"), "day", 1);
-
-    registry.byId("VacationStartDate").constraints.min = CalStart;
-    registry.byId("VacationStartDate").constraints.max = CalEnd;
-    registry.byId("VacationStartDate").dropDownDefaultValue = CalStart;
+    var start = moment(config.CalendarStart);
+    var end   = moment(config.CalendarEnd);
+            
+    var DStart = new Date(start.year(), start.month(), start.date());
+    var DEnd   = new Date(end.year(), end.month(), end.date());
+          
+    registry.byId("VacationStartDate").constraints.min = DStart;
+    registry.byId("VacationStartDate").constraints.max = DEnd;
+    registry.byId("VacationStartDate").dropDownDefaultValue = DStart;
 
     domStyle.set(registry.byId("CreateVacation").domNode,    "display", "inline");
     domStyle.set(registry.byId("DuplicateVacation").domNode, "display", "none");
