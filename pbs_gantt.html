@@ -4430,7 +4430,6 @@ registry.byId("CreateDayOff").on("click", function() {
 // |______||______|/_/    \_\\/    |______|
 //                                        
 //
-/*
 registry.byId("VacationStartDate").on("change", function() {
 console.log("VacationStartDate on change");
 console.log(this.get("value"));
@@ -4443,14 +4442,20 @@ console.log(this.get("value"));
 
 registry.byId("VacationEndDate").on("change", function() {
   var self = this;
-  if( self.get("value") < registry.byId("CalendarEnd").get("value") ) {
+
+  var end   = moment(config.CalendarEnd);
+  var DEnd  = new Date(end.year(), end.month(), end.date());
+
+  if( self.get("value") < DEnd ) {
     registry.byId("VacationStartDate").constraints.max = self.get("value"); 
   } 
   else {
-    registry.byId("VacationStartDate").constraints.max = registry.byId("CalendarEnd").get("value");
+    var end   = moment(config.CalendarEnd);
+    var DEnd  = new Date(end.year(), end.month(), end.date());
+ 
+    registry.byId("VacationStartDate").constraints.max = DEnd;
   }
 }, true);
-*/
 
 function SetUpVacationDialog(item) {
   if( item ) {
