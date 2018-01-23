@@ -4450,9 +4450,6 @@ registry.byId("VacationEndDate").on("change", function() {
     registry.byId("VacationStartDate").constraints.max = self.get("value"); 
   } 
   else {
-    var end   = moment(config.CalendarEnd);
-    var DEnd  = new Date(end.year(), end.month(), end.date());
- 
     registry.byId("VacationStartDate").constraints.max = DEnd;
   }
 }, true);
@@ -6280,7 +6277,7 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
             <td><input data-dojo-type="dijit/form/TextBox" name="pk" id="DistancePk" readonly="true" disabled="true"></td>
           </tr>
           <tr>
-            <td><label for="From">From</label></td>
+            <td class="label_on_tab"><label for="From">From</label></td>
             <td>
               <div style="width: 40em; height: 7em;">
                 <div data-dojo-type="dijit/layout/TabContainer" id="DistanceFromTabContainer" style="width: 100%; height: 100%;">
@@ -6309,7 +6306,8 @@ on(svg.dom, (!has("mozilla") ? "mousewheel" : "DOMMouseScroll"), function(evt) {
             </td>
           </tr>
           <tr>
-            <td><label for="To">To</label></td>
+          <tr>
+            <td class="label_on_tab"><label for="To">To</label></td>
             <td>
               <div style="width: 40em; height: 7em;">
                 <div data-dojo-type="dijit/layout/TabContainer" id="DistanceToTabContainer" style="width: 100%; height: 100%;">

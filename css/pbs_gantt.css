@@ -183,3 +183,8 @@ form {
   bottom   : 40px;
   opacity  : 1;
 }
+
+.label_on_tab {
+  vertical-align: top;
+  padding-top: 11px; /* 2(border) + 9(padding) */
+}
